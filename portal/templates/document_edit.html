@@ -1,0 +1,14 @@
+{% extends "layout.html" %}
+{% block title %}Edit Document{% endblock %}
+{% block content %}
+<div id="editor-wrapper" style="height:80vh;">
+  <div id="editor" style="height:100%;"></div>
+</div>
+<script>
+  window.editorConfig = {{ config | tojson }};
+  window.editorToken = {{ token | tojson }};
+  window.editorTokenHeader = {{ token_header | tojson }};
+</script>
+<script src="{{ editor_js }}"></script>
+<script src="{{ asset_url('document_edit.js') }}" defer></script>
+{% endblock %}
