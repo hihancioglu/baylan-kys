@@ -11,6 +11,7 @@ from sqlalchemy import (
     JSON,
     Enum,
     UniqueConstraint,
+    Boolean,
 )
 from sqlalchemy.orm import declarative_base, relationship, sessionmaker, scoped_session
 
@@ -105,6 +106,32 @@ class DocumentPermission(Base):
 
     role = relationship("Role", back_populates="permissions")
     document = relationship("Document")
+
+
+class Acknowledgement(Base):
+    __tablename__ = "acknowledgements"
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    doc_id = Column(Integer, ForeignKey("documents.id"), nullable=False)
+    acknowledged_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+    user = relationship("User")
+    document = relationship("Document")
+    __table_args__ = (
+        UniqueConstraint("user_id", "doc_id", name="uq_acknowledgement"),
+    )
+
+
+class TrainingResult(Base):
+    __tablename__ = "training_results"
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    score = Column(Integer, default=0)
+    max_score = Column(Integer, default=0)
+    passed = Column(Boolean, default=False)
+    completed_at = Column(DateTime, default=datetime.utcnow)
+
+    user = relationship("User")
 
 Base.metadata.create_all(engine)
 
