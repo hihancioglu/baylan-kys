@@ -366,35 +366,35 @@ def assign_role():
 @roles_required(RoleEnum.CONTRIBUTOR.value)
 def edit(doc_key):
     # doc_key: MinIO’daki dosya anahtarınız (örn: qdms/PRO-001_v1.docx)
-    user = {"id":"u1","name":"Ibrahim H.","email":"ih@baylan.local"}
+    user = session.get("user") or {"id": "u1", "name": "Ibrahim H.", "email": "ih@baylan.local"}
     # OnlyOffice editor config (minimal)
     config = {
-      "document": {
-        "fileType": "docx",
-        "key": f"{doc_key}",  # versiyon anahtarı; revizyon değişince değiştirin
-        "title": f"{doc_key.split('/')[-1]}",
-        "url": f"{os.environ['S3_ENDPOINT']}/local/{doc_key}",  # demo (gerçekte imzalı URL üretin)
-        "permissions": {
-          "edit": True,
-          "download": True,
-          "review": True,
-          "comment": True
-        }
-      },
-      "documentType": "text",
-      "editorConfig": {
-        "callbackUrl": f"{os.environ['PORTAL_PUBLIC_BASE_URL']}/onlyoffice/callback/{doc_key}",
-        "user": {"id":user["id"], "name":user["name"]},
-        "mode": "edit"
-      }
+        "document": {
+            "fileType": "docx",
+            "key": f"{doc_key}",  # versiyon anahtarı; revizyon değişince değiştirin
+            "title": f"{doc_key.split('/')[-1]}",
+            "url": f"{os.environ['S3_ENDPOINT']}/local/{doc_key}",  # demo (gerçekte imzalı URL üretin)
+            "permissions": {
+                "edit": True,
+                "download": True,
+                "review": True,
+                "comment": True,
+            },
+        },
+        "documentType": "text",
+        "editorConfig": {
+            "callbackUrl": f"{os.environ['PORTAL_PUBLIC_BASE_URL']}/onlyoffice/callback/{doc_key}",
+            "user": {"id": user["id"], "name": user["name"]},
+            "mode": "edit",
+        },
     }
     token = sign_payload(config)
-    # İstemci tarafta OnlyOffice Editor’ü çağırırken bu token’ı gönderirsiniz.
-    return jsonify(
-      editor_js=f"{ONLYOFFICE_PUBLIC_URL}/web-apps/apps/api/documents/api.js",
-      config=config,
-      token=token,
-      token_header=ONLYOFFICE_JWT_HEADER
+    return render_template(
+        "document_edit.html",
+        editor_js=f"{ONLYOFFICE_PUBLIC_URL}/web-apps/apps/api/documents/api.js",
+        config=config,
+        token=token,
+        token_header=ONLYOFFICE_JWT_HEADER,
     )
 
 @app.post("/documents/<int:doc_id>/revision")
@@ -724,9 +724,24 @@ def audit_export():
 def onlyoffice_callback(doc_key):
     data = request.get_json(silent=True) or {}
     status = data.get("status")
-    # status 2 veya 6 → dosya kapandı/kaydedildi; data['url'] ile final içeriği çekilebilir
-    # Burada yeni versiyon yaratıp MinIO’ya yazarsınız; audit-log tutarsınız.
-    # Güvenlik için Header’daki JWT’yi doğrulayın (OnlyOffice config -> JWT).
+    file_url = data.get("url")
+    db = get_session()
+    try:
+        doc = db.query(Document).filter_by(doc_key=doc_key).first()
+        if doc and status in {2, 6} and file_url:
+            doc.minor_version += 1
+            rev = DocumentRevision(
+                doc_id=doc.id,
+                major_version=doc.major_version,
+                minor_version=doc.minor_version,
+                track_changes={"status": status, "url": file_url},
+            )
+            db.add(rev)
+            db.commit()
+            user_id = session.get("user", {}).get("id") if session.get("user") else None
+            log_action(user_id, doc.id, f"onlyoffice_callback:{status}")
+    finally:
+        db.close()
     return jsonify(error=0)
 
 
