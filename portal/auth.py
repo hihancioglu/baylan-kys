@@ -2,7 +2,7 @@ import os
 from datetime import datetime, timedelta
 
 import jwt
-from ldap3 import Connection, Server, ALL, NTLM
+from ldap3 import Connection, Server, ALL, NTLM, SIMPLE
 from ldap3.core.exceptions import LDAPException
 from flask import (
     Blueprint,
@@ -67,7 +67,10 @@ def roles_required(*required_roles):
 
 def _ldap_authenticate(username: str, password: str) -> bool:
     """Authenticate a user against LDAP using a service account."""
-    server = Server(current_app.config['LDAP_URL'], get_info=ALL)
+    timeout = current_app.config.get('LDAP_CONNECT_TIMEOUT', 5)
+    server = Server(
+        current_app.config['LDAP_URL'], get_info=ALL, connect_timeout=timeout
+    )
     domain = current_app.config.get('LDAP_DOMAIN')
     bind_user = current_app.config.get('LDAP_USER')
     bind_password = current_app.config.get('LDAP_PASSWORD')
@@ -81,6 +84,7 @@ def _ldap_authenticate(username: str, password: str) -> bool:
             password=bind_password,
             authentication=NTLM,
             auto_bind=True,
+            receive_timeout=timeout,
         ) as conn:
             full_filter = f"(&{search_filter}(sAMAccountName={username}))"
             conn.search(base_dn, full_filter, attributes=['distinguishedName'])
@@ -92,10 +96,13 @@ def _ldap_authenticate(username: str, password: str) -> bool:
             server,
             user=user_dn,
             password=password,
-            authentication=NTLM,
+            authentication=SIMPLE,
+            auto_bind=True,
+            receive_timeout=timeout,
         ) as user_conn:
-            return user_conn.bind()
-    except LDAPException:
+            return user_conn.bound
+    except LDAPException as exc:
+        current_app.logger.warning("LDAP authentication failed: %s", exc)
         return False
 
 
@@ -121,6 +128,7 @@ def init_app(app):
     app.config['LDAP_SEARCH_FILTER'] = os.environ.get(
         'LDAP_SEARCH_FILTER', '(objectClass=user)'
     )
+    app.config['LDAP_CONNECT_TIMEOUT'] = int(os.environ.get('LDAP_CONNECT_TIMEOUT', 5))
     app.config['JWT_SECRET'] = os.environ.get(
         'PORTAL_JWT_SECRET', app.secret_key
     )
@@ -146,11 +154,16 @@ def api_login():
     data = request.get_json(silent=True) or request.form
     username = data.get('username')
     password = data.get('password')
+    wants_json = request.is_json or request.accept_mimetypes.best == 'application/json'
     if not username or not password:
-        return jsonify(error='Missing credentials'), 400
+        if wants_json:
+            return jsonify(error='Missing credentials'), 400
+        return render_template('login.html', error='Missing credentials'), 400
 
     if not _ldap_authenticate(username, password):
-        return jsonify(error='Invalid credentials'), 401
+        if wants_json:
+            return jsonify(error='Invalid credentials'), 401
+        return render_template('login.html', error='Invalid credentials'), 401
 
     secret = current_app.config['JWT_SECRET']
     now = datetime.utcnow()
@@ -167,7 +180,10 @@ def api_login():
     user_id, roles = _ensure_user(username)
     session['user'] = {'id': user_id, 'username': username}
     session['roles'] = roles
-    resp = jsonify(status='ok')
+    if wants_json:
+        resp = jsonify(status='ok')
+    else:
+        resp = redirect(url_for('index'))
     resp.set_cookie('access_token', access_token, httponly=True, samesite='Strict')
     resp.set_cookie('refresh_token', refresh_token, httponly=True, samesite='Strict')
     return resp
