@@ -1,0 +1,54 @@
+{% extends "layout.html" %}
+{% block title %}User Settings{% endblock %}
+{% block content %}
+<h3>User Settings</h3>
+{% if new_token %}
+<div class="alert alert-info">New token: {{ new_token }}</div>
+{% endif %}
+<form method="post">
+  <div class="mb-3">
+    <label class="form-label">Language</label>
+    <select class="form-select" name="language">
+      <option value="en" {% if settings.language == 'en' %}selected{% endif %}>English</option>
+      <option value="tr" {% if settings.language == 'tr' %}selected{% endif %}>Türkçe</option>
+    </select>
+  </div>
+  <div class="mb-3">
+    <label class="form-label">Theme</label>
+    <select class="form-select" name="theme">
+      <option value="light" {% if settings.theme == 'light' %}selected{% endif %}>Light</option>
+      <option value="dark" {% if settings.theme == 'dark' %}selected{% endif %}>Dark</option>
+    </select>
+  </div>
+  <div class="form-check">
+    <input class="form-check-input" type="checkbox" name="email_enabled" {% if settings.email_enabled %}checked{% endif %}>
+    <label class="form-check-label">Email Notifications</label>
+  </div>
+  <div class="form-check">
+    <input class="form-check-input" type="checkbox" name="webhook_enabled" {% if settings.webhook_enabled %}checked{% endif %}>
+    <label class="form-check-label">Webhook</label>
+  </div>
+  <input class="form-control my-2" type="text" name="webhook_url" value="{{ settings.webhook_url }}" placeholder="Webhook URL">
+  <button class="btn btn-primary" type="submit">Save</button>
+</form>
+
+<h4 class="mt-4">Personal Access Tokens</h4>
+<form method="post" action="{{ url_for('create_token', user_id=user_id) }}">
+  <div class="input-group mb-3">
+    <input type="text" class="form-control" name="name" placeholder="Token name">
+    <button class="btn btn-secondary" type="submit">Generate</button>
+  </div>
+</form>
+<ul class="list-group">
+  {% for token in tokens %}
+  <li class="list-group-item d-flex justify-content-between align-items-center">
+    {{ token.name or 'Token ' ~ token.id }}
+    <form method="post" action="{{ url_for('delete_token', token_id=token.id, user_id=user_id) }}">
+      <button class="btn btn-sm btn-danger" type="submit">Delete</button>
+    </form>
+  </li>
+  {% else %}
+  <li class="list-group-item">No tokens</li>
+  {% endfor %}
+</ul>
+{% endblock %}

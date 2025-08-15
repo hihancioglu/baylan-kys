@@ -1,4 +1,4 @@
-import os, json, time, base64, hmac, hashlib, csv, io
+import os, json, time, base64, hmac, hashlib, csv, io, secrets
 from flask import (
     Flask,
     request,
@@ -25,7 +25,8 @@ from models import (
     Deviation,
     CAPAAction,
     AuditLog,
-    NotificationSetting,
+    UserSetting,
+    PersonalAccessToken,
     WorkflowStep,
     get_session,
     RoleEnum,
@@ -726,37 +727,79 @@ def notifications_ui(user_id):
     )
 
 
-@app.route("/settings/notifications", methods=["GET", "POST"])
+@app.route("/settings", methods=["GET", "POST"])
 @roles_required(RoleEnum.READER.value)
-def notification_settings():
+def user_settings():
     user_id = request.args.get("user_id", type=int)
     if not user_id:
         return jsonify(error="user_id required"), 400
     session = get_session()
-    settings = session.query(NotificationSetting).filter_by(user_id=user_id).first()
+    settings = session.query(UserSetting).filter_by(user_id=user_id).first()
     if request.method == "POST":
         data = request.form or request.get_json(silent=True) or {}
-        email_enabled = bool(data.get("email_enabled"))
-        webhook_enabled = bool(data.get("webhook_enabled"))
-        webhook_url = data.get("webhook_url")
         if not settings:
-            settings = NotificationSetting(user_id=user_id)
+            settings = UserSetting(user_id=user_id)
             session.add(settings)
-        settings.email_enabled = email_enabled
-        settings.webhook_enabled = webhook_enabled
-        settings.webhook_url = webhook_url
+        settings.language = data.get("language", "en")
+        settings.theme = data.get("theme", "light")
+        settings.email_enabled = bool(data.get("email_enabled"))
+        settings.webhook_enabled = bool(data.get("webhook_enabled"))
+        settings.webhook_url = data.get("webhook_url")
         session.commit()
         session.close()
-        return redirect(url_for("notification_settings", user_id=user_id))
+        return redirect(url_for("user_settings", user_id=user_id))
     settings_data = {
+        "language": settings.language if settings else "en",
+        "theme": settings.theme if settings else "light",
         "email_enabled": settings.email_enabled if settings else False,
         "webhook_enabled": settings.webhook_enabled if settings else False,
         "webhook_url": settings.webhook_url if settings else "",
     }
+    tokens = session.query(PersonalAccessToken).filter_by(user_id=user_id).all()
+    new_token = request.args.get("token")
     session.close()
     return render_template(
-        "settings_notifications.html", settings=settings_data, user_id=user_id
+        "settings.html",
+        settings=settings_data,
+        tokens=tokens,
+        user_id=user_id,
+        new_token=new_token,
     )
+
+
+@app.route("/settings/tokens", methods=["POST"])
+@roles_required(RoleEnum.READER.value)
+def create_token():
+    user_id = request.args.get("user_id", type=int)
+    if not user_id:
+        return jsonify(error="user_id required"), 400
+    name = request.form.get("name")
+    raw_token = secrets.token_hex(32)
+    token_hash = hashlib.sha256(raw_token.encode()).hexdigest()
+    session = get_session()
+    session.add(PersonalAccessToken(user_id=user_id, name=name, token_hash=token_hash))
+    session.commit()
+    session.close()
+    return redirect(url_for("user_settings", user_id=user_id, token=raw_token))
+
+
+@app.route("/settings/tokens/<int:token_id>/delete", methods=["POST"])
+@roles_required(RoleEnum.READER.value)
+def delete_token(token_id):
+    user_id = request.args.get("user_id", type=int)
+    if not user_id:
+        return jsonify(error="user_id required"), 400
+    session = get_session()
+    token = (
+        session.query(PersonalAccessToken)
+        .filter_by(id=token_id, user_id=user_id)
+        .first()
+    )
+    if token:
+        session.delete(token)
+        session.commit()
+    session.close()
+    return redirect(url_for("user_settings", user_id=user_id))
 
 
 @app.post("/training/evaluate")
