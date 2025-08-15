@@ -527,11 +527,10 @@ def save_revision(doc_id):
 @app.post("/documents/<int:doc_id>/acknowledge")
 @roles_required(RoleEnum.READER.value)
 def acknowledge_document(doc_id):
-    data = request.get_json(silent=True) or {}
-    user_id = data.get("user_id") or request.form.get("user_id")
-    if not user_id:
-        return jsonify(error="user_id required"), 400
-    user_id = int(user_id)
+    user = session.get("user")
+    if not user:
+        return jsonify(error="user not logged in"), 401
+    user_id = user["id"]
     session = get_session()
     try:
         doc = session.get(Document, doc_id)
