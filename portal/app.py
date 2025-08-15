@@ -9,6 +9,9 @@ from models import (
     Acknowledgement,
     TrainingResult,
     FormSubmission,
+    ChangeRequest,
+    Deviation,
+    CAPAAction,
     get_session,
 )
 from search import index_document, search_documents
@@ -266,6 +269,113 @@ def training_evaluate():
     finally:
         session.close()
     return jsonify(passed=passed, score=score, max_score=len(correct))
+
+
+@app.post("/change_requests")
+def create_change_request():
+    data = request.get_json(silent=True) or {}
+    session = get_session()
+    cr = ChangeRequest(
+        document_id=data.get("document_id"),
+        description=data.get("description"),
+    )
+    session.add(cr)
+    session.commit()
+    result = {"id": cr.id}
+    session.close()
+    return jsonify(result), 201
+
+
+@app.put("/change_requests/<int:cr_id>")
+def update_change_request(cr_id):
+    data = request.get_json(silent=True) or {}
+    session = get_session()
+    cr = session.get(ChangeRequest, cr_id)
+    if not cr:
+        session.close()
+        return jsonify(error="not found"), 404
+    if data.get("document_id"):
+        cr.document_id = data["document_id"]
+    if "description" in data:
+        cr.description = data["description"]
+    session.commit()
+    session.close()
+    return jsonify(ok=True)
+
+
+@app.post("/deviations")
+def create_deviation():
+    data = request.get_json(silent=True) or {}
+    session = get_session()
+    dev = Deviation(
+        document_id=data.get("document_id"),
+        description=data.get("description"),
+    )
+    session.add(dev)
+    session.commit()
+    result = {"id": dev.id}
+    session.close()
+    return jsonify(result), 201
+
+
+@app.put("/deviations/<int:dev_id>")
+def update_deviation(dev_id):
+    data = request.get_json(silent=True) or {}
+    session = get_session()
+    dev = session.get(Deviation, dev_id)
+    if not dev:
+        session.close()
+        return jsonify(error="not found"), 404
+    if data.get("document_id"):
+        dev.document_id = data["document_id"]
+    if "description" in data:
+        dev.description = data["description"]
+    session.commit()
+    session.close()
+    return jsonify(ok=True)
+
+
+@app.post("/capa_actions")
+def create_capa_action():
+    data = request.get_json(silent=True) or {}
+    session = get_session()
+    act = CAPAAction(
+        document_id=data.get("document_id"),
+        action=data.get("action"),
+        status=data.get("status", "Open"),
+    )
+    session.add(act)
+    session.commit()
+    result = {"id": act.id}
+    session.close()
+    return jsonify(result), 201
+
+
+@app.put("/capa_actions/<int:action_id>")
+def update_capa_action(action_id):
+    data = request.get_json(silent=True) or {}
+    session = get_session()
+    act = session.get(CAPAAction, action_id)
+    if not act:
+        session.close()
+        return jsonify(error="not found"), 404
+    if data.get("document_id"):
+        act.document_id = data["document_id"]
+    if "action" in data:
+        act.action = data["action"]
+    if "status" in data:
+        act.status = data["status"]
+    session.commit()
+    session.close()
+    return jsonify(ok=True)
+
+
+@app.get("/capa/track")
+def capa_track():
+    session = get_session()
+    actions = session.query(CAPAAction).all()
+    session.close()
+    return render_template("capa_track.html", actions=actions)
 
 
 @app.post("/forms/<form_name>/submit")

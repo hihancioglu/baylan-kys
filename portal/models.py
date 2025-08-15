@@ -149,6 +149,41 @@ class FormSubmission(Base):
 
     user = relationship("User")
 
+
+class ChangeRequest(Base):
+    __tablename__ = "change_requests"
+    id = Column(Integer, primary_key=True)
+    document_id = Column(Integer, ForeignKey("documents.id"), nullable=False)
+    description = Column(Text)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    document = relationship("Document")
+
+
+class Deviation(Base):
+    __tablename__ = "deviations"
+    id = Column(Integer, primary_key=True)
+    document_id = Column(Integer, ForeignKey("documents.id"), nullable=False)
+    description = Column(Text)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    document = relationship("Document")
+
+
+class CAPAAction(Base):
+    __tablename__ = "capa_actions"
+    id = Column(Integer, primary_key=True)
+    document_id = Column(Integer, ForeignKey("documents.id"), nullable=False)
+    action = Column(Text)
+    status = Column(
+        Enum("Open", "In Progress", "Closed", name="capa_status"),
+        default="Open",
+        nullable=False,
+    )
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    document = relationship("Document")
+
 Base.metadata.create_all(engine)
 
 def get_session():
