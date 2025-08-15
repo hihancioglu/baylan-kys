@@ -2,7 +2,8 @@ import os
 from datetime import datetime, timedelta
 
 import jwt
-from ldap3 import Connection, Server, ALL
+from ldap3 import Connection, Server, ALL, NTLM
+from ldap3.core.exceptions import LDAPException
 from flask import (
     Blueprint,
     redirect,
@@ -64,6 +65,40 @@ def roles_required(*required_roles):
     return decorator
 
 
+def _ldap_authenticate(username: str, password: str) -> bool:
+    """Authenticate a user against LDAP using a service account."""
+    server = Server(current_app.config['LDAP_URL'], get_info=ALL)
+    domain = current_app.config.get('LDAP_DOMAIN')
+    bind_user = current_app.config.get('LDAP_USER')
+    bind_password = current_app.config.get('LDAP_PASSWORD')
+    base_dn = current_app.config.get('LDAP_BASE_DN')
+    search_filter = current_app.config.get('LDAP_SEARCH_FILTER', '(objectClass=user)')
+
+    try:
+        with Connection(
+            server,
+            user=f"{domain}\\{bind_user}" if domain else bind_user,
+            password=bind_password,
+            authentication=NTLM,
+            auto_bind=True,
+        ) as conn:
+            full_filter = f"(&{search_filter}(sAMAccountName={username}))"
+            conn.search(base_dn, full_filter, attributes=['distinguishedName'])
+            if not conn.entries:
+                return False
+            user_dn = conn.entries[0].distinguishedName.value
+
+        with Connection(
+            server,
+            user=user_dn,
+            password=password,
+            authentication=NTLM,
+        ) as user_conn:
+            return user_conn.bind()
+    except LDAPException:
+        return False
+
+
 def init_app(app):
     """Initialize OAuth client and authentication config."""
     oauth.init_app(app)
@@ -77,8 +112,14 @@ def init_app(app):
 
     app.config['LDAP_ENABLED'] = os.environ.get('LDAP_ENABLED', '').lower() == 'true'
     app.config['LDAP_URL'] = os.environ.get('LDAP_URL', 'ldap://localhost')
-    app.config['LDAP_USER_BASE'] = os.environ.get(
-        'LDAP_USER_BASE', 'ou=users,dc=example,dc=com'
+    app.config['LDAP_DOMAIN'] = os.environ.get('LDAP_DOMAIN', '')
+    app.config['LDAP_USER'] = os.environ.get('LDAP_USER', '')
+    app.config['LDAP_PASSWORD'] = os.environ.get('LDAP_PASSWORD', '')
+    app.config['LDAP_BASE_DN'] = os.environ.get(
+        'LDAP_BASE_DN', 'dc=example,dc=com'
+    )
+    app.config['LDAP_SEARCH_FILTER'] = os.environ.get(
+        'LDAP_SEARCH_FILTER', '(objectClass=user)'
     )
     app.config['JWT_SECRET'] = os.environ.get(
         'PORTAL_JWT_SECRET', app.secret_key
@@ -108,11 +149,7 @@ def api_login():
     if not username or not password:
         return jsonify(error='Missing credentials'), 400
 
-    server = Server(current_app.config['LDAP_URL'], get_info=ALL)
-    user_dn = f"uid={username},{current_app.config['LDAP_USER_BASE']}"
-    try:
-        Connection(server, user=user_dn, password=password, auto_bind=True)
-    except Exception:
+    if not _ldap_authenticate(username, password):
         return jsonify(error='Invalid credentials'), 401
 
     secret = current_app.config['JWT_SECRET']
