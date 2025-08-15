@@ -3,3 +3,16 @@
 body {
   padding-top: 60px;
 }
+
+/* Ensure containers span the full width on small screens */
+.container {
+  width: 100%;
+  margin: 0 auto;
+}
+
+/* Constrain container width on large displays */
+@media (min-width: 1280px) {
+  .container {
+    max-width: 1280px;
+  }
+}
