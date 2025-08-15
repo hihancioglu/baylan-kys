@@ -1,5 +1,6 @@
 import os
 from datetime import datetime
+from enum import Enum as PyEnum
 from sqlalchemy import (
     create_engine,
     Column,
@@ -20,6 +21,17 @@ DATABASE_URL = os.environ.get("DATABASE_URL", "sqlite:///portal.db")
 engine = create_engine(DATABASE_URL)
 SessionLocal = scoped_session(sessionmaker(bind=engine))
 Base = declarative_base()
+
+
+class RoleEnum(PyEnum):
+    READER = "reader"
+    CONTRIBUTOR = "contributor"
+    REVIEWER = "reviewer"
+    APPROVER = "approver"
+    PUBLISHER = "publisher"
+    QUALITY_ADMIN = "quality_admin"
+    AUDITOR = "auditor"
+
 
 class Document(Base):
     __tablename__ = "documents"
@@ -225,3 +237,30 @@ Base.metadata.create_all(engine)
 
 def get_session():
     return SessionLocal()
+
+
+def seed_roles_and_users():
+    """Seed default roles and test users."""
+    session = get_session()
+    try:
+        for role in RoleEnum:
+            if not session.query(Role).filter_by(name=role.value).first():
+                session.add(Role(name=role.value))
+        session.commit()
+        for role in RoleEnum:
+            username = f"test_{role.value}"
+            user = session.query(User).filter_by(username=username).first()
+            if not user:
+                user = User(username=username, email=f"{username}@example.com")
+                session.add(user)
+                session.commit()
+            role_obj = session.query(Role).filter_by(name=role.value).first()
+            link = session.query(UserRole).filter_by(user_id=user.id, role_id=role_obj.id).first()
+            if not link:
+                session.add(UserRole(user_id=user.id, role_id=role_obj.id))
+        session.commit()
+    finally:
+        session.close()
+
+
+seed_roles_and_users()

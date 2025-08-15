@@ -10,6 +10,13 @@
 <nav class="navbar navbar-expand-lg navbar-light bg-light fixed-top">
   <div class="container-fluid">
     <a class="navbar-brand" href="/">Portal</a>
+    <ul class="navbar-nav ms-auto">
+      {% if current_user %}
+      <li class="nav-item"><span class="navbar-text">{{ current_user.username }}</span></li>
+      {% else %}
+      <li class="nav-item"><a class="nav-link" href="{{ url_for('auth.login') }}">Login</a></li>
+      {% endif %}
+    </ul>
   </div>
 </nav>
 <div class="container-fluid">
@@ -17,8 +24,27 @@
     <aside class="col-md-2 d-none d-md-block bg-light sidebar">
       {% block sidebar %}
       <ul class="nav flex-column mt-4">
+        {% if has_role('reader') %}
         <li class="nav-item"><a class="nav-link" href="/search">Search</a></li>
+        {% endif %}
+        {% if has_role('contributor') %}
+        <li class="nav-item"><a class="nav-link" href="/documents/new">New Document</a></li>
+        {% endif %}
+        {% if has_role('reviewer') %}
+        <li class="nav-item"><a class="nav-link" href="/reviews">Review Queue</a></li>
+        {% endif %}
+        {% if has_role('approver') %}
+        <li class="nav-item"><a class="nav-link" href="/approvals">Approvals</a></li>
+        {% endif %}
+        {% if has_role('publisher') %}
+        <li class="nav-item"><a class="nav-link" href="/publish">Publish</a></li>
+        {% endif %}
+        {% if has_role('quality_admin') %}
+        <li class="nav-item"><a class="nav-link" href="/admin">Admin</a></li>
+        {% endif %}
+        {% if has_role('quality_admin') or has_role('auditor') %}
         <li class="nav-item"><a class="nav-link" href="/reports">Reports</a></li>
+        {% endif %}
       </ul>
       {% endblock %}
     </aside>
