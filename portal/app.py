@@ -1,5 +1,6 @@
 import os, json, time, base64, hmac, hashlib
 from flask import Flask, request, jsonify, redirect, url_for
+from models import Document, DocumentRevision, get_session
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "dev")
@@ -56,6 +57,32 @@ def edit(doc_key):
       token=token,
       token_header=ONLYOFFICE_JWT_HEADER
     )
+
+@app.post("/documents/<int:doc_id>/revision")
+def save_revision(doc_id):
+    session = get_session()
+    data = request.get_json(silent=True) or {}
+    track_changes = data.get("track_changes")
+    compare_result = data.get("compare_result")
+    revision_notes = data.get("revision_notes")
+    doc = session.get(Document, doc_id)
+    if not doc:
+        session.close()
+        return jsonify(error="document not found"), 404
+    doc.minor_version += 1
+    doc.revision_notes = revision_notes
+    rev = DocumentRevision(
+        doc_id=doc.id,
+        major_version=doc.major_version,
+        minor_version=doc.minor_version,
+        revision_notes=revision_notes,
+        track_changes=track_changes,
+        compare_result=compare_result,
+    )
+    session.add(rev)
+    session.commit()
+    session.close()
+    return jsonify(ok=True, version=f"{doc.major_version}.{doc.minor_version}")
 
 @app.post("/onlyoffice/callback/<path:doc_key>")
 def onlyoffice_callback(doc_key):
