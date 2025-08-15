@@ -19,6 +19,7 @@ from models import (
     Role,
     UserRole,
     Acknowledgement,
+    Notification,
     TrainingResult,
     FormSubmission,
     ChangeRequest,
@@ -1063,6 +1064,42 @@ def acknowledgements():
             {"title": "Acknowledgements"},
         ]
         return render_template("acknowledgements.html", partial=partial, **context)
+    finally:
+        db.close()
+
+
+@app.route("/notifications/panel", methods=["GET", "POST"])
+@roles_required(RoleEnum.READER.value)
+def notifications_panel():
+    user = session.get("user")
+    if not user:
+        return "", 401
+    user_id = user["id"]
+    page = request.args.get("page", 1, type=int)
+    db = get_session()
+    try:
+        if request.method == "POST":
+            notif_id = request.form.get("id", type=int)
+            if notif_id:
+                notif = db.get(Notification, notif_id)
+                if notif and notif.user_id == user_id:
+                    notif.read = True
+                    db.commit()
+        per_page = 10
+        query = (
+            db.query(Notification)
+            .filter_by(user_id=user_id)
+            .order_by(Notification.created_at.desc())
+        )
+        notifications = query.offset((page - 1) * per_page).limit(per_page + 1).all()
+        has_more = len(notifications) > per_page
+        notifications = notifications[:per_page]
+        return render_template(
+            "partials/_notifications_panel.html",
+            notifications=notifications,
+            page=page,
+            has_more=has_more,
+        )
     finally:
         db.close()
 

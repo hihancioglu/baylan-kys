@@ -14,7 +14,11 @@
 
     <ul class="navbar-nav align-items-center">
       {% if current_user %}
-      <li class="nav-item"><a class="nav-link" href="/notifications/{{ current_user.id }}/view">🔔</a></li>
+      <li class="nav-item">
+        <a class="nav-link" role="button"
+           data-bs-toggle="offcanvas" data-bs-target="#notificationsOffcanvas"
+           aria-controls="notificationsOffcanvas">🔔</a>
+      </li>
       <li class="nav-item dropdown">
         <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
           {{ current_user.username }}
@@ -37,3 +41,17 @@
     </form>
   </div>
 </nav>
+
+<div class="offcanvas offcanvas-end" tabindex="-1" id="notificationsOffcanvas"
+     style="--bs-offcanvas-width: min(100vw, 400px);">
+  <div class="offcanvas-header">
+    <h5 class="offcanvas-title">Notifications</h5>
+    <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+  </div>
+  <div class="offcanvas-body p-0" id="notifications-panel"
+       hx-get="{{ url_for('notifications_panel') }}"
+       hx-trigger="revealed"
+       hx-target="#notifications-panel"
+       hx-swap="outerHTML">
+  </div>
+</div>
