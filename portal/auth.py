@@ -90,13 +90,12 @@ def _ldap_authenticate(username: str, password: str) -> bool:
             conn.search(base_dn, full_filter, attributes=['distinguishedName'])
             if not conn.entries:
                 return False
-            user_dn = conn.entries[0].distinguishedName.value
 
         with Connection(
             server,
-            user=user_dn,
+            user=f"{domain}\\{username}" if domain else username,
             password=password,
-            authentication=SIMPLE,
+            authentication=NTLM,
             auto_bind=True,
             receive_timeout=timeout,
         ) as user_conn:
