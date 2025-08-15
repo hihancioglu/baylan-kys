@@ -1,0 +1,88 @@
+async function fetchData(kind, startInput, endInput) {
+  const params = new URLSearchParams();
+  if (startInput.value) params.set('start', startInput.value);
+  if (endInput.value) params.set('end', endInput.value);
+  const resp = await fetch(`/reports/${kind}?${params.toString()}`);
+  return resp.json();
+}
+
+function updateLinks(kind, startInput, endInput, csvLink, pdfLink) {
+  const params = new URLSearchParams();
+  if (startInput.value) params.set('start', startInput.value);
+  if (endInput.value) params.set('end', endInput.value);
+  params.set('format', 'csv');
+  csvLink.href = `/reports/${kind}?${params.toString()}`;
+  params.set('format', 'pdf');
+  pdfLink.href = `/reports/${kind}?${params.toString()}`;
+}
+
+// Pending approvals
+const pendingStart = document.getElementById('pending-start');
+const pendingEnd = document.getElementById('pending-end');
+const pendingCount = document.getElementById('pending-count');
+const pendingCsv = document.getElementById('pending-csv');
+const pendingPdf = document.getElementById('pending-pdf');
+
+async function updatePending() {
+  const data = await fetchData('pending-approvals', pendingStart, pendingEnd);
+  pendingCount.textContent = data.length;
+  updateLinks('pending-approvals', pendingStart, pendingEnd, pendingCsv, pendingPdf);
+}
+
+pendingStart.addEventListener('change', updatePending);
+pendingEnd.addEventListener('change', updatePending);
+updatePending();
+
+// Compliance rate
+const complianceStart = document.getElementById('compliance-start');
+const complianceEnd = document.getElementById('compliance-end');
+const complianceRate = document.getElementById('compliance-rate');
+const complianceCsv = document.getElementById('compliance-csv');
+const compliancePdf = document.getElementById('compliance-pdf');
+
+async function updateCompliance() {
+  const data = await fetchData('training', complianceStart, complianceEnd);
+  const total = data.length;
+  const passed = data.filter(r => r.passed).length;
+  const rate = total ? Math.round((passed / total) * 100) : 0;
+  complianceRate.textContent = rate + '%';
+  updateLinks('training', complianceStart, complianceEnd, complianceCsv, compliancePdf);
+}
+
+complianceStart.addEventListener('change', updateCompliance);
+complianceEnd.addEventListener('change', updateCompliance);
+updateCompliance();
+
+// Recent changes chart
+const changesStart = document.getElementById('changes-start');
+const changesEnd = document.getElementById('changes-end');
+const changesCsv = document.getElementById('changes-csv');
+const changesPdf = document.getElementById('changes-pdf');
+let changesChart;
+
+async function updateChanges() {
+  const data = await fetchData('revisions', changesStart, changesEnd);
+  const counts = {};
+  data.forEach(r => {
+    const d = r.created_at.slice(0, 10);
+    counts[d] = (counts[d] || 0) + 1;
+  });
+  const labels = Object.keys(counts).sort();
+  const values = labels.map(l => counts[l]);
+  const ctx = document.getElementById('changes-chart');
+  if (changesChart) {
+    changesChart.destroy();
+  }
+  changesChart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: labels,
+      datasets: [{ label: 'Revisions', data: values }]
+    },
+  });
+  updateLinks('revisions', changesStart, changesEnd, changesCsv, changesPdf);
+}
+
+changesStart.addEventListener('change', updateChanges);
+changesEnd.addEventListener('change', updateChanges);
+updateChanges();
