@@ -10,6 +10,7 @@ from sqlalchemy import (
     DateTime,
     JSON,
     Enum,
+    UniqueConstraint,
 )
 from sqlalchemy.orm import declarative_base, relationship, sessionmaker, scoped_session
 
@@ -63,6 +64,47 @@ class WorkflowStep(Base):
     approved_at = Column(DateTime)
 
     document = relationship("Document", back_populates="workflow_steps")
+
+
+class Role(Base):
+    __tablename__ = "roles"
+    id = Column(Integer, primary_key=True)
+    name = Column(String, unique=True, nullable=False)
+    ldap_group = Column(String, unique=True)
+
+    users = relationship("UserRole", back_populates="role", cascade="all, delete-orphan")
+    permissions = relationship("DocumentPermission", back_populates="role", cascade="all, delete-orphan")
+
+
+class User(Base):
+    __tablename__ = "users"
+    id = Column(Integer, primary_key=True)
+    username = Column(String, unique=True, nullable=False)
+    email = Column(String, unique=True)
+
+    roles = relationship("UserRole", back_populates="user", cascade="all, delete-orphan")
+
+
+class UserRole(Base):
+    __tablename__ = "user_roles"
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    role_id = Column(Integer, ForeignKey("roles.id"), nullable=False)
+
+    user = relationship("User", back_populates="roles")
+    role = relationship("Role", back_populates="users")
+    __table_args__ = (UniqueConstraint("user_id", "role_id", name="uq_user_role"),)
+
+
+class DocumentPermission(Base):
+    __tablename__ = "document_permissions"
+    id = Column(Integer, primary_key=True)
+    role_id = Column(Integer, ForeignKey("roles.id"), nullable=False)
+    doc_id = Column(Integer, ForeignKey("documents.id"))
+    folder = Column(String)
+
+    role = relationship("Role", back_populates="permissions")
+    document = relationship("Document")
 
 Base.metadata.create_all(engine)
 
