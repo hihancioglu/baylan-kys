@@ -17,44 +17,7 @@
   <div class="row">
     <aside class="col-md-2 d-none d-md-block bg-light sidebar">
       {% block sidebar %}
-      <ul class="nav flex-column mt-4">
-        {% if has_role('reader') %}
-        <li class="nav-item"><a class="nav-link" href="/search">Search</a></li>
-        {% endif %}
-        {% if has_role('contributor') %}
-        <li class="nav-item"><a class="nav-link" href="/documents/new">New Document</a></li>
-        {% endif %}
-        {% if has_role('reviewer') %}
-        <li class="nav-item">
-          <a class="nav-link d-flex justify-content-between align-items-center" href="/reviews">
-            Review Queue
-            <span id="review-count" class="badge bg-secondary ms-2">0</span>
-          </a>
-        </li>
-        {% endif %}
-        {% if has_role('approver') %}
-        <li class="nav-item">
-          <a class="nav-link d-flex justify-content-between align-items-center" href="/approvals">
-            Approvals
-            <span id="approval-count" class="badge bg-secondary ms-2">0</span>
-          </a>
-        </li>
-        {% endif %}
-        {% if has_role('publisher') %}
-        <li class="nav-item">
-          <a class="nav-link d-flex justify-content-between align-items-center" href="/publish">
-            Publish
-            <span id="publish-count" class="badge bg-secondary ms-2">0</span>
-          </a>
-        </li>
-        {% endif %}
-        {% if has_role('quality_admin') %}
-        <li class="nav-item"><a class="nav-link" href="/admin">Admin</a></li>
-        {% endif %}
-        {% if has_role('quality_admin') or has_role('auditor') %}
-        <li class="nav-item"><a class="nav-link" href="/reports">Reports</a></li>
-        {% endif %}
-      </ul>
+      {% include 'partials/_sidebar.html' %}
       {% endblock %}
     </aside>
     <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
