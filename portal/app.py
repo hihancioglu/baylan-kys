@@ -501,7 +501,7 @@ def sign_document(doc_id: int):
 
 
 @app.get("/approvals")
-@roles_required(RoleEnum.APPROVER.value)
+@roles_required(RoleEnum.APPROVER.value, RoleEnum.REVIEWER.value)
 def approval_queue():
     db = get_session()
     try:
@@ -515,8 +515,13 @@ def approval_queue():
             )
             .all()
         )
+        template = (
+            "partials/approvals/_table.html"
+            if request.headers.get("HX-Request")
+            else "approvals/list.html"
+        )
         return render_template(
-            "approvals.html",
+            template,
             steps=steps,
             breadcrumbs=[
                 {"title": "Home", "url": url_for("index")},
@@ -528,7 +533,7 @@ def approval_queue():
 
 
 @app.post("/approvals/<int:step_id>/approve")
-@roles_required(RoleEnum.APPROVER.value)
+@roles_required(RoleEnum.APPROVER.value, RoleEnum.REVIEWER.value)
 def approve_step(step_id: int):
     db = get_session()
     try:
@@ -537,10 +542,11 @@ def approve_step(step_id: int):
             return "Not found", 404
         step.status = "Approved"
         step.approved_at = datetime.utcnow()
+        step.comment = request.form.get("comment")
         db.commit()
         broadcast_counts()
         db.refresh(step)
-        html = render_template("_approval_row.html", step=step)
+        html = render_template("partials/approvals/_row.html", step=step)
         resp = make_response(html)
         resp.headers["HX-Trigger"] = json.dumps({"showToast": "Approved"})
         return resp
@@ -549,7 +555,7 @@ def approve_step(step_id: int):
 
 
 @app.post("/approvals/<int:step_id>/reject")
-@roles_required(RoleEnum.APPROVER.value)
+@roles_required(RoleEnum.APPROVER.value, RoleEnum.REVIEWER.value)
 def reject_step(step_id: int):
     db = get_session()
     try:
@@ -557,10 +563,11 @@ def reject_step(step_id: int):
         if not step:
             return "Not found", 404
         step.status = "Rejected"
+        step.comment = request.form.get("comment")
         db.commit()
         broadcast_counts()
         db.refresh(step)
-        html = render_template("_approval_row.html", step=step)
+        html = render_template("partials/approvals/_row.html", step=step)
         resp = make_response(html)
         resp.headers["HX-Trigger"] = json.dumps({"showToast": "Rejected"})
         return resp

@@ -83,6 +83,7 @@ class WorkflowStep(Base):
     approver = Column(String)
     status = Column(String, default="Pending", nullable=False)
     approved_at = Column(DateTime)
+    comment = Column(Text)
 
     document = relationship("Document", back_populates="workflow_steps")
 

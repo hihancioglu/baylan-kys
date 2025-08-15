@@ -1,0 +1,24 @@
+<table class="table table-striped">
+  <thead class="table-light">
+    <tr>
+      <th>Document</th>
+      <th>Step</th>
+      <th>Status</th>
+      <th>Comment</th>
+      <th>Actions</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for step in steps %}
+      {% include 'partials/approvals/_row.html' %}
+    {% else %}
+    <tr><td colspan="5">No pending approvals.</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% for step in steps %}
+  {% set action = 'approve' %}
+  {% include 'partials/approvals/_modal.html' %}
+  {% set action = 'reject' %}
+  {% include 'partials/approvals/_modal.html' %}
+{% endfor %}
