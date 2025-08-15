@@ -8,10 +8,13 @@ from models import (
     UserRole,
     Acknowledgement,
     TrainingResult,
+    FormSubmission,
     get_session,
 )
 from search import index_document, search_documents
 from ocr import extract_text
+from flask import Response
+from docxf_render import render_form_to_pdf
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "dev")
@@ -263,6 +266,26 @@ def training_evaluate():
     finally:
         session.close()
     return jsonify(passed=passed, score=score, max_score=len(correct))
+
+
+@app.post("/forms/<form_name>/submit")
+def submit_form(form_name):
+    """Render a DOCXF form and return the resulting PDF while logging usage."""
+    payload = request.get_json(silent=True) or {}
+    user_id = payload.get("user_id")
+    fields = payload.get("fields", {})
+    if not user_id:
+        return jsonify(error="user_id required"), 400
+    pdf = render_form_to_pdf(form_name, fields)
+    session = get_session()
+    try:
+        session.add(
+            FormSubmission(form_name=form_name, user_id=user_id, data=fields)
+        )
+        session.commit()
+    finally:
+        session.close()
+    return Response(pdf, mimetype="application/pdf")
 
 @app.post("/onlyoffice/callback/<path:doc_key>")
 def onlyoffice_callback(doc_key):
