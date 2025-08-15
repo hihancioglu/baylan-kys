@@ -1,7 +1,16 @@
 import os, json, time, base64, hmac, hashlib, csv, io
-from flask import Flask, request, jsonify, redirect, url_for, render_template, Response
+from flask import (
+    Flask,
+    request,
+    jsonify,
+    redirect,
+    url_for,
+    render_template,
+    Response,
+    session,
+)
 from flask_wtf.csrf import CSRFProtect
-from auth import auth_bp, init_app as auth_init
+from auth import auth_bp, init_app as auth_init, login_required, roles_required
 from models import (
     Document,
     DocumentRevision,
@@ -17,6 +26,7 @@ from models import (
     AuditLog,
     NotificationSetting,
     get_session,
+    RoleEnum,
 )
 from search import index_document, search_documents
 from ocr import extract_text
@@ -59,6 +69,15 @@ def asset_url(name: str) -> str:
 
 app.jinja_env.globals["asset_url"] = asset_url
 
+
+@app.context_processor
+def inject_user():
+    roles = session.get("roles", [])
+    user = session.get("user")
+    def has_role(role):
+        return role in roles
+    return {"current_user": user, "user_roles": roles, "has_role": has_role}
+
 ONLYOFFICE_INTERNAL_URL = os.environ["ONLYOFFICE_INTERNAL_URL"]  # http://onlyoffice
 ONLYOFFICE_PUBLIC_URL   = os.environ["ONLYOFFICE_PUBLIC_URL"]    # https://qdms.example.com/onlyoffice
 ONLYOFFICE_JWT_SECRET   = os.environ["ONLYOFFICE_JWT_SECRET"]
@@ -85,6 +104,7 @@ def log_action(user_id, doc_id, action):
         session.close()
 
 @app.route("/")
+@login_required
 def index():
     return render_template("index.html")
 
@@ -95,6 +115,7 @@ def health():
 
 
 @app.get("/archive")
+@roles_required(RoleEnum.READER.value)
 def list_archived_documents():
     session = get_session()
     docs = session.query(Document).filter_by(status="Archived").all()
@@ -112,6 +133,7 @@ def list_archived_documents():
 
 
 @app.post("/documents")
+@roles_required(RoleEnum.CONTRIBUTOR.value)
 def create_document():
     data = request.get_json(silent=True) or {}
     doc = Document(
@@ -139,6 +161,7 @@ def create_document():
 
 
 @app.post("/documents/<int:doc_id>/sign")
+@roles_required(RoleEnum.APPROVER.value, RoleEnum.PUBLISHER.value)
 def sign_document(doc_id: int):
     data = request.get_json(silent=True) or {}
     user_id = data.get("user_id")
@@ -154,6 +177,7 @@ def sign_document(doc_id: int):
 
 
 @app.get("/search")
+@roles_required(RoleEnum.READER.value)
 def search_view():
     fields = ["title", "code", "tags", "department", "process"]
     filters = {f: request.args.get(f) for f in fields}
@@ -189,11 +213,13 @@ def search_view():
 
 
 @app.get("/reports")
+@roles_required(RoleEnum.AUDITOR.value, RoleEnum.QUALITY_ADMIN.value)
 def reports_index():
     return render_template("reports.html")
 
 
 @app.get("/reports/<kind>")
+@roles_required(RoleEnum.AUDITOR.value, RoleEnum.QUALITY_ADMIN.value)
 def report_download(kind):
     fmt = request.args.get("format", "json").lower()
     mapping = {
@@ -218,6 +244,7 @@ def report_download(kind):
 
 
 @app.post("/roles/assign")
+@roles_required(RoleEnum.QUALITY_ADMIN.value)
 def assign_role():
     """Assign a role to a user."""
     data = request.get_json(silent=True) or {}
@@ -247,6 +274,7 @@ def assign_role():
         session.close()
 
 @app.route("/doc/<doc_key>/edit")
+@roles_required(RoleEnum.CONTRIBUTOR.value)
 def edit(doc_key):
     # doc_key: MinIO’daki dosya anahtarınız (örn: qdms/PRO-001_v1.docx)
     user = {"id":"u1","name":"Ibrahim H.","email":"ih@baylan.local"}
@@ -281,6 +309,7 @@ def edit(doc_key):
     )
 
 @app.post("/documents/<int:doc_id>/revision")
+@roles_required(RoleEnum.REVIEWER.value)
 def save_revision(doc_id):
     session = get_session()
     data = request.get_json(silent=True) or {}
@@ -311,6 +340,7 @@ def save_revision(doc_id):
 
 
 @app.post("/documents/<int:doc_id>/acknowledge")
+@roles_required(RoleEnum.READER.value)
 def acknowledge_document(doc_id):
     data = request.get_json(silent=True) or {}
     user_id = data.get("user_id")
@@ -337,6 +367,7 @@ def acknowledge_document(doc_id):
 
 
 @app.get("/notifications/<int:user_id>")
+@roles_required(RoleEnum.READER.value)
 def notifications(user_id):
     session = get_session()
     try:
@@ -356,6 +387,7 @@ def notifications(user_id):
 
 
 @app.get("/notifications/<int:user_id>/view")
+@roles_required(RoleEnum.READER.value)
 def notifications_ui(user_id):
     return (
         "<html><body><h3>Pending Acknowledgements</h3>"\
@@ -367,6 +399,7 @@ def notifications_ui(user_id):
 
 
 @app.route("/settings/notifications", methods=["GET", "POST"])
+@roles_required(RoleEnum.READER.value)
 def notification_settings():
     user_id = request.args.get("user_id", type=int)
     if not user_id:
@@ -399,6 +432,7 @@ def notification_settings():
 
 
 @app.post("/training/evaluate")
+@roles_required(RoleEnum.QUALITY_ADMIN.value)
 def training_evaluate():
     data = request.get_json(silent=True) or {}
     user_id = data.get("user_id")
@@ -427,6 +461,7 @@ def training_evaluate():
 
 
 @app.post("/change_requests")
+@roles_required(RoleEnum.CONTRIBUTOR.value)
 def create_change_request():
     data = request.get_json(silent=True) or {}
     session = get_session()
@@ -443,6 +478,7 @@ def create_change_request():
 
 
 @app.put("/change_requests/<int:cr_id>")
+@roles_required(RoleEnum.QUALITY_ADMIN.value)
 def update_change_request(cr_id):
     data = request.get_json(silent=True) or {}
     session = get_session()
@@ -461,6 +497,7 @@ def update_change_request(cr_id):
 
 
 @app.post("/deviations")
+@roles_required(RoleEnum.CONTRIBUTOR.value)
 def create_deviation():
     data = request.get_json(silent=True) or {}
     session = get_session()
@@ -477,6 +514,7 @@ def create_deviation():
 
 
 @app.put("/deviations/<int:dev_id>")
+@roles_required(RoleEnum.QUALITY_ADMIN.value)
 def update_deviation(dev_id):
     data = request.get_json(silent=True) or {}
     session = get_session()
@@ -495,6 +533,7 @@ def update_deviation(dev_id):
 
 
 @app.post("/capa_actions")
+@roles_required(RoleEnum.QUALITY_ADMIN.value)
 def create_capa_action():
     data = request.get_json(silent=True) or {}
     session = get_session()
@@ -512,6 +551,7 @@ def create_capa_action():
 
 
 @app.put("/capa_actions/<int:action_id>")
+@roles_required(RoleEnum.QUALITY_ADMIN.value)
 def update_capa_action(action_id):
     data = request.get_json(silent=True) or {}
     session = get_session()
@@ -532,6 +572,7 @@ def update_capa_action(action_id):
 
 
 @app.get("/capa/track")
+@roles_required(RoleEnum.AUDITOR.value, RoleEnum.QUALITY_ADMIN.value)
 def capa_track():
     session = get_session()
     actions = session.query(CAPAAction).all()
@@ -540,6 +581,7 @@ def capa_track():
 
 
 @app.post("/forms/<form_name>/submit")
+@roles_required(RoleEnum.READER.value)
 def submit_form(form_name):
     """Render a DOCXF form and return the resulting PDF while logging usage."""
     payload = request.get_json(silent=True) or {}
@@ -561,6 +603,7 @@ def submit_form(form_name):
 
 
 @app.get("/audit/export")
+@roles_required(RoleEnum.AUDITOR.value, RoleEnum.QUALITY_ADMIN.value)
 def audit_export():
     fmt = request.args.get("format", "csv").lower()
     session = get_session()
@@ -588,6 +631,7 @@ def audit_export():
         )
 
 @app.post("/onlyoffice/callback/<path:doc_key>")
+@login_required
 def onlyoffice_callback(doc_key):
     data = request.get_json(silent=True) or {}
     status = data.get("status")

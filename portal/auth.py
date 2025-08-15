@@ -12,11 +12,56 @@ from flask import (
     jsonify,
     current_app,
     render_template,
+    abort,
 )
 from authlib.integrations.flask_client import OAuth
+from functools import wraps
+
+from models import get_session, User, Role
 
 oauth = OAuth()
 auth_bp = Blueprint('auth', __name__)
+
+
+def _ensure_user(username: str, email: str | None = None):
+    session_db = get_session()
+    try:
+        user = session_db.query(User).filter_by(username=username).first()
+        if not user:
+            user = User(username=username, email=email)
+            session_db.add(user)
+            session_db.commit()
+        roles = [ur.role.name for ur in user.roles]
+        return user.id, roles
+    finally:
+        session_db.close()
+
+
+def login_required(view):
+    @wraps(view)
+    def wrapped(*args, **kwargs):
+        if not session.get('user'):
+            return redirect(url_for('auth.login'))
+        return view(*args, **kwargs)
+
+    return wrapped
+
+
+def roles_required(*required_roles):
+    def decorator(view):
+        @wraps(view)
+        def wrapped(*args, **kwargs):
+            if not session.get('user'):
+                return redirect(url_for('auth.login'))
+            user_roles = session.get('roles', [])
+            role_names = [r.value if hasattr(r, 'value') else r for r in required_roles]
+            if role_names and not any(r in user_roles for r in role_names):
+                abort(403)
+            return view(*args, **kwargs)
+
+        return wrapped
+
+    return decorator
 
 
 def init_app(app):
@@ -82,8 +127,9 @@ def api_login():
     }
     access_token = jwt.encode(access_payload, secret, algorithm='HS256')
     refresh_token = jwt.encode(refresh_payload, secret, algorithm='HS256')
-
-    session['user'] = {'username': username}
+    user_id, roles = _ensure_user(username)
+    session['user'] = {'id': user_id, 'username': username}
+    session['roles'] = roles
     resp = jsonify(status='ok')
     resp.set_cookie('access_token', access_token, httponly=True, samesite='Strict')
     resp.set_cookie('refresh_token', refresh_token, httponly=True, samesite='Strict')
@@ -133,5 +179,8 @@ def oidc_callback():
     """Handle IdP callback and persist user info in session."""
     token = oauth.oidc.authorize_access_token()
     user_info = token.get('userinfo') or oauth.oidc.parse_id_token(token)
-    session['user'] = user_info
+    username = user_info.get('preferred_username') or user_info.get('email') or user_info.get('sub')
+    user_id, roles = _ensure_user(username, user_info.get('email'))
+    session['user'] = {'id': user_id, 'username': username, 'email': user_info.get('email')}
+    session['roles'] = roles
     return redirect(url_for('index'))
