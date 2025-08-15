@@ -1,4 +1,4 @@
-from models import get_session, Document, DocumentRevision
+from models import get_session, Document, DocumentRevision, WorkflowStep
 
 
 def restore_version(doc_id: int, version: str) -> Document:
@@ -21,6 +21,25 @@ def restore_version(doc_id: int, version: str) -> Document:
     doc.major_version = major
     doc.minor_version = minor
     doc.revision_notes = rev.revision_notes
+    session.commit()
+    session.refresh(doc)
+    session.close()
+    return doc
+
+
+def submit_for_approval(doc_id: int) -> Document:
+    """Move a document to review state and create workflow steps."""
+    session = get_session()
+    doc = session.get(Document, doc_id)
+    if not doc:
+        session.close()
+        raise ValueError("Document not found")
+    doc.status = "Review"
+    steps = [
+        WorkflowStep(doc_id=doc_id, step_order=i, approver=approver)
+        for i, approver in enumerate(["manager", "quality"], start=1)
+    ]
+    session.add_all(steps)
     session.commit()
     session.refresh(doc)
     session.close()
