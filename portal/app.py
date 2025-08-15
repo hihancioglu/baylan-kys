@@ -65,3 +65,10 @@ def onlyoffice_callback(doc_key):
     # Burada yeni versiyon yaratıp MinIO’ya yazarsınız; audit-log tutarsınız.
     # Güvenlik için Header’daki JWT’yi doğrulayın (OnlyOffice config -> JWT).
     return jsonify(error=0)
+
+
+if __name__ == "__main__":
+    bind = os.environ.get("BIND", "0.0.0.0:5000")
+    host, port = bind.split(":")
+    debug = os.environ.get("DEBUG", "").lower() in {"1", "true", "yes"}
+    app.run(host=host, port=int(port), debug=debug)
