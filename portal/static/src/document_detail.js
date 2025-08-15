@@ -1,3 +1,6 @@
+import { getToken } from './tokens';
+getToken('color-primary');
+
 function initTabs() {
   const tabs = document.querySelectorAll('#document-tabs .nav-link');
   const panels = {

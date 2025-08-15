@@ -1,9 +1,11 @@
 @import "bootstrap/dist/css/bootstrap.css";
+@use "../css/tokens" as *;
+
 /* custom styles */
 body {
   padding-top: 60px;
-  color: #1a1a1a;
-  background-color: #fff;
+  color: $color-text;
+  background-color: $color-background;
 }
 
 /* Skip link for keyboard users */
@@ -11,10 +13,10 @@ body {
   position: absolute;
   top: -40px;
   left: 0;
-  background: #fff;
-  color: #005ea2;
-  padding: 8px;
-  z-index: 100;
+  background: $color-background;
+  color: $color-primary;
+  padding: $spacing-sm;
+  z-index: $z-overlay;
 }
 
 .skip-link:focus {
@@ -28,25 +30,25 @@ body {
 }
 
 /* Constrain container width on large displays */
-@media (min-width: 1280px) {
+@media (min-width: $breakpoint-lg) {
   .container {
-    max-width: 1280px;
+    max-width: $breakpoint-lg;
   }
 }
 
 /* High-contrast link styling */
 a {
-  color: #005ea2;
+  color: $color-primary;
 }
 
 a:hover,
 a:focus {
-  color: #003a75;
+  color: $color-primary-dark;
 }
 
 /* Consistent focus outlines */
 :focus {
-  outline: 2px solid #005ea2;
+  outline: 2px solid $color-primary;
   outline-offset: 2px;
 }
 
@@ -59,32 +61,32 @@ a:focus {
 }
 
 /* Responsive layout */
-@media (max-width: 599px) {
+@media (max-width: ($breakpoint-sm - 1)) {
   body {
     padding-top: 56px;
   }
   .container {
-    padding: 0 1rem;
+    padding: 0 $spacing-md;
   }
   .navbar-nav .nav-link {
-    padding: 0.5rem;
+    padding: $spacing-sm;
   }
 }
 
-@media (min-width: 600px) and (max-width: 1023px) {
+@media (min-width: $breakpoint-sm) and (max-width: ($breakpoint-md - 1)) {
   body {
     padding-top: 58px;
   }
   .container {
-    padding: 0 2rem;
+    padding: 0 $spacing-lg;
   }
 }
 
-@media (min-width: 1024px) {
+@media (min-width: $breakpoint-md) {
   body {
     padding-top: 60px;
   }
   .container {
-    padding: 0 3rem;
+    padding: 0 $spacing-xl;
   }
 }

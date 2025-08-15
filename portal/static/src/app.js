@@ -1,4 +1,6 @@
+import { getToken } from './tokens';
 import 'bootstrap';
+getToken('color-primary');
 
 function displayToast(message) {
   const toastEl = document.getElementById('action-toast');

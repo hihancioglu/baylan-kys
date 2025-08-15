@@ -1,3 +1,6 @@
+import { getToken } from './tokens';
+getToken('color-primary');
+
 async function fetchData(kind, startInput, endInput) {
   const params = new URLSearchParams();
   if (startInput.value) params.set('start', startInput.value);
