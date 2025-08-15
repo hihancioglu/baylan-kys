@@ -1,5 +1,10 @@
 {% extends "base.html" %}
 {% block title %}Document Detail{% endblock %}
+{% block page_actions %}
+{% if has_role('CONTRIBUTOR') %}
+<a class="btn btn-primary" href="{{ url_for('edit', doc_key=doc.doc_key) }}">Edit</a>
+{% endif %}
+{% endblock %}
 {% block content %}
 {% macro version_list(doc, revisions) %}
 <form method="get" action="{{ url_for('compare_document_versions', doc_id=doc.id) }}">

@@ -91,7 +91,7 @@ def init_app(app):
 @auth_bp.route('/login')
 def login():
     """Render LDAP login form."""
-    return render_template('login.html')
+    return render_template('login.html', breadcrumbs=[{"title": "Login"}])
 
 
 @auth_bp.post('/api/auth/login')
@@ -104,12 +104,12 @@ def api_login():
     if not username or not password:
         if wants_json:
             return jsonify(error='Missing credentials'), 400
-        return render_template('login.html', error='Missing credentials'), 400
+        return render_template('login.html', error='Missing credentials', breadcrumbs=[{"title": "Login"}]), 400
 
     if not ldap_auth(username, password):
         if wants_json:
             return jsonify(error='Invalid credentials'), 401
-        return render_template('login.html', error='Invalid credentials'), 401
+        return render_template('login.html', error='Invalid credentials', breadcrumbs=[{"title": "Login"}]), 401
 
     secret = current_app.config['JWT_SECRET']
     now = datetime.utcnow()
