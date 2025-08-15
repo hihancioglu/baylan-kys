@@ -1,26 +1,26 @@
-document.addEventListener('DOMContentLoaded', () => {
+function initTabs() {
   const tabs = document.querySelectorAll('#document-tabs .nav-link');
-  const metadata = document.getElementById('tab-metadata');
-  const versions = document.getElementById('tab-versions');
-
+  const panels = {
+    summary: document.getElementById('tab-summary'),
+    versions: document.getElementById('tab-versions'),
+    related: document.getElementById('tab-related'),
+  };
   tabs.forEach((tab) => {
     tab.addEventListener('click', (evt) => {
       evt.preventDefault();
       tabs.forEach((t) => t.classList.remove('active'));
       tab.classList.add('active');
-      if (tab.dataset.tab === 'metadata') {
-        metadata.classList.remove('d-none');
-        versions.classList.add('d-none');
-      } else {
-        versions.classList.remove('d-none');
-        metadata.classList.add('d-none');
-      }
+      Object.values(panels).forEach((p) => p.classList.add('d-none'));
+      panels[tab.dataset.tab].classList.remove('d-none');
     });
   });
-});
+}
+
+document.addEventListener('DOMContentLoaded', initTabs);
 
 document.addEventListener('htmx:afterSwap', (evt) => {
   if (evt.target.id === 'version-area') {
+    initTabs();
     window.scrollTo(0, 0);
   }
 });

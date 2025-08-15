@@ -354,12 +354,15 @@ def document_detail(doc_id: int):
         )
     session.close()
     partial = bool(request.headers.get("HX-Request"))
+    template = (
+        "partials/documents/_versions.html" if partial else "documents/detail.html"
+    )
     return render_template(
-        "document_detail.html",
+        template,
         doc=doc,
         revisions=revisions,
         revision=revision,
-        partial=partial,
+        active_tab="versions" if revision_id else "summary",
         breadcrumbs=[
             {"title": "Home", "url": url_for("index")},
             {"title": "Documents", "url": url_for("list_documents")},
@@ -407,6 +410,50 @@ def compare_document_versions(doc_id: int):
             {"title": "Compare"},
         ],
     )
+
+
+@app.post("/documents/<int:doc_id>/revert/<int:revision_id>")
+@roles_required(RoleEnum.REVIEWER.value)
+def revert_document(doc_id: int, revision_id: int):
+    partial = bool(request.headers.get("HX-Request"))
+    session = get_session()
+    doc = session.get(Document, doc_id)
+    rev = (
+        session.query(DocumentRevision)
+        .filter_by(id=revision_id, doc_id=doc_id)
+        .first()
+    )
+    if not doc or not rev:
+        session.close()
+        return "Version not found", 404
+    doc.minor_version += 1
+    doc.revision_notes = rev.revision_notes
+    new_rev = DocumentRevision(
+        doc_id=doc.id,
+        major_version=doc.major_version,
+        minor_version=doc.minor_version,
+        revision_notes=rev.revision_notes,
+        track_changes=rev.track_changes,
+        compare_result=rev.compare_result,
+    )
+    session.add(new_rev)
+    session.commit()
+    revisions = (
+        session.query(DocumentRevision)
+        .filter_by(doc_id=doc_id)
+        .order_by(DocumentRevision.major_version.desc(), DocumentRevision.minor_version.desc())
+        .all()
+    )
+    session.close()
+    if partial:
+        return render_template(
+            "partials/documents/_versions.html",
+            doc=doc,
+            revisions=revisions,
+            revision=None,
+            active_tab="versions",
+        )
+    return redirect(url_for("document_detail", doc_id=doc_id))
 
 
 @app.post("/documents")
