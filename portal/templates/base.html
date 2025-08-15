@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-bs-theme="light" data-density="comfortable">
 <head>
   <meta charset="utf-8">
   <title>{% block title %}Portal{% endblock %}</title>
@@ -8,6 +8,16 @@
   <link rel="stylesheet" href="{{ asset_url('app.css') }}">
 </head>
 <body>
+<script>
+  (function() {
+    const lang = localStorage.getItem('pref-language');
+    if (lang) document.documentElement.lang = lang;
+    const theme = localStorage.getItem('pref-theme');
+    if (theme) document.documentElement.setAttribute('data-bs-theme', theme);
+    const density = localStorage.getItem('pref-density');
+    if (density) document.documentElement.setAttribute('data-density', density);
+  })();
+</script>
 <header>
   {% block header %}
   {% include 'partials/_header.html' %}
