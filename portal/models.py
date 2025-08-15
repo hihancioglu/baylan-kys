@@ -188,6 +188,17 @@ class CAPAAction(Base):
     document = relationship("Document")
 
 
+class NotificationSetting(Base):
+    __tablename__ = "notification_settings"
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey("users.id"), unique=True, nullable=False)
+    email_enabled = Column(Boolean, default=True)
+    webhook_enabled = Column(Boolean, default=False)
+    webhook_url = Column(String)
+
+    user = relationship("User")
+
+
 class AuditLog(Base):
     __tablename__ = "audit_logs"
     id = Column(Integer, primary_key=True)

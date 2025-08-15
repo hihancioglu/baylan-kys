@@ -1,4 +1,11 @@
-from models import get_session, Document, DocumentRevision, WorkflowStep
+from models import (
+    get_session,
+    Document,
+    DocumentRevision,
+    WorkflowStep,
+    Role,
+    UserRole,
+)
 
 
 def restore_version(doc_id: int, version: str) -> Document:
@@ -42,5 +49,14 @@ def submit_for_approval(doc_id: int) -> Document:
     session.add_all(steps)
     session.commit()
     session.refresh(doc)
+    approver_ids = []
+    for step in steps:
+        role = session.query(Role).filter_by(name=step.approver).first()
+        if role:
+            ids = [ur.user_id for ur in session.query(UserRole).filter_by(role_id=role.id).all()]
+            approver_ids.extend(ids)
     session.close()
+    from notifications import notify_approval_queue
+
+    notify_approval_queue(doc, approver_ids)
     return doc
