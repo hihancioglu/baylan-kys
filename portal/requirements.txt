@@ -15,3 +15,5 @@ reportlab==4.1.0
 Flask-WTF
 six==1.16.0
 PyJWT==2.8.0
+passlib
+pycryptodome
