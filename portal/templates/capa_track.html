@@ -1,7 +1,8 @@
-<!doctype html>
-<title>CAPA Tracker</title>
+{% extends "layout.html" %}
+{% block title %}CAPA Tracker{% endblock %}
+{% block content %}
 <h1>CAPA Actions</h1>
-<table border="1" cellpadding="5">
+<table class="table table-bordered">
   <tr>
     <th>ID</th>
     <th>Document ID</th>
@@ -17,3 +18,4 @@
   </tr>
   {% endfor %}
 </table>
+{% endblock %}
