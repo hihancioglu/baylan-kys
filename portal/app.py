@@ -26,6 +26,7 @@ from reports import (
     training_compliance_report,
     pending_approvals_report,
 )
+from signing import create_signed_pdf
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "dev")
@@ -102,6 +103,21 @@ def create_document():
     result = {"id": doc.id}
     session.close()
     return jsonify(result), 201
+
+
+@app.post("/documents/<int:doc_id>/sign")
+def sign_document(doc_id: int):
+    data = request.get_json(silent=True) or {}
+    user_id = data.get("user_id")
+    file_path = data.get("file_path")
+    if not user_id or not file_path:
+        return jsonify(error="user_id and file_path required"), 400
+    try:
+        signed_pdf = create_signed_pdf(doc_id, user_id, file_path)
+        log_action(user_id, doc_id, "sign_document")
+    except Exception as exc:
+        return jsonify(error=str(exc)), 500
+    return Response(signed_pdf, mimetype="application/pdf")
 
 
 @app.get("/search")
