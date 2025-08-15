@@ -909,18 +909,21 @@ def delete_department_api(dept_id):
     finally:
         db.close()
 
-@app.route("/doc/<doc_key>/edit")
+@app.get("/documents/<int:doc_id>/edit")
 @roles_required(RoleEnum.CONTRIBUTOR.value)
-def edit(doc_key):
-    # doc_key: MinIO’daki dosya anahtarınız (örn: qdms/PRO-001_v1.docx)
+def edit_document(doc_id):
+    db = get_session()
+    doc = db.get(Document, doc_id)
+    if not doc:
+        db.close()
+        return "Document not found", 404
     user = session.get("user") or {"id": "u1", "name": "Ibrahim H.", "email": "ih@baylan.local"}
-    # OnlyOffice editor config (minimal)
     config = {
         "document": {
             "fileType": "docx",
-            "key": f"{doc_key}",  # versiyon anahtarı; revizyon değişince değiştirin
-            "title": f"{doc_key.split('/')[-1]}",
-            "url": f"{os.environ['S3_ENDPOINT']}/local/{doc_key}",  # demo (gerçekte imzalı URL üretin)
+            "key": f"{doc.doc_key}",
+            "title": doc.title or doc.doc_key.split('/')[-1],
+            "url": f"{os.environ['S3_ENDPOINT']}/local/{doc.doc_key}",
             "permissions": {
                 "edit": True,
                 "download": True,
@@ -930,21 +933,25 @@ def edit(doc_key):
         },
         "documentType": "text",
         "editorConfig": {
-            "callbackUrl": f"{os.environ['PORTAL_PUBLIC_BASE_URL']}/onlyoffice/callback/{doc_key}",
+            "callbackUrl": f"{os.environ['PORTAL_PUBLIC_BASE_URL']}/onlyoffice/callback/{doc.doc_key}",
             "user": {"id": user["id"], "name": user["name"]},
             "mode": "edit",
         },
     }
     token = sign_payload(config)
+    db.close()
     return render_template(
-        "document_edit.html",
+        "documents/edit.html",
         editor_js=f"{ONLYOFFICE_PUBLIC_URL}/web-apps/apps/api/documents/api.js",
         config=config,
         token=token,
         token_header=ONLYOFFICE_JWT_HEADER,
+        doc_id=doc_id,
         breadcrumbs=[
             {"title": "Home", "url": url_for("index")},
-            {"title": "Edit Document"},
+            {"title": "Documents", "url": url_for("list_documents")},
+            {"title": doc.title, "url": url_for("document_detail", doc_id=doc_id)},
+            {"title": "Edit"},
         ],
     )
 
