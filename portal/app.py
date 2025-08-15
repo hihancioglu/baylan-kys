@@ -198,6 +198,15 @@ def dashboard():
     return render_template("dashboard.html", **context)
 
 
+@app.get("/profile")
+@login_required
+def profile_view():
+    return render_template(
+        "profile/index.html",
+        breadcrumbs=[{"title": "Profile"}]
+    )
+
+
 @app.get("/dashboard/cards/pending")
 @login_required
 def dashboard_cards_pending():
