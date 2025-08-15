@@ -16,12 +16,10 @@ from flask import (
     render_template,
     abort,
 )
-from authlib.integrations.flask_client import OAuth
 from functools import wraps
 
 from models import get_session, User, Role
 
-oauth = OAuth()
 auth_bp = Blueprint('auth', __name__)
 
 
@@ -69,12 +67,10 @@ def roles_required(*required_roles):
 def _ldap_authenticate(username: str, password: str) -> bool:
     """Authenticate a user against LDAP using a service account."""
     timeout = current_app.config.get('LDAP_CONNECT_TIMEOUT', 5)
-    # Parse the LDAP URL so we honour scheme and custom ports.
     url = urlparse(current_app.config['LDAP_URL'])
-    use_ssl = url.scheme == 'ldaps'
-    port = url.port or (636 if use_ssl else 389)
+    port = url.port or 389
     host = url.hostname or current_app.config['LDAP_URL']
-    server = Server(host, port=port, use_ssl=use_ssl, get_info=ALL, connect_timeout=timeout)
+    server = Server(host, port=port, use_ssl=False, get_info=ALL, connect_timeout=timeout)
 
     domain = current_app.config.get('LDAP_DOMAIN')
     bind_user = current_app.config.get('LDAP_USER')
@@ -113,17 +109,7 @@ def _ldap_authenticate(username: str, password: str) -> bool:
 
 
 def init_app(app):
-    """Initialize OAuth client and authentication config."""
-    oauth.init_app(app)
-    oauth.register(
-        name='oidc',
-        client_id=app.config['OIDC_CLIENT_ID'],
-        client_secret=app.config['OIDC_CLIENT_SECRET'],
-        server_metadata_url=f"{app.config['OIDC_ISSUER']}/.well-known/openid-configuration",
-        client_kwargs={'scope': 'openid profile email'},
-    )
-
-    app.config['LDAP_ENABLED'] = os.environ.get('LDAP_ENABLED', '').lower() == 'true'
+    """Initialize authentication config."""
     app.config['LDAP_URL'] = os.environ.get('LDAP_URL', 'ldap://localhost')
     app.config['LDAP_DOMAIN'] = os.environ.get('LDAP_DOMAIN', '')
     app.config['LDAP_USER'] = os.environ.get('LDAP_USER', '')
@@ -144,19 +130,13 @@ def init_app(app):
 
 @auth_bp.route('/login')
 def login():
-    """Render LDAP login form or redirect to OIDC."""
-    if current_app.config.get('LDAP_ENABLED'):
-        return render_template('login.html')
-    redirect_uri = url_for('auth.oidc_callback', _external=True)
-    return oauth.oidc.authorize_redirect(redirect_uri)
+    """Render LDAP login form."""
+    return render_template('login.html')
 
 
 @auth_bp.post('/api/auth/login')
 def api_login():
-    """Authenticate user via LDAP or delegate to OIDC."""
-    if not current_app.config.get('LDAP_ENABLED'):
-        return redirect(url_for('auth.login'))
-
+    """Authenticate user via LDAP."""
     data = request.get_json(silent=True) or request.form
     username = data.get('username')
     password = data.get('password')
@@ -231,15 +211,3 @@ def refresh():
     resp.set_cookie('access_token', new_access, httponly=True, samesite='Strict')
     resp.set_cookie('refresh_token', new_refresh, httponly=True, samesite='Strict')
     return resp
-
-
-@auth_bp.route('/oidc/callback')
-def oidc_callback():
-    """Handle IdP callback and persist user info in session."""
-    token = oauth.oidc.authorize_access_token()
-    user_info = token.get('userinfo') or oauth.oidc.parse_id_token(token)
-    username = user_info.get('preferred_username') or user_info.get('email') or user_info.get('sub')
-    user_id, roles = _ensure_user(username, user_info.get('email'))
-    session['user'] = {'id': user_id, 'username': username, 'email': user_info.get('email')}
-    session['roles'] = roles
-    return redirect(url_for('index'))

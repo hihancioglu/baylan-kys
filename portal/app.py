@@ -43,9 +43,6 @@ from signing import create_signed_pdf
 app = Flask(__name__, static_folder="static/dist")
 app.secret_key = os.environ.get("SECRET_KEY", "dev")
 app.config.update(
-    OIDC_CLIENT_ID=os.environ.get("OIDC_CLIENT_ID", ""),
-    OIDC_CLIENT_SECRET=os.environ.get("OIDC_CLIENT_SECRET", ""),
-    OIDC_ISSUER=os.environ.get("OIDC_ISSUER", ""),
     SESSION_COOKIE_HTTPONLY=True,
 )
 
