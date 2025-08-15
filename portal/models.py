@@ -1,6 +1,16 @@
 import os
 from datetime import datetime
-from sqlalchemy import create_engine, Column, Integer, String, Text, ForeignKey, DateTime, JSON
+from sqlalchemy import (
+    create_engine,
+    Column,
+    Integer,
+    String,
+    Text,
+    ForeignKey,
+    DateTime,
+    JSON,
+    Enum,
+)
 from sqlalchemy.orm import declarative_base, relationship, sessionmaker, scoped_session
 
 DATABASE_URL = os.environ.get("DATABASE_URL", "sqlite:///portal.db")
@@ -17,6 +27,16 @@ class Document(Base):
     minor_version = Column(Integer, default=0)
     revision_notes = Column(Text)
 
+    status = Column(
+        Enum("Draft", "Review", "Approved", "Published", "Archived", name="document_status"),
+        default="Draft",
+        nullable=False,
+    )
+
+    workflow_steps = relationship(
+        "WorkflowStep", back_populates="document", cascade="all, delete-orphan"
+    )
+
     revisions = relationship("DocumentRevision", back_populates="document", cascade="all, delete-orphan")
 
 class DocumentRevision(Base):
@@ -31,6 +51,18 @@ class DocumentRevision(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
 
     document = relationship("Document", back_populates="revisions")
+
+
+class WorkflowStep(Base):
+    __tablename__ = "workflow_steps"
+    id = Column(Integer, primary_key=True)
+    doc_id = Column(Integer, ForeignKey("documents.id"), nullable=False)
+    step_order = Column(Integer, nullable=False)
+    approver = Column(String)
+    status = Column(String, default="Pending", nullable=False)
+    approved_at = Column(DateTime)
+
+    document = relationship("Document", back_populates="workflow_steps")
 
 Base.metadata.create_all(engine)
 
