@@ -8,6 +8,7 @@
   <link rel="stylesheet" href="{{ asset_url('app.css') }}">
 </head>
 <body>
+<a href="#main-content" class="skip-link">Skip to main content</a>
 <script>
   (function() {
     const lang = localStorage.getItem('pref-language');
@@ -18,19 +19,19 @@
     if (density) document.documentElement.setAttribute('data-density', density);
   })();
 </script>
-<header>
+<header role="banner">
   {% block header %}
   {% include 'partials/_header.html' %}
   {% endblock %}
 </header>
 <div class="container">
   <div class="row">
-    <aside class="col-md-2 d-none d-md-block bg-light sidebar">
+    <aside class="col-md-2 d-none d-md-block bg-light sidebar" aria-label="Sidebar">
       {% block sidebar %}
       {% include 'partials/_sidebar.html' %}
       {% endblock %}
     </aside>
-    <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
+    <main id="main-content" class="col-md-9 ms-sm-auto col-lg-10 px-md-4" tabindex="-1">
       {% include 'partials/_breadcrumbs.html' %}
       <div class="d-flex justify-content-end mb-3">
         {% block page_actions %}{% endblock %}
