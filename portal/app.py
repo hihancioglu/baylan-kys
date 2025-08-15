@@ -1,6 +1,13 @@
 import os, json, time, base64, hmac, hashlib
 from flask import Flask, request, jsonify, redirect, url_for
-from models import Document, DocumentRevision, get_session
+from models import (
+    Document,
+    DocumentRevision,
+    User,
+    Role,
+    UserRole,
+    get_session,
+)
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "dev")
@@ -23,6 +30,35 @@ def sign_payload(payload: dict) -> str:
 @app.route("/")
 def index():
     return jsonify(ok=True, msg="QDMS Portal running")
+
+
+@app.post("/roles/assign")
+def assign_role():
+    """Assign a role to a user."""
+    data = request.get_json(silent=True) or {}
+    user_id = data.get("user_id")
+    role_name = data.get("role")
+    if not user_id or not role_name:
+        return jsonify(error="user_id and role required"), 400
+    session = get_session()
+    try:
+        user = session.get(User, user_id)
+        if not user:
+            user = User(id=user_id, username=data.get("username", str(user_id)), email=data.get("email"))
+            session.add(user)
+            session.commit()
+        role = session.query(Role).filter_by(name=role_name).first()
+        if not role:
+            role = Role(name=role_name)
+            session.add(role)
+            session.commit()
+        link = session.query(UserRole).filter_by(user_id=user.id, role_id=role.id).first()
+        if not link:
+            session.add(UserRole(user_id=user.id, role_id=role.id))
+        session.commit()
+        return jsonify(ok=True)
+    finally:
+        session.close()
 
 @app.route("/doc/<doc_key>/edit")
 def edit(doc_key):
