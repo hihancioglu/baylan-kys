@@ -52,6 +52,23 @@ def index():
     return jsonify(ok=True, msg="QDMS Portal running")
 
 
+@app.get("/archive")
+def list_archived_documents():
+    session = get_session()
+    docs = session.query(Document).filter_by(status="Archived").all()
+    result = [
+        {
+            "id": d.id,
+            "doc_key": d.doc_key,
+            "title": d.title,
+            "archived_at": d.archived_at.isoformat() if d.archived_at else None,
+        }
+        for d in docs
+    ]
+    session.close()
+    return jsonify(result)
+
+
 @app.post("/documents")
 def create_document():
     data = request.get_json(silent=True) or {}
@@ -62,6 +79,7 @@ def create_document():
         tags=",".join(data.get("tags", [])) if isinstance(data.get("tags"), list) else data.get("tags"),
         department=data.get("department"),
         process=data.get("process"),
+        retention_period=data.get("retention_period"),
     )
     session = get_session()
     session.add(doc)

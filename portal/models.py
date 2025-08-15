@@ -33,6 +33,9 @@ class Document(Base):
     major_version = Column(Integer, default=1)
     minor_version = Column(Integer, default=0)
     revision_notes = Column(Text)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    retention_period = Column(Integer)
+    archived_at = Column(DateTime)
 
     status = Column(
         Enum("Draft", "Review", "Approved", "Published", "Archived", name="document_status"),
