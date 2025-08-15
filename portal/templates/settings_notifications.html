@@ -1,0 +1,17 @@
+<html>
+<body>
+<h3>Notification Settings</h3>
+<form method="post">
+  <label>
+    <input type="checkbox" name="email_enabled" {% if settings.email_enabled %}checked{% endif %}>
+    Email
+  </label><br>
+  <label>
+    <input type="checkbox" name="webhook_enabled" {% if settings.webhook_enabled %}checked{% endif %}>
+    Webhook URL
+  </label>
+  <input type="text" name="webhook_url" value="{{ settings.webhook_url }}"><br>
+  <button type="submit">Save</button>
+</form>
+</body>
+</html>

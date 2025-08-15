@@ -13,11 +13,13 @@ from models import (
     Deviation,
     CAPAAction,
     AuditLog,
+    NotificationSetting,
     get_session,
 )
 from search import index_document, search_documents
 from ocr import extract_text
 from docxf_render import render_form_to_pdf
+from notifications import notify_revision_time, notify_mandatory_read
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "dev")
@@ -89,6 +91,8 @@ def create_document():
     if data.get("file_path"):
         content = extract_text(data["file_path"])
     index_document(doc, content)
+    user_ids = [u.id for u in session.query(User).all()]
+    notify_mandatory_read(doc, user_ids)
     result = {"id": doc.id}
     session.close()
     return jsonify(result), 201
@@ -216,6 +220,8 @@ def save_revision(doc_id):
     session.add(rev)
     session.commit()
     log_action(data.get("user_id"), doc_id, "save_revision")
+    user_ids = [u.id for u in session.query(User).all()]
+    notify_revision_time(doc, user_ids)
     session.close()
     return jsonify(ok=True, version=f"{doc.major_version}.{doc.minor_version}")
 
@@ -273,6 +279,38 @@ def notifications_ui(user_id):
         "<script>fetch('/notifications/" + str(user_id) + "').then(r=>r.json()).then(data=>{"\
         "document.getElementById('list').innerText = JSON.stringify(data.pending_acknowledgements);"\
         "});</script></body></html>"
+    )
+
+
+@app.route("/settings/notifications", methods=["GET", "POST"])
+def notification_settings():
+    user_id = request.args.get("user_id", type=int)
+    if not user_id:
+        return jsonify(error="user_id required"), 400
+    session = get_session()
+    settings = session.query(NotificationSetting).filter_by(user_id=user_id).first()
+    if request.method == "POST":
+        data = request.form or request.get_json(silent=True) or {}
+        email_enabled = bool(data.get("email_enabled"))
+        webhook_enabled = bool(data.get("webhook_enabled"))
+        webhook_url = data.get("webhook_url")
+        if not settings:
+            settings = NotificationSetting(user_id=user_id)
+            session.add(settings)
+        settings.email_enabled = email_enabled
+        settings.webhook_enabled = webhook_enabled
+        settings.webhook_url = webhook_url
+        session.commit()
+        session.close()
+        return redirect(url_for("notification_settings", user_id=user_id))
+    settings_data = {
+        "email_enabled": settings.email_enabled if settings else False,
+        "webhook_enabled": settings.webhook_enabled if settings else False,
+        "webhook_url": settings.webhook_url if settings else "",
+    }
+    session.close()
+    return render_template(
+        "settings_notifications.html", settings=settings_data, user_id=user_id
     )
 
 
