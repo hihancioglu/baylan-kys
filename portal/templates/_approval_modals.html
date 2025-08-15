@@ -9,6 +9,7 @@
       <div class="modal-footer">
         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
         <form hx-post="{{ url_for('approve_step', step_id=step.id) }}" hx-target="#step-{{ step.id }}" hx-swap="outerHTML">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
           <button type="submit" class="btn btn-success" data-bs-dismiss="modal">Approve</button>
         </form>
       </div>
@@ -27,6 +28,7 @@
       <div class="modal-footer">
         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
         <form hx-post="{{ url_for('reject_step', step_id=step.id) }}" hx-target="#step-{{ step.id }}" hx-swap="outerHTML">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
           <button type="submit" class="btn btn-danger" data-bs-dismiss="modal">Reject</button>
         </form>
       </div>
