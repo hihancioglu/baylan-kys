@@ -1,3 +1,6 @@
+import { getToken } from './tokens';
+getToken('color-primary');
+
 document.addEventListener('DOMContentLoaded', () => {
   const cfg = Object.assign({}, window.editorConfig || {});
   cfg.events = {
