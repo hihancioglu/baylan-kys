@@ -143,6 +143,17 @@ class Acknowledgement(Base):
     )
 
 
+class Notification(Base):
+    __tablename__ = "notifications"
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    message = Column(String, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    read = Column(Boolean, default=False, nullable=False)
+
+    user = relationship("User")
+
+
 class TrainingResult(Base):
     __tablename__ = "training_results"
     id = Column(Integer, primary_key=True)
