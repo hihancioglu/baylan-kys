@@ -6,6 +6,8 @@ from models import (
     User,
     Role,
     UserRole,
+    Acknowledgement,
+    TrainingResult,
     get_session,
 )
 
@@ -119,6 +121,88 @@ def save_revision(doc_id):
     session.commit()
     session.close()
     return jsonify(ok=True, version=f"{doc.major_version}.{doc.minor_version}")
+
+
+@app.post("/documents/<int:doc_id>/acknowledge")
+def acknowledge_document(doc_id):
+    data = request.get_json(silent=True) or {}
+    user_id = data.get("user_id")
+    if not user_id:
+        return jsonify(error="user_id required"), 400
+    session = get_session()
+    try:
+        doc = session.get(Document, doc_id)
+        if not doc:
+            return jsonify(error="document not found"), 404
+        ack = (
+            session.query(Acknowledgement)
+            .filter_by(user_id=user_id, doc_id=doc_id)
+            .first()
+        )
+        if not ack:
+            ack = Acknowledgement(user_id=user_id, doc_id=doc_id)
+            session.add(ack)
+            session.commit()
+        return jsonify(ok=True, acknowledged_at=ack.acknowledged_at.isoformat())
+    finally:
+        session.close()
+
+
+@app.get("/notifications/<int:user_id>")
+def notifications(user_id):
+    session = get_session()
+    try:
+        published = session.query(Document).filter_by(status="Published").all()
+        pending = []
+        for doc in published:
+            ack = (
+                session.query(Acknowledgement)
+                .filter_by(user_id=user_id, doc_id=doc.id)
+                .first()
+            )
+            if not ack:
+                pending.append({"doc_id": doc.id, "doc_key": doc.doc_key})
+        return jsonify(pending_acknowledgements=pending)
+    finally:
+        session.close()
+
+
+@app.get("/notifications/<int:user_id>/view")
+def notifications_ui(user_id):
+    return (
+        "<html><body><h3>Pending Acknowledgements</h3>"\
+        "<div id='list'></div>"\
+        "<script>fetch('/notifications/" + str(user_id) + "').then(r=>r.json()).then(data=>{"\
+        "document.getElementById('list').innerText = JSON.stringify(data.pending_acknowledgements);"\
+        "});</script></body></html>"
+    )
+
+
+@app.post("/training/evaluate")
+def training_evaluate():
+    data = request.get_json(silent=True) or {}
+    user_id = data.get("user_id")
+    answers = data.get("answers", {})
+    if not user_id:
+        return jsonify(error="user_id required"), 400
+    # Demo correct answers
+    correct = {"q1": "a", "q2": "b"}
+    score = sum(1 for q, a in correct.items() if answers.get(q) == a)
+    passed = score == len(correct)
+    session = get_session()
+    try:
+        session.add(
+            TrainingResult(
+                user_id=user_id,
+                score=score,
+                max_score=len(correct),
+                passed=passed,
+            )
+        )
+        session.commit()
+    finally:
+        session.close()
+    return jsonify(passed=passed, score=score, max_score=len(correct))
 
 @app.post("/onlyoffice/callback/<path:doc_key>")
 def onlyoffice_callback(doc_key):
