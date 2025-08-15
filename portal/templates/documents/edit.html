@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block title %}Edit Document{% endblock %}
+{% block page_actions %}
+<a class="btn btn-secondary" href="{{ url_for('document_detail', doc_id=doc_id) }}">Back</a>
+<a class="btn btn-secondary" href="{{ url_for('document_detail', doc_id=doc_id) }}#versions">Versions</a>
+<a class="btn btn-secondary" href="{{ url_for('compare_document_versions', doc_id=doc_id) }}">Compare</a>
+{% endblock %}
+{% block content %}
+<div id="editor-container" class="vh-100 overflow-auto">
+  <!-- OnlyOffice editor iframe placeholder -->
+  <iframe id="docEditor" class="w-100 h-100 border-0" title="Document editor"></iframe>
+</div>
+<script>
+  const editorConfig = {{ config | tojson }};
+  const editorToken = {{ token | tojson }};
+</script>
+<script src="{{ editor_js }}"></script>
+<script>
+  if (editorToken && window.DocsAPI && window.DocsAPI.setRequestHeaders) {
+    window.DocsAPI.setRequestHeaders([{ header: '{{ token_header|default('Authorization') }}', value: editorToken }]);
+  }
+  window.docEditor = new DocsAPI.DocEditor('docEditor', editorConfig);
+</script>
+{% endblock %}
