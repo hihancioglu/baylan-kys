@@ -1,8 +1,9 @@
 {
-  "document_list.js": "document_list-f404e197.js",
-  "app.js": "app-a94455d5.js",
-  "app.css": "app-b6ed878f.css",
-  "document_detail.js": "document_detail-5c433774.js",
-  "document_edit.js": "document_edit-42d55077.js",
-  "reports.js": "reports-35e33d3e.js"
+  "app.js": "app-e2deecaf.js",
+  "document_detail.js": "document_detail-5b9fb6d7.js",
+  "app.css": "app-ca4e48e0.css",
+  "reports.js": "reports-dc07090a.js",
+  "tokens.js": "tokens-f03c821c.js",
+  "document_list.js": "document_list-fe3c6da0.js",
+  "document_edit.js": "document_edit-c3f5f07f.js"
 }
