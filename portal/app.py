@@ -186,8 +186,55 @@ def sse_events():
 
 @app.route("/")
 @login_required
-def index():
-    return render_template("index.html", breadcrumbs=[{"title": "Home"}])
+def dashboard():
+    context = {
+        "breadcrumbs": [{"title": "Dashboard"}],
+        "pending_approvals": [],
+        "mandatory_reading": [],
+        "recent_revisions": [],
+        "quick_access": [],
+    }
+    return render_template("dashboard.html", **context)
+
+
+@app.get("/dashboard/cards/pending")
+@login_required
+def dashboard_cards_pending():
+    return render_template(
+        "partials/dashboard/_cards.html",
+        card="pending",
+        pending_approvals=[],
+    )
+
+
+@app.get("/dashboard/cards/mandatory")
+@login_required
+def dashboard_cards_mandatory():
+    return render_template(
+        "partials/dashboard/_cards.html",
+        card="mandatory",
+        mandatory_reading=[],
+    )
+
+
+@app.get("/dashboard/cards/recent")
+@login_required
+def dashboard_cards_recent():
+    return render_template(
+        "partials/dashboard/_cards.html",
+        card="recent",
+        recent_revisions=[],
+    )
+
+
+@app.get("/dashboard/cards/quick")
+@login_required
+def dashboard_cards_quick():
+    return render_template(
+        "partials/dashboard/_cards.html",
+        card="quick",
+        quick_access=[],
+    )
 
 
 @app.get("/health")
