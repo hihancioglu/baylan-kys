@@ -187,7 +187,7 @@ def sse_events():
 @app.route("/")
 @login_required
 def index():
-    return render_template("index.html")
+    return render_template("index.html", breadcrumbs=[{"title": "Home"}])
 
 
 @app.get("/health")
@@ -265,6 +265,10 @@ def list_documents():
         "params": params,
     }
     partial = bool(request.headers.get("HX-Request"))
+    context["breadcrumbs"] = [
+        {"title": "Home", "url": url_for("index")},
+        {"title": "Documents"},
+    ]
     return render_template("document_list.html", partial=partial, **context)
 
 
@@ -299,6 +303,11 @@ def document_detail(doc_id: int):
         revisions=revisions,
         revision=revision,
         partial=partial,
+        breadcrumbs=[
+            {"title": "Home", "url": url_for("index")},
+            {"title": "Documents", "url": url_for("list_documents")},
+            {"title": doc.title},
+        ],
     )
 
 
@@ -309,6 +318,7 @@ def compare_document_versions(doc_id: int):
     if len(rev_ids) < 2:
         return "Select at least two versions", 400
     session = get_session()
+    doc = session.get(Document, doc_id)
     revisions = (
         session.query(DocumentRevision)
         .filter(DocumentRevision.doc_id == doc_id, DocumentRevision.id.in_(rev_ids))
@@ -333,6 +343,12 @@ def compare_document_versions(doc_id: int):
         doc_id=doc_id,
         revisions=revisions,
         diff=diff_html,
+        breadcrumbs=[
+            {"title": "Home", "url": url_for("index")},
+            {"title": "Documents", "url": url_for("list_documents")},
+            {"title": doc.title, "url": url_for("document_detail", doc_id=doc_id)},
+            {"title": "Compare"},
+        ],
     )
 
 
@@ -395,7 +411,14 @@ def approval_queue():
             )
             .all()
         )
-        return render_template("approvals.html", steps=steps)
+        return render_template(
+            "approvals.html",
+            steps=steps,
+            breadcrumbs=[
+                {"title": "Home", "url": url_for("index")},
+                {"title": "Approvals"},
+            ],
+        )
     finally:
         db.close()
 
@@ -501,13 +524,23 @@ def search_view():
         filters=filters,
         facets=facets,
         page=page,
+        breadcrumbs=[
+            {"title": "Home", "url": url_for("index")},
+            {"title": "Search"},
+        ],
     )
 
 
 @app.get("/reports")
 @roles_required(RoleEnum.AUDITOR.value, RoleEnum.QUALITY_ADMIN.value)
 def reports_index():
-    return render_template("reports.html")
+    return render_template(
+        "reports.html",
+        breadcrumbs=[
+            {"title": "Home", "url": url_for("index")},
+            {"title": "Reports"},
+        ],
+    )
 
 
 @app.get("/reports/<kind>")
@@ -601,7 +634,15 @@ def admin_users_page():
     db = get_session()
     try:
         users = db.query(User).all()
-        return render_template("admin/users.html", users=users)
+        return render_template(
+            "admin/users.html",
+            users=users,
+            breadcrumbs=[
+                {"title": "Home", "url": url_for("index")},
+                {"title": "Admin"},
+                {"title": "Users"},
+            ],
+        )
     finally:
         db.close()
 
@@ -614,7 +655,16 @@ def admin_roles_page():
     try:
         users = db.query(User).all()
         roles = db.query(Role).all()
-        return render_template("admin/roles.html", users=users, roles=roles)
+        return render_template(
+            "admin/roles.html",
+            users=users,
+            roles=roles,
+            breadcrumbs=[
+                {"title": "Home", "url": url_for("index")},
+                {"title": "Admin"},
+                {"title": "Roles"},
+            ],
+        )
     finally:
         db.close()
 
@@ -626,7 +676,15 @@ def admin_departments_page():
     db = get_session()
     try:
         departments = db.query(DepartmentVisibility).all()
-        return render_template("admin/departments.html", departments=departments)
+        return render_template(
+            "admin/departments.html",
+            departments=departments,
+            breadcrumbs=[
+                {"title": "Home", "url": url_for("index")},
+                {"title": "Admin"},
+                {"title": "Departments"},
+            ],
+        )
     finally:
         db.close()
 
@@ -812,6 +870,10 @@ def edit(doc_key):
         config=config,
         token=token,
         token_header=ONLYOFFICE_JWT_HEADER,
+        breadcrumbs=[
+            {"title": "Home", "url": url_for("index")},
+            {"title": "Edit Document"},
+        ],
     )
 
 @app.post("/documents/<int:doc_id>/revision")
@@ -910,6 +972,10 @@ def acknowledgements():
             "filters": filters,
         }
         partial = bool(request.headers.get("HX-Request"))
+        context["breadcrumbs"] = [
+            {"title": "Home", "url": url_for("index")},
+            {"title": "Acknowledgements"},
+        ]
         return render_template("acknowledgements.html", partial=partial, **context)
     finally:
         db.close()
@@ -984,6 +1050,10 @@ def user_settings():
         tokens=tokens,
         user_id=user_id,
         new_token=new_token,
+        breadcrumbs=[
+            {"title": "Home", "url": url_for("index")},
+            {"title": "Settings"},
+        ],
     )
 
 
@@ -1168,7 +1238,14 @@ def capa_track():
     session = get_session()
     actions = session.query(CAPAAction).all()
     session.close()
-    return render_template("capa_track.html", actions=actions)
+    return render_template(
+        "capa_track.html",
+        actions=actions,
+        breadcrumbs=[
+            {"title": "Home", "url": url_for("index")},
+            {"title": "CAPA"},
+        ],
+    )
 
 
 @app.post("/forms/<form_name>/submit")
