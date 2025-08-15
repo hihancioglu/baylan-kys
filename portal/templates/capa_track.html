@@ -1,0 +1,19 @@
+<!doctype html>
+<title>CAPA Tracker</title>
+<h1>CAPA Actions</h1>
+<table border="1" cellpadding="5">
+  <tr>
+    <th>ID</th>
+    <th>Document ID</th>
+    <th>Action</th>
+    <th>Status</th>
+  </tr>
+  {% for a in actions %}
+  <tr>
+    <td>{{ a.id }}</td>
+    <td>{{ a.document_id }}</td>
+    <td>{{ a.action }}</td>
+    <td>{{ a.status }}</td>
+  </tr>
+  {% endfor %}
+</table>
