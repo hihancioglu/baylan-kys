@@ -2,6 +2,7 @@
   <td>{{ step.document.title }}</td>
   <td>{{ step.step_order }}</td>
   <td>{{ step.status }}</td>
+  <td>{{ step.comment or '' }}</td>
   <td>
     {% if step.status == 'Pending' %}
     <button class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#approveModal-{{ step.id }}">Approve</button>

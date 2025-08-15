@@ -1,0 +1,23 @@
+<div class="modal fade" id="{{ action }}Modal-{{ step.id }}" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">{{ action|capitalize }} "{{ step.document.title }}"?</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <form hx-post="{{ url_for(action + '_step', step_id=step.id) }}" hx-target="#step-{{ step.id }}" hx-swap="outerHTML">
+        <div class="modal-body">
+          <div class="mb-3">
+            <label class="form-label">Comment</label>
+            <textarea class="form-control" name="comment" rows="3"></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button type="submit" class="btn btn-{{ 'success' if action=='approve' else 'danger' }}" data-bs-dismiss="modal">{{ action|capitalize }}</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
