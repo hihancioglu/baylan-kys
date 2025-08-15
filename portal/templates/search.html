@@ -1,0 +1,22 @@
+<!doctype html>
+<html>
+<head><title>Document Search</title></head>
+<body>
+  <h1>Search Documents</h1>
+  <form method="get">
+    <input name="title" placeholder="Title" value="{{ filters.title or '' }}" />
+    <input name="code" placeholder="Code" value="{{ filters.code or '' }}" />
+    <input name="tags" placeholder="Tags" value="{{ filters.tags or '' }}" />
+    <input name="department" placeholder="Department" value="{{ filters.department or '' }}" />
+    <input name="process" placeholder="Process" value="{{ filters.process or '' }}" />
+    <button type="submit">Search</button>
+  </form>
+  <ul>
+  {% for doc in results %}
+    <li>{{ doc.title }} ({{ doc.code }}) - {{ doc.department }} - {{ doc.process }} - {{ doc.tags }}</li>
+  {% else %}
+    <li>No results found.</li>
+  {% endfor %}
+  </ul>
+</body>
+</html>

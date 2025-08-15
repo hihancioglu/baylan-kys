@@ -25,6 +25,11 @@ class Document(Base):
     __tablename__ = "documents"
     id = Column(Integer, primary_key=True)
     doc_key = Column(String, nullable=False, unique=True)
+    title = Column(String, index=True)
+    code = Column(String, index=True)
+    tags = Column(String, index=True)
+    department = Column(String, index=True)
+    process = Column(String, index=True)
     major_version = Column(Integer, default=1)
     minor_version = Column(Integer, default=0)
     revision_notes = Column(Text)
