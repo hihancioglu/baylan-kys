@@ -1,0 +1,39 @@
+<nav class="navbar navbar-expand-lg navbar-light bg-light fixed-top">
+  <div class="container">
+    <a class="navbar-brand" href="/">Portal</a>
+
+    <form class="d-none d-lg-flex ms-auto me-3" role="search" action="{{ url_for('search_view') }}" method="get">
+      <input class="form-control" type="search" placeholder="Search" aria-label="Search" name="q">
+    </form>
+
+    <button class="btn btn-outline-secondary d-lg-none ms-auto me-2" type="button"
+            data-bs-toggle="collapse" data-bs-target="#navbar-search"
+            aria-controls="navbar-search" aria-expanded="false" aria-label="Toggle search">
+      🔍
+    </button>
+
+    <ul class="navbar-nav align-items-center">
+      {% if current_user %}
+      <li class="nav-item"><a class="nav-link" href="/notifications/{{ current_user.id }}/view">🔔</a></li>
+      <li class="nav-item dropdown">
+        <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+          {{ current_user.username }}
+        </a>
+        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
+          <li><a class="dropdown-item" href="/profile">Profile</a></li>
+          <li><a class="dropdown-item" href="/language">Language</a></li>
+          <li><hr class="dropdown-divider"></li>
+          <li><a class="dropdown-item" href="/logout">Logout</a></li>
+        </ul>
+      </li>
+      {% else %}
+      <li class="nav-item"><a class="nav-link" href="{{ url_for('auth.login') }}">Login</a></li>
+      {% endif %}
+    </ul>
+  </div>
+  <div class="collapse w-100" id="navbar-search">
+    <form class="p-3" action="{{ url_for('search_view') }}" method="get">
+      <input class="form-control" type="search" placeholder="Search" aria-label="Search" name="q">
+    </form>
+  </div>
+</nav>
