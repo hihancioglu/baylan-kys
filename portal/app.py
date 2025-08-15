@@ -528,9 +528,10 @@ def save_revision(doc_id):
 @roles_required(RoleEnum.READER.value)
 def acknowledge_document(doc_id):
     data = request.get_json(silent=True) or {}
-    user_id = data.get("user_id")
+    user_id = data.get("user_id") or request.form.get("user_id")
     if not user_id:
         return jsonify(error="user_id required"), 400
+    user_id = int(user_id)
     session = get_session()
     try:
         doc = session.get(Document, doc_id)
@@ -549,6 +550,48 @@ def acknowledge_document(doc_id):
         return jsonify(ok=True, acknowledged_at=ack.acknowledged_at.isoformat())
     finally:
         session.close()
+
+
+@app.get("/acknowledgements")
+@roles_required(RoleEnum.READER.value)
+def acknowledgements():
+    user = session.get("user")
+    if not user:
+        return redirect(url_for("auth.login"))
+    user_id = user.get("id")
+    db = get_session()
+    try:
+        query = db.query(Document).filter_by(status="Published")
+        filters = {}
+        department = request.args.get("department")
+        if department:
+            query = query.filter(Document.department == department)
+            filters["department"] = department
+        tag = request.args.get("tag")
+        if tag:
+            query = query.filter(Document.tags.contains(tag))
+            filters["tag"] = tag
+
+        pending = []
+        for doc in query.order_by(Document.id).all():
+            ack = (
+                db.query(Acknowledgement)
+                .filter_by(user_id=user_id, doc_id=doc.id)
+                .first()
+            )
+            if not ack:
+                pending.append(doc)
+
+        remaining = len(pending)
+        context = {
+            "documents": pending,
+            "remaining": remaining,
+            "filters": filters,
+        }
+        partial = bool(request.headers.get("HX-Request"))
+        return render_template("acknowledgements.html", partial=partial, **context)
+    finally:
+        db.close()
 
 
 @app.get("/notifications/<int:user_id>")

@@ -1,0 +1,53 @@
+{% extends "layout.html" %}
+{% block title %}Acknowledgements{% endblock %}
+{% block content %}
+{% macro table(docs) %}
+<table class="table table-striped">
+  <thead>
+    <tr>
+      <th>Code</th>
+      <th>Title</th>
+      <th>Department</th>
+      <th>Tags</th>
+      <th></th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for doc in docs %}
+    <tr>
+      <td>{{ doc.code }}</td>
+      <td>{{ doc.title }}</td>
+      <td>{{ doc.department }}</td>
+      <td>{{ doc.tags }}</td>
+      <td>
+        <button class="btn btn-sm btn-success"
+                hx-post="{{ url_for('acknowledge_document', doc_id=doc.id) }}"
+                hx-vals='{"user_id":"{{ current_user.id }}"}'
+                hx-target="closest tr"
+                hx-swap="delete"
+                hx-on="htmx:afterRequest: document.getElementById('remaining').innerText = parseInt(document.getElementById('remaining').innerText) - 1">
+          Okudum
+        </button>
+      </td>
+    </tr>
+    {% else %}
+    <tr><td colspan="5">No documents pending.</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endmacro %}
+
+{% if partial %}
+  {{ table(documents) }}
+{% else %}
+<h1>Acknowledgements (<span id="remaining">{{ remaining }}</span>)</h1>
+<form hx-get="{{ url_for('acknowledgements') }}" hx-target="#ack-table" hx-push-url="true" class="row g-2 mb-3">
+  <div class="col-md-3"><input class="form-control" name="department" placeholder="Department" value="{{ filters.department or '' }}"></div>
+  <div class="col-md-3"><input class="form-control" name="tag" placeholder="Tag" value="{{ filters.tag or '' }}"></div>
+  <div class="col-md-2"><button class="btn btn-primary w-100" type="submit">Filter</button></div>
+</form>
+<div id="ack-table">
+  {{ table(documents) }}
+</div>
+{% endif %}
+{% endblock %}
