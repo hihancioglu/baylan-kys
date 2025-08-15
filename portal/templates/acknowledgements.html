@@ -20,13 +20,13 @@
       <td>{{ doc.department }}</td>
       <td>{{ doc.tags }}</td>
       <td>
-        <button class="btn btn-sm btn-success"
-                hx-post="{{ url_for('acknowledge_document', doc_id=doc.id) }}"
-                hx-target="closest tr"
-                hx-swap="delete"
-                hx-on="htmx:afterRequest: document.getElementById('remaining').innerText = parseInt(document.getElementById('remaining').innerText) - 1">
-          Okudum
-        </button>
+        <form hx-post="{{ url_for('acknowledge_document', doc_id=doc.id) }}"
+              hx-target="closest tr"
+              hx-swap="delete"
+              hx-on="htmx:afterRequest: document.getElementById('remaining').innerText = parseInt(document.getElementById('remaining').innerText) - 1">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button type="submit" class="btn btn-sm btn-success">Okudum</button>
+        </form>
       </td>
     </tr>
     {% else %}
