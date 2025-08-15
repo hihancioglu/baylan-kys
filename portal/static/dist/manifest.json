@@ -1,7 +1,8 @@
 {
-  "document_edit.js": "document_edit-42d55077.js",
   "app.css": "app-bfd4bd45.css",
+  "document_edit.js": "document_edit-42d55077.js",
   "app.js": "app-c48e3578.js",
-  "document_list.js": "document_list-f404e197.js",
-  "document_detail.js": "document_detail-eb1344bc.js"
+  "document_detail.js": "document_detail-eb1344bc.js",
+  "reports.js": "reports-35e33d3e.js",
+  "document_list.js": "document_list-f404e197.js"
 }

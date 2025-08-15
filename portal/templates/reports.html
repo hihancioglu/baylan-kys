@@ -1,25 +1,53 @@
 {% extends "layout.html" %}
 {% block title %}Reports{% endblock %}
 {% block content %}
-<h1>Reports</h1>
-<ul>
-  <li>
-    Revision Report:
-    <a href="/reports/revisions?format=csv">CSV</a> |
-    <a href="/reports/revisions?format=xlsx">Excel</a> |
-    <a href="/reports/revisions?format=pdf">PDF</a>
-  </li>
-  <li>
-    Training Compliance:
-    <a href="/reports/training?format=csv">CSV</a> |
-    <a href="/reports/training?format=xlsx">Excel</a> |
-    <a href="/reports/training?format=pdf">PDF</a>
-  </li>
-  <li>
-    Pending Approvals:
-    <a href="/reports/pending-approvals?format=csv">CSV</a> |
-    <a href="/reports/pending-approvals?format=xlsx">Excel</a> |
-    <a href="/reports/pending-approvals?format=pdf">PDF</a>
-  </li>
-</ul>
+<h1>Reports Dashboard</h1>
+<div class="row">
+  <div class="col-md-4">
+    <div class="card mb-3">
+      <div class="card-body">
+        <h5 class="card-title">Pending Approvals</h5>
+        <div class="d-flex mb-2">
+          <input type="date" id="pending-start" class="form-control form-control-sm me-2">
+          <input type="date" id="pending-end" class="form-control form-control-sm">
+        </div>
+        <p class="display-6" id="pending-count">0</p>
+        <a id="pending-csv" class="btn btn-sm btn-outline-primary me-1">CSV</a>
+        <a id="pending-pdf" class="btn btn-sm btn-outline-primary">PDF</a>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="card mb-3">
+      <div class="card-body">
+        <h5 class="card-title">Compliance Rate</h5>
+        <div class="d-flex mb-2">
+          <input type="date" id="compliance-start" class="form-control form-control-sm me-2">
+          <input type="date" id="compliance-end" class="form-control form-control-sm">
+        </div>
+        <p class="display-6" id="compliance-rate">0%</p>
+        <a id="compliance-csv" class="btn btn-sm btn-outline-primary me-1">CSV</a>
+        <a id="compliance-pdf" class="btn btn-sm btn-outline-primary">PDF</a>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="card mb-3">
+      <div class="card-body">
+        <h5 class="card-title">Recent Changes</h5>
+        <div class="d-flex mb-2">
+          <input type="date" id="changes-start" class="form-control form-control-sm me-2">
+          <input type="date" id="changes-end" class="form-control form-control-sm">
+        </div>
+        <canvas id="changes-chart" height="150"></canvas>
+        <div class="mt-2">
+          <a id="changes-csv" class="btn btn-sm btn-outline-primary me-1">CSV</a>
+          <a id="changes-pdf" class="btn btn-sm btn-outline-primary">PDF</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/chart.js" defer></script>
+<script src="{{ asset_url('reports.js') }}" defer></script>
 {% endblock %}

@@ -503,10 +503,14 @@ def reports_index():
 @roles_required(RoleEnum.AUDITOR.value, RoleEnum.QUALITY_ADMIN.value)
 def report_download(kind):
     fmt = request.args.get("format", "json").lower()
+    start = request.args.get("start")
+    end = request.args.get("end")
+    start_dt = datetime.fromisoformat(start) if start else None
+    end_dt = datetime.fromisoformat(end) if end else None
     mapping = {
-        "revisions": revision_report,
-        "training": training_compliance_report,
-        "pending-approvals": pending_approvals_report,
+        "revisions": lambda: revision_report(start_dt, end_dt),
+        "training": lambda: training_compliance_report(start_dt, end_dt),
+        "pending-approvals": lambda: pending_approvals_report(start_dt, end_dt),
     }
     if fmt == "json":
         fn = mapping.get(kind)
@@ -514,7 +518,7 @@ def report_download(kind):
             return jsonify(error="unknown report"), 400
         return jsonify(fn())
     try:
-        content, mime, ext = build_report(kind, fmt)
+        content, mime, ext = build_report(kind, fmt, start_dt, end_dt)
     except ValueError:
         return jsonify(error="unknown report or format"), 400
     return Response(
