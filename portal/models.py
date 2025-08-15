@@ -199,6 +199,17 @@ class NotificationSetting(Base):
     user = relationship("User")
 
 
+class SignatureLog(Base):
+    __tablename__ = "signature_logs"
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    doc_id = Column(Integer, ForeignKey("documents.id"), nullable=False)
+    signed_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+    user = relationship("User")
+    document = relationship("Document")
+
+
 class AuditLog(Base):
     __tablename__ = "audit_logs"
     id = Column(Integer, primary_key=True)
