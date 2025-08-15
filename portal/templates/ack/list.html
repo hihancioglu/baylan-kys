@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block title %}Acknowledgements{% endblock %}
+{% block content %}
+<h1>Acknowledgements (<span id="ack-count">{{ remaining }}</span>)</h1>
+<form hx-get="{{ url_for('ack.list') }}" hx-target="#ack-table" hx-push-url="true" class="row g-2 mb-3">
+  <div class="col-md-3">
+    <input class="form-control" name="status" placeholder="Status" value="{{ filters.status or '' }}">
+  </div>
+  <div class="col-md-3">
+    <input class="form-control" type="date" name="due" value="{{ filters.due or '' }}">
+  </div>
+  <div class="col-md-2">
+    <button class="btn btn-primary w-100" type="submit">Filter</button>
+  </div>
+</form>
+<div id="ack-table">
+  {% include 'partials/ack/_table.html' %}
+</div>
+{% endblock %}
