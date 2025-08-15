@@ -221,6 +221,40 @@ def document_detail(doc_id: int):
     )
 
 
+@app.get("/documents/<int:doc_id>/compare")
+@roles_required(RoleEnum.READER.value)
+def compare_document_versions(doc_id: int):
+    rev_ids = request.args.getlist("rev_id", type=int)
+    if len(rev_ids) < 2:
+        return "Select at least two versions", 400
+    session = get_session()
+    revisions = (
+        session.query(DocumentRevision)
+        .filter(DocumentRevision.doc_id == doc_id, DocumentRevision.id.in_(rev_ids))
+        .order_by(DocumentRevision.major_version, DocumentRevision.minor_version)
+        .all()
+    )
+    session.close()
+    if len(revisions) < 2:
+        return "Versions not found", 404
+    if revisions[0].compare_result:
+        diff_html = revisions[0].compare_result
+    else:
+        import difflib
+        diff_html = difflib.HtmlDiff().make_table(
+            (revisions[0].revision_notes or "").splitlines(),
+            (revisions[1].revision_notes or "").splitlines(),
+            fromdesc=f"{revisions[0].major_version}.{revisions[0].minor_version}",
+            todesc=f"{revisions[1].major_version}.{revisions[1].minor_version}",
+        )
+    return render_template(
+        "document_compare.html",
+        doc_id=doc_id,
+        revisions=revisions,
+        diff=diff_html,
+    )
+
+
 @app.post("/documents")
 @roles_required(RoleEnum.CONTRIBUTOR.value)
 def create_document():

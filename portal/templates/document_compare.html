@@ -1,0 +1,9 @@
+{% extends "layout.html" %}
+{% block title %}Compare Versions{% endblock %}
+{% block content %}
+<h1>Version Comparison</h1>
+<div class="mb-3">
+  {{ diff|safe }}
+</div>
+<a class="btn btn-secondary" href="{{ url_for('document_detail', doc_id=doc_id) }}">Back</a>
+{% endblock %}

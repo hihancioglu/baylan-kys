@@ -2,16 +2,22 @@
 {% block title %}Document Detail{% endblock %}
 {% block content %}
 {% macro version_list(doc, revisions) %}
+<form method="get" action="{{ url_for('compare_document_versions', doc_id=doc.id) }}">
 <ul class="list-group">
   {% for rev in revisions %}
   <li class="list-group-item d-flex justify-content-between align-items-center">
-    <a hx-get="{{ url_for('document_detail', doc_id=doc.id, revision_id=rev.id) }}" hx-target="#version-area" hx-push-url="false">{{ rev.major_version }}.{{ rev.minor_version }}</a>
+    <div class="d-flex align-items-center">
+      <input class="form-check-input me-2" type="checkbox" name="rev_id" value="{{ rev.id }}" id="rev-{{ rev.id }}">
+      <a hx-get="{{ url_for('document_detail', doc_id=doc.id, revision_id=rev.id) }}" hx-target="#version-area" hx-push-url="false">{{ rev.major_version }}.{{ rev.minor_version }}</a>
+    </div>
     <small class="text-muted">{{ rev.created_at.strftime('%Y-%m-%d') if rev.created_at else '' }}</small>
   </li>
   {% else %}
   <li class="list-group-item">No versions found.</li>
   {% endfor %}
 </ul>
+<button type="submit" class="btn btn-primary mt-2">Compare</button>
+</form>
 {% endmacro %}
 
 {% macro version_detail(doc, revision) %}
