@@ -32,8 +32,8 @@ from models import (
     get_session,
     RoleEnum,
 )
-from search import index_document, search_documents
-from sqlalchemy import func
+from search import index_document
+from sqlalchemy import func, or_
 from ocr import extract_text
 from docxf_render import render_form_to_pdf
 from notifications import notify_revision_time, notify_mandatory_read
@@ -515,69 +515,37 @@ def reject_step(step_id: int):
 @roles_required(RoleEnum.READER.value)
 def search_view():
     keyword = request.args.get("q", "")
-    filters = {f: request.args.get(f) for f in ["department", "status", "type"]}
     page = int(request.args.get("page", 1))
-    results = []
-    facets = {"department": {}, "status": {}, "type": {}}
-    try:
-        results, facets = search_documents(keyword, filters, page=page)
-    except Exception:
-        session = get_session()
-        query = session.query(Document)
-        if keyword:
-            query = query.filter(Document.title.ilike(f"%{keyword}%"))
-        if filters["department"]:
-            query = query.filter(Document.department == filters["department"])
-        if filters["status"]:
-            query = query.filter(Document.status == filters["status"])
-        if filters["type"]:
-            if hasattr(Document, "type"):
-                query = query.filter(Document.type == filters["type"])
-            else:
-                query = query.filter(Document.process == filters["type"])
-        docs = query.offset((page - 1) * 10).limit(10).all()
-        results = [
-            {
-                "id": d.id,
-                "title": d.title,
-                "code": d.code,
-                "tags": d.tags,
-                "department": d.department,
-                "status": d.status,
-                "type": getattr(d, "type", getattr(d, "process", "")),
-            }
-            for d in docs
-        ]
-        facets = {
-            "department": {
-                row[0]: row[1]
-                for row in session.query(Document.department, func.count(Document.id)).group_by(Document.department)
-            },
-            "status": {
-                row[0]: row[1]
-                for row in session.query(Document.status, func.count(Document.id)).group_by(Document.status)
-            },
-        }
-        if hasattr(Document, "type"):
-            facet_query = session.query(Document.type, func.count(Document.id)).group_by(Document.type)
-        else:
-            facet_query = session.query(Document.process, func.count(Document.id)).group_by(Document.process)
-        facets["type"] = {row[0]: row[1] for row in facet_query}
-        session.close()
-    return render_template(
-        "search.html",
-        results=results,
-        keyword=keyword,
-        filters=filters,
-        facets=facets,
-        page=page,
-        breadcrumbs=[
-            {"title": "Home", "url": url_for("index")},
-            {"title": "Search"},
-        ],
-    )
-
-
+    page_size = int(request.args.get("page_size", 20))
+    session = get_session()
+    query = session.query(Document)
+    if keyword:
+        query = query.filter(or_(Document.title.ilike(f"%{keyword}%"), Document.code.ilike(f"%{keyword}%")))
+        total = query.count()
+        docs = (
+            query.order_by(Document.id)
+            .limit(page_size)
+            .offset((page - 1) * page_size)
+            .all()
+        )
+    else:
+        total = 0
+        docs = []
+    session.close()
+    pages = (total + page_size - 1) // page_size if total else 1
+    context = {
+        "documents": docs,
+        "keyword": keyword,
+        "page": page,
+        "pages": pages,
+    }
+    partial = bool(request.headers.get("HX-Request"))
+    context["breadcrumbs"] = [
+        {"title": "Home", "url": url_for("index")},
+        {"title": "Search"},
+    ]
+    template = "search/results.html" if partial else "search.html"
+    return render_template(template, **context)
 @app.get("/reports")
 @roles_required(RoleEnum.AUDITOR.value, RoleEnum.QUALITY_ADMIN.value)
 def reports_index():

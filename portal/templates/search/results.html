@@ -1,0 +1,39 @@
+<table class="table table-striped">
+  <thead>
+    <tr>
+      <th>Code</th>
+      <th>Title</th>
+      <th>Status</th>
+      <th>Latest Version</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% if documents %}
+      {% for doc in documents %}
+      <tr>
+        <td>{{ doc.code }}</td>
+        <td>{{ doc.title }}</td>
+        <td>{{ doc.status }}</td>
+        <td>{{ doc.major_version }}.{{ doc.minor_version }}</td>
+      </tr>
+      {% endfor %}
+    {% elif keyword %}
+      <tr><td colspan="4">No matching documents.</td></tr>
+    {% else %}
+      <tr><td colspan="4">Enter a search term to begin.</td></tr>
+    {% endif %}
+  </tbody>
+</table>
+{% if keyword %}
+<nav>
+  <ul class="pagination">
+    {% if page > 1 %}
+    <li class="page-item"><a class="page-link" hx-get="{{ url_for('search_view', q=keyword, page=page-1) }}" hx-target="#search-results" hx-push-url="true">Previous</a></li>
+    {% endif %}
+    <li class="page-item disabled"><span class="page-link">{{ page }} / {{ pages }}</span></li>
+    {% if page < pages %}
+    <li class="page-item"><a class="page-link" hx-get="{{ url_for('search_view', q=keyword, page=page+1) }}" hx-target="#search-results" hx-push-url="true">Next</a></li>
+    {% endif %}
+  </ul>
+</nav>
+{% endif %}
