@@ -4,6 +4,7 @@ from datetime import datetime, timedelta
 import jwt
 from ldap3 import Connection, Server, ALL, NTLM, SIMPLE
 from ldap3.core.exceptions import LDAPException
+from urllib.parse import urlparse
 from flask import (
     Blueprint,
     redirect,
@@ -68,21 +69,27 @@ def roles_required(*required_roles):
 def _ldap_authenticate(username: str, password: str) -> bool:
     """Authenticate a user against LDAP using a service account."""
     timeout = current_app.config.get('LDAP_CONNECT_TIMEOUT', 5)
-    server = Server(
-        current_app.config['LDAP_URL'], get_info=ALL, connect_timeout=timeout
-    )
+    # Parse the LDAP URL so we honour scheme and custom ports.
+    url = urlparse(current_app.config['LDAP_URL'])
+    use_ssl = url.scheme == 'ldaps'
+    port = url.port or (636 if use_ssl else 389)
+    host = url.hostname or current_app.config['LDAP_URL']
+    server = Server(host, port=port, use_ssl=use_ssl, get_info=ALL, connect_timeout=timeout)
+
     domain = current_app.config.get('LDAP_DOMAIN')
     bind_user = current_app.config.get('LDAP_USER')
     bind_password = current_app.config.get('LDAP_PASSWORD')
     base_dn = current_app.config.get('LDAP_BASE_DN')
     search_filter = current_app.config.get('LDAP_SEARCH_FILTER', '(objectClass=user)')
 
+    auth_method = NTLM if domain else SIMPLE
+
     try:
         with Connection(
             server,
             user=f"{domain}\\{bind_user}" if domain else bind_user,
             password=bind_password,
-            authentication=NTLM,
+            authentication=auth_method,
             auto_bind=True,
             receive_timeout=timeout,
         ) as conn:
@@ -95,7 +102,7 @@ def _ldap_authenticate(username: str, password: str) -> bool:
             server,
             user=f"{domain}\\{username}" if domain else username,
             password=password,
-            authentication=NTLM,
+            authentication=auth_method,
             auto_bind=True,
             receive_timeout=timeout,
         ) as user_conn:

@@ -6,6 +6,7 @@ The module connects to an LDAP server and synchronises the group names with the
 
 import os
 from typing import List
+from urllib.parse import urlparse
 
 from ldap3 import Connection, Server, ALL
 from models import get_session, Role
@@ -15,10 +16,16 @@ LDAP_USER = os.environ.get("LDAP_USER")
 LDAP_PASSWORD = os.environ.get("LDAP_PASSWORD")
 LDAP_GROUP_BASE = os.environ.get("LDAP_GROUP_BASE", "ou=groups,dc=example,dc=com")
 
+# Parse the URL to support ldaps:// and custom ports
+_url = urlparse(LDAP_URL)
+_USE_SSL = _url.scheme == "ldaps"
+_PORT = _url.port or (636 if _USE_SSL else 389)
+_HOST = _url.hostname or LDAP_URL
+
 
 def fetch_groups() -> List[str]:
     """Fetch group names from LDAP."""
-    server = Server(LDAP_URL, get_info=ALL)
+    server = Server(_HOST, port=_PORT, use_ssl=_USE_SSL, get_info=ALL)
     try:
         conn = Connection(server, user=LDAP_USER, password=LDAP_PASSWORD, auto_bind=True)
         conn.search(LDAP_GROUP_BASE, "(objectClass=group)", attributes=["cn"])
