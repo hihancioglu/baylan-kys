@@ -190,6 +190,40 @@ def list_documents():
     return render_template("document_list.html", partial=partial, **context)
 
 
+@app.get("/documents/<int:doc_id>")
+@roles_required(RoleEnum.READER.value)
+def document_detail(doc_id: int):
+    session = get_session()
+    doc = session.get(Document, doc_id)
+    if not doc:
+        session.close()
+        return "Document not found", 404
+
+    revision_id = request.args.get("revision_id", type=int)
+    revisions = (
+        session.query(DocumentRevision)
+        .filter_by(doc_id=doc_id)
+        .order_by(DocumentRevision.major_version.desc(), DocumentRevision.minor_version.desc())
+        .all()
+    )
+    revision = None
+    if revision_id:
+        revision = (
+            session.query(DocumentRevision)
+            .filter_by(id=revision_id, doc_id=doc_id)
+            .first()
+        )
+    session.close()
+    partial = bool(request.headers.get("HX-Request"))
+    return render_template(
+        "document_detail.html",
+        doc=doc,
+        revisions=revisions,
+        revision=revision,
+        partial=partial,
+    )
+
+
 @app.post("/documents")
 @roles_required(RoleEnum.CONTRIBUTOR.value)
 def create_document():
