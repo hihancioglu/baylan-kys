@@ -8,7 +8,7 @@ import os
 from typing import List
 from urllib.parse import urlparse
 
-from ldap3 import Connection, Server, ALL
+import ldap3
 from models import get_session, Role
 
 LDAP_URL = os.environ.get("LDAP_URL", "ldap://localhost")
@@ -25,11 +25,13 @@ _HOST = _url.hostname or LDAP_URL
 
 def fetch_groups() -> List[str]:
     """Fetch group names from LDAP."""
-    server = Server(_HOST, port=_PORT, use_ssl=_USE_SSL, get_info=ALL)
+    server = ldap3.Server(_HOST, port=_PORT, use_ssl=_USE_SSL, get_info=ldap3.NONE)
     try:
-        conn = Connection(server, user=LDAP_USER, password=LDAP_PASSWORD, auto_bind=True)
+        conn = ldap3.Connection(server, user=LDAP_USER, password=LDAP_PASSWORD, auto_bind=True)
         conn.search(LDAP_GROUP_BASE, "(objectClass=group)", attributes=["cn"])
-        return [entry.cn.value for entry in conn.entries]
+        groups = [entry.cn.value for entry in conn.entries]
+        conn.unbind()
+        return groups
     except Exception:
         # In case LDAP is unreachable return empty list; log in real implementation
         return []
