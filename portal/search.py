@@ -1,4 +1,7 @@
 import os
+import json
+from functools import lru_cache
+
 from elasticsearch import Elasticsearch
 
 # The search functionality relies on an external Elasticsearch service. In
@@ -40,7 +43,8 @@ def create_index() -> None:
                 "code": {"type": "keyword"},
                 "tags": {"type": "keyword"},
                 "department": {"type": "keyword"},
-                "process": {"type": "keyword"},
+                "status": {"type": "keyword"},
+                "type": {"type": "keyword"},
                 "content": {"type": "text"},
             }
         }
@@ -63,7 +67,8 @@ def index_document(doc, content: str = "") -> None:
         "code": doc.code,
         "tags": doc.tags,
         "department": doc.department,
-        "process": doc.process,
+        "status": getattr(doc, "status", ""),
+        "type": getattr(doc, "type", ""),
         "content": content,
     }
     try:
@@ -73,30 +78,60 @@ def index_document(doc, content: str = "") -> None:
         pass
 
 
-def search_documents(filters: dict):
-    """Search for documents matching the given filter dictionary.
+@lru_cache(maxsize=128)
+def _cached_search(query_json: str):
+    """Execute the Elasticsearch query represented by ``query_json``.
 
-    If the search service isn't available an empty list is returned instead of
-    raising an exception.
+    The JSON string is used as the cache key so identical queries can be
+    returned quickly without hitting the backend, helping to keep response
+    times low.
+    """
+
+    return es.search(index=INDEX_NAME, body=json.loads(query_json))
+
+
+def search_documents(keyword: str, filters: dict, page: int = 1, per_page: int = 10):
+    """Search for documents matching the given keyword and filters.
+
+    Returns a tuple of ``(results, facets)`` where ``results`` is a list of
+    matching documents and ``facets`` contains aggregation counts for the
+    ``department``, ``status`` and ``type`` fields.
     """
 
     if es is None:
-        return []
+        raise RuntimeError("Search service unavailable")
 
     must = []
-    for field, value in filters.items():
+    if keyword:
+        must.append({"multi_match": {"query": keyword, "fields": ["title^2", "content"]}})
+    for field in ["department", "status", "type"]:
+        value = filters.get(field)
         if value:
-            if field == "title" or field == "content":
-                must.append({"match": {field: value}})
-            else:
-                must.append({"term": {field: value}})
-    query = {"query": {"bool": {"must": must}}}
-    try:
-        resp = es.search(index=INDEX_NAME, body=query)
-    except Exception:
-        return []
+            must.append({"term": {field: value}})
 
-    return [hit["_source"] | {"id": hit["_id"]} for hit in resp["hits"]["hits"]]
+    query = {
+        "query": {"bool": {"must": must}} if must else {"match_all": {}},
+        "size": per_page,
+        "from": (page - 1) * per_page,
+        "aggs": {
+            "department": {"terms": {"field": "department"}},
+            "status": {"terms": {"field": "status"}},
+            "type": {"terms": {"field": "type"}},
+        },
+    }
+
+    try:
+        resp = _cached_search(json.dumps(query, sort_keys=True))
+    except Exception as exc:
+        raise RuntimeError("Search query failed") from exc
+
+    results = [hit["_source"] | {"id": hit["_id"]} for hit in resp["hits"]["hits"]]
+    aggs = {}
+    for facet in ["department", "status", "type"]:
+        buckets = resp.get("aggregations", {}).get(facet, {}).get("buckets", [])
+        aggs[facet] = {b["key"]: b["doc_count"] for b in buckets}
+
+    return results, aggs
 
 
 create_index()
