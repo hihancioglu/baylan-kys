@@ -200,10 +200,12 @@ class CAPAAction(Base):
     document = relationship("Document")
 
 
-class NotificationSetting(Base):
-    __tablename__ = "notification_settings"
+class UserSetting(Base):
+    __tablename__ = "user_settings"
     id = Column(Integer, primary_key=True)
     user_id = Column(Integer, ForeignKey("users.id"), unique=True, nullable=False)
+    language = Column(String, default="en")
+    theme = Column(String, default="light")
     email_enabled = Column(Boolean, default=True)
     webhook_enabled = Column(Boolean, default=False)
     webhook_url = Column(String)
@@ -232,6 +234,17 @@ class AuditLog(Base):
 
     user = relationship("User")
     document = relationship("Document")
+
+
+class PersonalAccessToken(Base):
+    __tablename__ = "personal_access_tokens"
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    name = Column(String)
+    token_hash = Column(String, unique=True, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+    user = relationship("User")
 
 Base.metadata.create_all(engine)
 

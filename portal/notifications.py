@@ -2,7 +2,7 @@ import os
 import smtplib
 from email.message import EmailMessage
 import requests
-from models import get_session, User, NotificationSetting
+from models import get_session, User, UserSetting
 
 SMTP_SERVER = os.environ.get("SMTP_SERVER", "localhost")
 SMTP_PORT = int(os.environ.get("SMTP_PORT", "25"))
@@ -24,7 +24,7 @@ def notify_user(user_id: int, subject: str, body: str) -> None:
     session = get_session()
     try:
         user = session.get(User, user_id)
-        settings = session.query(NotificationSetting).filter_by(user_id=user_id).first()
+        settings = session.query(UserSetting).filter_by(user_id=user_id).first()
     finally:
         session.close()
     if not user:
