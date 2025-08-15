@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block title %}Documents{% endblock %}
+{% block content %}
+<h1>Documents</h1>
+<form hx-get="{{ url_for('documents_table') }}" hx-target="#document-table" hx-push-url="true" class="row g-2 mb-3">
+  <div class="col-md-3"><input class="form-control" name="status" placeholder="Status" value="{{ filters.status or '' }}"></div>
+  <div class="col-md-3"><input class="form-control" name="department" placeholder="Department" value="{{ filters.department or '' }}"></div>
+  <div class="col-md-3"><input class="form-control" name="tag" placeholder="Tag" value="{{ filters.tag or '' }}"></div>
+  <div class="col-md-3"><button class="btn btn-primary w-100" type="submit">Filter</button></div>
+</form>
+<div id="document-table">
+  {% include 'documents/_table.html' %}
+</div>
+<script src="{{ asset_url('document_list.js') }}" defer></script>
+{% endblock %}

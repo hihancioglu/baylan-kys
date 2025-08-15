@@ -260,20 +260,10 @@ def list_archived_documents():
     return jsonify(result)
 
 
-@app.get("/documents")
-@roles_required(RoleEnum.READER.value)
-def list_documents():
+def _get_documents():
     session = get_session()
     query = session.query(Document)
     filters = {}
-    code = request.args.get("code")
-    if code:
-        query = query.filter(Document.code == code)
-        filters["code"] = code
-    title = request.args.get("title")
-    if title:
-        query = query.filter(Document.title.ilike(f"%{title}%"))
-        filters["title"] = title
     status = request.args.get("status")
     if status:
         query = query.filter(Document.status == status)
@@ -304,6 +294,31 @@ def list_documents():
     params.pop("page_size", None)
     params["page_size"] = page_size
 
+    return docs, page, pages, filters, params
+
+
+@app.get("/documents")
+@roles_required(RoleEnum.READER.value)
+def list_documents():
+    docs, page, pages, filters, params = _get_documents()
+    context = {
+        "documents": docs,
+        "page": page,
+        "pages": pages,
+        "filters": filters,
+        "params": params,
+        "breadcrumbs": [
+            {"title": "Home", "url": url_for("index")},
+            {"title": "Documents"},
+        ],
+    }
+    return render_template("documents/list.html", **context)
+
+
+@app.get("/documents/table")
+@roles_required(RoleEnum.READER.value)
+def documents_table():
+    docs, page, pages, filters, params = _get_documents()
     context = {
         "documents": docs,
         "page": page,
@@ -311,12 +326,7 @@ def list_documents():
         "filters": filters,
         "params": params,
     }
-    partial = bool(request.headers.get("HX-Request"))
-    context["breadcrumbs"] = [
-        {"title": "Home", "url": url_for("index")},
-        {"title": "Documents"},
-    ]
-    return render_template("document_list.html", partial=partial, **context)
+    return render_template("documents/_table.html", **context)
 
 
 @app.get("/documents/<int:doc_id>")
