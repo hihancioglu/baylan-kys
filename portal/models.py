@@ -138,6 +138,17 @@ class TrainingResult(Base):
 
     user = relationship("User")
 
+
+class FormSubmission(Base):
+    __tablename__ = "form_submissions"
+    id = Column(Integer, primary_key=True)
+    form_name = Column(String, nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    data = Column(JSON)
+    submitted_at = Column(DateTime, default=datetime.utcnow)
+
+    user = relationship("User")
+
 Base.metadata.create_all(engine)
 
 def get_session():
