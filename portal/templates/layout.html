@@ -32,13 +32,28 @@
         <li class="nav-item"><a class="nav-link" href="/documents/new">New Document</a></li>
         {% endif %}
         {% if has_role('reviewer') %}
-        <li class="nav-item"><a class="nav-link" href="/reviews">Review Queue</a></li>
+        <li class="nav-item">
+          <a class="nav-link d-flex justify-content-between align-items-center" href="/reviews">
+            Review Queue
+            <span id="review-count" class="badge bg-secondary ms-2">0</span>
+          </a>
+        </li>
         {% endif %}
         {% if has_role('approver') %}
-        <li class="nav-item"><a class="nav-link" href="/approvals">Approvals</a></li>
+        <li class="nav-item">
+          <a class="nav-link d-flex justify-content-between align-items-center" href="/approvals">
+            Approvals
+            <span id="approval-count" class="badge bg-secondary ms-2">0</span>
+          </a>
+        </li>
         {% endif %}
         {% if has_role('publisher') %}
-        <li class="nav-item"><a class="nav-link" href="/publish">Publish</a></li>
+        <li class="nav-item">
+          <a class="nav-link d-flex justify-content-between align-items-center" href="/publish">
+            Publish
+            <span id="publish-count" class="badge bg-secondary ms-2">0</span>
+          </a>
+        </li>
         {% endif %}
         {% if has_role('quality_admin') %}
         <li class="nav-item"><a class="nav-link" href="/admin">Admin</a></li>
