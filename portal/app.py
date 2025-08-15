@@ -42,6 +42,7 @@ from reports import (
 )
 from signing import create_signed_pdf
 from datetime import datetime
+from queue import Queue
 
 app = Flask(__name__, static_folder="static/dist")
 app.secret_key = os.environ.get("SECRET_KEY", "dev")
@@ -105,6 +106,71 @@ def log_action(user_id, doc_id, action):
         session.commit()
     finally:
         session.close()
+
+
+# --- Real-time count streaming ---
+sse_clients = []
+
+
+def _compute_counts(db, user_id, roles):
+    approval_count = (
+        db.query(WorkflowStep)
+        .filter(
+            WorkflowStep.status == "Pending",
+            WorkflowStep.approver.in_(roles),
+        )
+        .count()
+    )
+    ack_count = (
+        db.query(Document)
+        .filter(Document.status == "Published")
+        .outerjoin(
+            Acknowledgement,
+            (Acknowledgement.doc_id == Document.id)
+            & (Acknowledgement.user_id == user_id),
+        )
+        .filter(Acknowledgement.id.is_(None))
+        .count()
+    )
+    return {"approvals": approval_count, "acknowledgements": ack_count}
+
+
+def broadcast_counts():
+    db = get_session()
+    try:
+        for client in list(sse_clients):
+            counts = _compute_counts(db, client["user_id"], client["roles"])
+            client["queue"].put(json.dumps(counts))
+    finally:
+        db.close()
+
+
+@app.get("/events")
+@login_required
+def sse_events():
+    user = session.get("user")
+    if not user:
+        return "Unauthorized", 401
+    user_id = user.get("id")
+    roles = session.get("roles", [])
+    q = Queue()
+    client = {"user_id": user_id, "roles": roles, "queue": q}
+    sse_clients.append(client)
+
+    db = get_session()
+    counts = _compute_counts(db, user_id, roles)
+    db.close()
+
+    def stream():
+        yield f"data: {json.dumps(counts)}\n\n"
+        try:
+            while True:
+                data = q.get()
+                yield f"data: {data}\n\n"
+        finally:
+            sse_clients.remove(client)
+
+    return Response(stream(), mimetype="text/event-stream")
 
 @app.route("/")
 @login_required
@@ -333,6 +399,7 @@ def approve_step(step_id: int):
         step.status = "Approved"
         step.approved_at = datetime.utcnow()
         db.commit()
+        broadcast_counts()
         db.refresh(step)
         html = render_template("_approval_row.html", step=step)
         resp = make_response(html)
@@ -352,6 +419,7 @@ def reject_step(step_id: int):
             return "Not found", 404
         step.status = "Rejected"
         db.commit()
+        broadcast_counts()
         db.refresh(step)
         html = render_template("_approval_row.html", step=step)
         resp = make_response(html)
@@ -546,6 +614,7 @@ def acknowledge_document(doc_id):
             session.add(ack)
             session.commit()
             log_action(user_id, doc_id, "acknowledge_document")
+            broadcast_counts()
         return jsonify(ok=True, acknowledged_at=ack.acknowledged_at.isoformat())
     finally:
         session.close()

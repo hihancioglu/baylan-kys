@@ -1,7 +1,7 @@
 {
-  "document_detail.js": "document_detail-eb1344bc.js",
-  "app.css": "app-bfd4bd45.css",
   "document_edit.js": "document_edit-42d55077.js",
-  "app.js": "app-8b588082.js",
-  "document_list.js": "document_list-f404e197.js"
+  "app.css": "app-bfd4bd45.css",
+  "app.js": "app-c48e3578.js",
+  "document_list.js": "document_list-f404e197.js",
+  "document_detail.js": "document_detail-eb1344bc.js"
 }
