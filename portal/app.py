@@ -1,5 +1,5 @@
 import os, json, time, base64, hmac, hashlib
-from flask import Flask, request, jsonify, redirect, url_for
+from flask import Flask, request, jsonify, redirect, url_for, render_template
 from models import (
     Document,
     DocumentRevision,
@@ -10,6 +10,8 @@ from models import (
     TrainingResult,
     get_session,
 )
+from search import index_document, search_documents
+from ocr import extract_text
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "dev")
@@ -32,6 +34,64 @@ def sign_payload(payload: dict) -> str:
 @app.route("/")
 def index():
     return jsonify(ok=True, msg="QDMS Portal running")
+
+
+@app.post("/documents")
+def create_document():
+    data = request.get_json(silent=True) or {}
+    doc = Document(
+        doc_key=data.get("doc_key"),
+        title=data.get("title"),
+        code=data.get("code"),
+        tags=",".join(data.get("tags", [])) if isinstance(data.get("tags"), list) else data.get("tags"),
+        department=data.get("department"),
+        process=data.get("process"),
+    )
+    session = get_session()
+    session.add(doc)
+    session.commit()
+    content = ""
+    if data.get("file_path"):
+        content = extract_text(data["file_path"])
+    index_document(doc, content)
+    result = {"id": doc.id}
+    session.close()
+    return jsonify(result), 201
+
+
+@app.get("/search")
+def search_view():
+    fields = ["title", "code", "tags", "department", "process"]
+    filters = {f: request.args.get(f) for f in fields}
+    results = []
+    try:
+        results = search_documents(filters)
+    except Exception:
+        session = get_session()
+        query = session.query(Document)
+        if filters["title"]:
+            query = query.filter(Document.title.ilike(f"%{filters['title']}%"))
+        if filters["code"]:
+            query = query.filter(Document.code == filters["code"])
+        if filters["tags"]:
+            query = query.filter(Document.tags.contains(filters["tags"]))
+        if filters["department"]:
+            query = query.filter(Document.department == filters["department"])
+        if filters["process"]:
+            query = query.filter(Document.process == filters["process"])
+        results = [
+            {
+                "id": d.id,
+                "title": d.title,
+                "code": d.code,
+                "tags": d.tags,
+                "department": d.department,
+                "process": d.process,
+            }
+            for d in query.all()
+        ]
+        session.close()
+    return render_template("search.html", results=results, filters=filters)
 
 
 @app.post("/roles/assign")
