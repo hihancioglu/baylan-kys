@@ -1,0 +1,25 @@
+{% extends "layout.html" %}
+{% block title %}Approvals{% endblock %}
+{% block content %}
+<h1>Approvals</h1>
+<table class="table" id="approval-table">
+  <thead>
+    <tr>
+      <th>Document</th>
+      <th>Step</th>
+      <th>Status</th>
+      <th>Actions</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for step in steps %}
+      {% include "_approval_row.html" %}
+    {% else %}
+    <tr><td colspan="4">No pending approvals.</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% for step in steps %}
+  {% include "_approval_modals.html" %}
+{% endfor %}
+{% endblock %}

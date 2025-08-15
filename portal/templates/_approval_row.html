@@ -1,0 +1,13 @@
+<tr id="step-{{ step.id }}">
+  <td>{{ step.document.title }}</td>
+  <td>{{ step.step_order }}</td>
+  <td>{{ step.status }}</td>
+  <td>
+    {% if step.status == 'Pending' %}
+    <button class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#approveModal-{{ step.id }}">Approve</button>
+    <button class="btn btn-danger btn-sm" data-bs-toggle="modal" data-bs-target="#rejectModal-{{ step.id }}">Reject</button>
+    {% else %}
+    {{ step.status }}
+    {% endif %}
+  </td>
+</tr>

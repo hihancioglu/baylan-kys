@@ -8,6 +8,7 @@ from flask import (
     render_template,
     Response,
     session,
+    make_response,
 )
 from flask_wtf.csrf import CSRFProtect
 from auth import auth_bp, init_app as auth_init, login_required, roles_required
@@ -25,6 +26,7 @@ from models import (
     CAPAAction,
     AuditLog,
     NotificationSetting,
+    WorkflowStep,
     get_session,
     RoleEnum,
 )
@@ -39,6 +41,7 @@ from reports import (
     pending_approvals_report,
 )
 from signing import create_signed_pdf
+from datetime import datetime
 
 app = Flask(__name__, static_folder="static/dist")
 app.secret_key = os.environ.get("SECRET_KEY", "dev")
@@ -297,6 +300,65 @@ def sign_document(doc_id: int):
     except Exception as exc:
         return jsonify(error=str(exc)), 500
     return Response(signed_pdf, mimetype="application/pdf")
+
+
+@app.get("/approvals")
+@roles_required(RoleEnum.APPROVER.value)
+def approval_queue():
+    db = get_session()
+    try:
+        user_roles = session.get("roles", [])
+        steps = (
+            db.query(WorkflowStep)
+            .join(Document)
+            .filter(
+                WorkflowStep.status == "Pending",
+                WorkflowStep.approver.in_(user_roles),
+            )
+            .all()
+        )
+        return render_template("approvals.html", steps=steps)
+    finally:
+        db.close()
+
+
+@app.post("/approvals/<int:step_id>/approve")
+@roles_required(RoleEnum.APPROVER.value)
+def approve_step(step_id: int):
+    db = get_session()
+    try:
+        step = db.get(WorkflowStep, step_id)
+        if not step:
+            return "Not found", 404
+        step.status = "Approved"
+        step.approved_at = datetime.utcnow()
+        db.commit()
+        db.refresh(step)
+        html = render_template("_approval_row.html", step=step)
+        resp = make_response(html)
+        resp.headers["HX-Trigger"] = json.dumps({"showToast": "Approved"})
+        return resp
+    finally:
+        db.close()
+
+
+@app.post("/approvals/<int:step_id>/reject")
+@roles_required(RoleEnum.APPROVER.value)
+def reject_step(step_id: int):
+    db = get_session()
+    try:
+        step = db.get(WorkflowStep, step_id)
+        if not step:
+            return "Not found", 404
+        step.status = "Rejected"
+        db.commit()
+        db.refresh(step)
+        html = render_template("_approval_row.html", step=step)
+        resp = make_response(html)
+        resp.headers["HX-Trigger"] = json.dumps({"showToast": "Rejected"})
+        return resp
+    finally:
+        db.close()
 
 
 @app.get("/search")
