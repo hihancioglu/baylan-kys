@@ -60,6 +60,52 @@ a:focus {
   fill: currentColor;
 }
 
+/* Bootstrap component overrides */
+.btn {
+  border-radius: $radius-md;
+}
+
+.btn-primary {
+  background-color: $color-primary;
+  border-color: $color-primary;
+}
+
+.btn-primary:hover,
+.btn-primary:focus {
+  background-color: $color-primary-dark;
+  border-color: $color-primary-dark;
+}
+
+.form-control {
+  color: $color-text;
+  background-color: $color-background;
+  border-radius: $radius-md;
+}
+
+.card {
+  border-radius: $radius-md;
+  box-shadow: $shadow-sm;
+}
+
+.navbar {
+  background-color: $color-primary;
+}
+
+.navbar .nav-link {
+  color: $color-background;
+}
+
+.badge {
+  background-color: $color-primary;
+  border-radius: $radius-sm;
+}
+
+.alert-primary {
+  background-color: $color-primary;
+  color: $color-background;
+  border-radius: $radius-md;
+}
+
 /* Responsive layout */
 @media (max-width: ($breakpoint-sm - 1)) {
   body {

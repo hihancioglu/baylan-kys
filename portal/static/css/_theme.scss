@@ -1,0 +1,18 @@
+@use 'tokens' as *;
+
+$primary: $color-primary;
+$body-color: $color-text;
+$body-bg: $color-background;
+
+$border-radius: $radius-md;
+$border-radius-sm: $radius-sm;
+$border-radius-lg: $radius-lg;
+
+$btn-border-radius: $radius-md;
+$form-control-border-radius: $radius-md;
+$card-border-radius: $radius-md;
+$navbar-light-color: $color-text;
+$navbar-light-hover-color: $color-primary-dark;
+$navbar-light-active-color: $color-primary;
+$badge-border-radius: $radius-sm;
+$alert-border-radius: $radius-md;
