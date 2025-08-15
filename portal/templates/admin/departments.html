@@ -1,0 +1,32 @@
+{% extends "layout.html" %}
+{% block content %}
+<h1>Departments</h1>
+<table class="table">
+  <thead><tr><th>Name</th><th>Visible</th></tr></thead>
+  <tbody>
+  {% for d in departments %}
+  <tr>
+    <td>{{ d.name }}</td>
+    <td>{{ 'Yes' if d.visible else 'No' }}</td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+<form id="deptForm">
+  <input class="form-control" name="name" placeholder="Department name">
+  <button class="btn btn-primary mt-2" type="submit">Add</button>
+</form>
+<script>
+const form = document.getElementById('deptForm');
+form.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const data = Object.fromEntries(new FormData(form).entries());
+  await fetch('/admin/api/departments', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify(data)
+  });
+  location.reload();
+});
+</script>
+{% endblock %}

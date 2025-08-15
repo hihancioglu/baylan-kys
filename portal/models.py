@@ -246,6 +246,14 @@ class PersonalAccessToken(Base):
 
     user = relationship("User")
 
+
+class DepartmentVisibility(Base):
+    """Visibility flags for departments."""
+    __tablename__ = "department_visibility"
+    id = Column(Integer, primary_key=True)
+    name = Column(String, unique=True, nullable=False)
+    visible = Column(Boolean, default=True, nullable=False)
+
 Base.metadata.create_all(engine)
 
 def get_session():

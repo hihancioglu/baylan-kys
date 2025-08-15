@@ -1,0 +1,17 @@
+{% extends "layout.html" %}
+{% block content %}
+<h1>Users</h1>
+<table class="table">
+  <thead><tr><th>ID</th><th>Username</th><th>Email</th><th>Roles</th></tr></thead>
+  <tbody>
+  {% for u in users %}
+  <tr>
+    <td>{{ u.id }}</td>
+    <td>{{ u.username }}</td>
+    <td>{{ u.email }}</td>
+    <td>{% for r in u.roles %}{{ r.role.name }}{% if not loop.last %}, {% endif %}{% endfor %}</td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

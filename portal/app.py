@@ -27,6 +27,7 @@ from models import (
     AuditLog,
     UserSetting,
     PersonalAccessToken,
+    DepartmentVisibility,
     WorkflowStep,
     get_session,
     RoleEnum,
@@ -558,6 +559,216 @@ def assign_role():
         return jsonify(ok=True)
     finally:
         session.close()
+
+
+@app.delete("/roles/assign")
+@roles_required(RoleEnum.QUALITY_ADMIN.value)
+def remove_role():
+    """Remove a role from a user."""
+    data = request.get_json(silent=True) or {}
+    user_id = data.get("user_id")
+    role_name = data.get("role")
+    if not user_id or not role_name:
+        return jsonify(error="user_id and role required"), 400
+    session = get_session()
+    try:
+        role = session.query(Role).filter_by(name=role_name).first()
+        if not role:
+            return jsonify(error="role not found"), 404
+        link = session.query(UserRole).filter_by(user_id=user_id, role_id=role.id).first()
+        if link:
+            session.delete(link)
+            session.commit()
+            log_action(user_id, None, f"remove_role:{role_name}")
+        return jsonify(ok=True)
+    finally:
+        session.close()
+
+
+@app.get("/admin/users")
+@roles_required(RoleEnum.QUALITY_ADMIN.value)
+def admin_users_page():
+    """Render user list page."""
+    db = get_session()
+    try:
+        users = db.query(User).all()
+        return render_template("admin/users.html", users=users)
+    finally:
+        db.close()
+
+
+@app.get("/admin/roles")
+@roles_required(RoleEnum.QUALITY_ADMIN.value)
+def admin_roles_page():
+    """Render role assignment page."""
+    db = get_session()
+    try:
+        users = db.query(User).all()
+        roles = db.query(Role).all()
+        return render_template("admin/roles.html", users=users, roles=roles)
+    finally:
+        db.close()
+
+
+@app.get("/admin/departments")
+@roles_required(RoleEnum.QUALITY_ADMIN.value)
+def admin_departments_page():
+    """Render department visibility page."""
+    db = get_session()
+    try:
+        departments = db.query(DepartmentVisibility).all()
+        return render_template("admin/departments.html", departments=departments)
+    finally:
+        db.close()
+
+
+@app.get("/admin/api/users")
+@roles_required(RoleEnum.QUALITY_ADMIN.value)
+def list_users_api():
+    """Return all users as JSON."""
+    db = get_session()
+    try:
+        users = db.query(User).all()
+        data = [
+            {
+                "id": u.id,
+                "username": u.username,
+                "email": u.email,
+                "roles": [ur.role.name for ur in u.roles],
+            }
+            for u in users
+        ]
+        return jsonify(data)
+    finally:
+        db.close()
+
+
+@app.post("/admin/api/users")
+@roles_required(RoleEnum.QUALITY_ADMIN.value)
+def create_user_api():
+    data = request.get_json(silent=True) or {}
+    username = data.get("username")
+    email = data.get("email")
+    if not username:
+        return jsonify(error="username required"), 400
+    db = get_session()
+    try:
+        user = User(username=username, email=email)
+        db.add(user)
+        db.commit()
+        admin_id = session.get("user", {}).get("id")
+        log_action(admin_id, None, f"create_user:{user.id}")
+        return jsonify(id=user.id, username=user.username, email=user.email)
+    finally:
+        db.close()
+
+
+@app.put("/admin/api/users/<int:user_id>")
+@roles_required(RoleEnum.QUALITY_ADMIN.value)
+def update_user_api(user_id):
+    data = request.get_json(silent=True) or {}
+    db = get_session()
+    try:
+        user = db.get(User, user_id)
+        if not user:
+            return jsonify(error="user not found"), 404
+        user.username = data.get("username", user.username)
+        user.email = data.get("email", user.email)
+        db.commit()
+        admin_id = session.get("user", {}).get("id")
+        log_action(admin_id, None, f"update_user:{user_id}")
+        return jsonify(ok=True)
+    finally:
+        db.close()
+
+
+@app.delete("/admin/api/users/<int:user_id>")
+@roles_required(RoleEnum.QUALITY_ADMIN.value)
+def delete_user_api(user_id):
+    db = get_session()
+    try:
+        user = db.get(User, user_id)
+        if not user:
+            return jsonify(error="user not found"), 404
+        db.delete(user)
+        db.commit()
+        admin_id = session.get("user", {}).get("id")
+        log_action(admin_id, None, f"delete_user:{user_id}")
+        return jsonify(ok=True)
+    finally:
+        db.close()
+
+
+@app.get("/admin/api/departments")
+@roles_required(RoleEnum.QUALITY_ADMIN.value)
+def list_departments_api():
+    db = get_session()
+    try:
+        depts = db.query(DepartmentVisibility).all()
+        data = [
+            {"id": d.id, "name": d.name, "visible": d.visible}
+            for d in depts
+        ]
+        return jsonify(data)
+    finally:
+        db.close()
+
+
+@app.post("/admin/api/departments")
+@roles_required(RoleEnum.QUALITY_ADMIN.value)
+def create_department_api():
+    data = request.get_json(silent=True) or {}
+    name = data.get("name")
+    if not name:
+        return jsonify(error="name required"), 400
+    db = get_session()
+    try:
+        dept = DepartmentVisibility(name=name, visible=data.get("visible", True))
+        db.add(dept)
+        db.commit()
+        admin_id = session.get("user", {}).get("id")
+        log_action(admin_id, None, f"create_department:{dept.id}")
+        return jsonify(id=dept.id, name=dept.name, visible=dept.visible)
+    finally:
+        db.close()
+
+
+@app.put("/admin/api/departments/<int:dept_id>")
+@roles_required(RoleEnum.QUALITY_ADMIN.value)
+def update_department_api(dept_id):
+    data = request.get_json(silent=True) or {}
+    db = get_session()
+    try:
+        dept = db.get(DepartmentVisibility, dept_id)
+        if not dept:
+            return jsonify(error="department not found"), 404
+        if "name" in data:
+            dept.name = data["name"]
+        if "visible" in data:
+            dept.visible = bool(data["visible"])
+        db.commit()
+        admin_id = session.get("user", {}).get("id")
+        log_action(admin_id, None, f"update_department:{dept_id}")
+        return jsonify(ok=True)
+    finally:
+        db.close()
+
+
+@app.delete("/admin/api/departments/<int:dept_id>")
+@roles_required(RoleEnum.QUALITY_ADMIN.value)
+def delete_department_api(dept_id):
+    db = get_session()
+    try:
+        dept = db.get(DepartmentVisibility, dept_id)
+        if not dept:
+            return jsonify(error="department not found"), 404
+        db.delete(dept)
+        db.commit()
+        admin_id = session.get("user", {}).get("id")
+        log_action(admin_id, None, f"delete_department:{dept_id}")
+        return jsonify(ok=True)
+    finally:
+        db.close()
 
 @app.route("/doc/<doc_key>/edit")
 @roles_required(RoleEnum.CONTRIBUTOR.value)

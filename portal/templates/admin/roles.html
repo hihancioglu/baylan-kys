@@ -1,0 +1,38 @@
+{% extends "layout.html" %}
+{% block content %}
+<h1>Assign Role</h1>
+<form id="roleForm">
+  <div class="mb-3">
+    <label>User
+      <select class="form-select" name="user_id">
+        {% for u in users %}
+        <option value="{{ u.id }}">{{ u.username }}</option>
+        {% endfor %}
+      </select>
+    </label>
+  </div>
+  <div class="mb-3">
+    <label>Role
+      <select class="form-select" name="role">
+        {% for r in roles %}
+        <option value="{{ r.name }}">{{ r.name }}</option>
+        {% endfor %}
+      </select>
+    </label>
+  </div>
+  <button class="btn btn-primary" type="submit">Assign</button>
+</form>
+<script>
+const form = document.getElementById('roleForm');
+form.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const data = Object.fromEntries(new FormData(form).entries());
+  await fetch('/roles/assign', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify(data)
+  });
+  location.reload();
+});
+</script>
+{% endblock %}
