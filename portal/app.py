@@ -20,6 +20,12 @@ from search import index_document, search_documents
 from ocr import extract_text
 from docxf_render import render_form_to_pdf
 from notifications import notify_revision_time, notify_mandatory_read
+from reports import (
+    build_report,
+    revision_report,
+    training_compliance_report,
+    pending_approvals_report,
+)
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "dev")
@@ -131,6 +137,35 @@ def search_view():
         ]
         session.close()
     return render_template("search.html", results=results, filters=filters)
+
+
+@app.get("/reports")
+def reports_index():
+    return render_template("reports.html")
+
+
+@app.get("/reports/<kind>")
+def report_download(kind):
+    fmt = request.args.get("format", "json").lower()
+    mapping = {
+        "revisions": revision_report,
+        "training": training_compliance_report,
+        "pending-approvals": pending_approvals_report,
+    }
+    if fmt == "json":
+        fn = mapping.get(kind)
+        if not fn:
+            return jsonify(error="unknown report"), 400
+        return jsonify(fn())
+    try:
+        content, mime, ext = build_report(kind, fmt)
+    except ValueError:
+        return jsonify(error="unknown report or format"), 400
+    return Response(
+        content,
+        mimetype=mime,
+        headers={"Content-Disposition": f"attachment; filename={kind}.{ext}"},
+    )
 
 
 @app.post("/roles/assign")

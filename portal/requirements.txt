@@ -9,3 +9,6 @@ elasticsearch==8.13.0
 # textract 1.6.4 and 1.6.5 have issues; use 1.6.3 instead
 textract==1.6.3
 fpdf==1.7.2
+pandas==2.2.2
+openpyxl==3.1.2
+reportlab==4.1.0
