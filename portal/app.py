@@ -1,5 +1,5 @@
-import os, json, time, base64, hmac, hashlib
-from flask import Flask, request, jsonify, redirect, url_for, render_template
+import os, json, time, base64, hmac, hashlib, csv, io
+from flask import Flask, request, jsonify, redirect, url_for, render_template, Response
 from models import (
     Document,
     DocumentRevision,
@@ -12,11 +12,11 @@ from models import (
     ChangeRequest,
     Deviation,
     CAPAAction,
+    AuditLog,
     get_session,
 )
 from search import index_document, search_documents
 from ocr import extract_text
-from flask import Response
 from docxf_render import render_form_to_pdf
 
 app = Flask(__name__)
@@ -37,6 +37,16 @@ def sign_payload(payload: dict) -> str:
     segs.append(base64.urlsafe_b64encode(sig).rstrip(b'='))
     return b'.'.join(segs).decode()
 
+
+def log_action(user_id, doc_id, action):
+    """Persist an audit log entry."""
+    session = get_session()
+    try:
+        session.add(AuditLog(user_id=user_id, doc_id=doc_id, action=action))
+        session.commit()
+    finally:
+        session.close()
+
 @app.route("/")
 def index():
     return jsonify(ok=True, msg="QDMS Portal running")
@@ -56,6 +66,7 @@ def create_document():
     session = get_session()
     session.add(doc)
     session.commit()
+    log_action(data.get("user_id"), doc.id, "create_document")
     content = ""
     if data.get("file_path"):
         content = extract_text(data["file_path"])
@@ -124,6 +135,7 @@ def assign_role():
         if not link:
             session.add(UserRole(user_id=user.id, role_id=role.id))
         session.commit()
+        log_action(user_id, None, f"assign_role:{role_name}")
         return jsonify(ok=True)
     finally:
         session.close()
@@ -185,6 +197,7 @@ def save_revision(doc_id):
     )
     session.add(rev)
     session.commit()
+    log_action(data.get("user_id"), doc_id, "save_revision")
     session.close()
     return jsonify(ok=True, version=f"{doc.major_version}.{doc.minor_version}")
 
@@ -209,6 +222,7 @@ def acknowledge_document(doc_id):
             ack = Acknowledgement(user_id=user_id, doc_id=doc_id)
             session.add(ack)
             session.commit()
+            log_action(user_id, doc_id, "acknowledge_document")
         return jsonify(ok=True, acknowledged_at=ack.acknowledged_at.isoformat())
     finally:
         session.close()
@@ -266,6 +280,7 @@ def training_evaluate():
             )
         )
         session.commit()
+        log_action(user_id, None, "training_evaluate")
     finally:
         session.close()
     return jsonify(passed=passed, score=score, max_score=len(correct))
@@ -281,6 +296,7 @@ def create_change_request():
     )
     session.add(cr)
     session.commit()
+    log_action(data.get("user_id"), cr.document_id, "create_change_request")
     result = {"id": cr.id}
     session.close()
     return jsonify(result), 201
@@ -299,6 +315,7 @@ def update_change_request(cr_id):
     if "description" in data:
         cr.description = data["description"]
     session.commit()
+    log_action(data.get("user_id"), cr_id, "update_change_request")
     session.close()
     return jsonify(ok=True)
 
@@ -313,6 +330,7 @@ def create_deviation():
     )
     session.add(dev)
     session.commit()
+    log_action(data.get("user_id"), dev.document_id, "create_deviation")
     result = {"id": dev.id}
     session.close()
     return jsonify(result), 201
@@ -331,6 +349,7 @@ def update_deviation(dev_id):
     if "description" in data:
         dev.description = data["description"]
     session.commit()
+    log_action(data.get("user_id"), dev_id, "update_deviation")
     session.close()
     return jsonify(ok=True)
 
@@ -346,6 +365,7 @@ def create_capa_action():
     )
     session.add(act)
     session.commit()
+    log_action(data.get("user_id"), act.document_id, "create_capa_action")
     result = {"id": act.id}
     session.close()
     return jsonify(result), 201
@@ -366,6 +386,7 @@ def update_capa_action(action_id):
     if "status" in data:
         act.status = data["status"]
     session.commit()
+    log_action(data.get("user_id"), action_id, "update_capa_action")
     session.close()
     return jsonify(ok=True)
 
@@ -393,9 +414,38 @@ def submit_form(form_name):
             FormSubmission(form_name=form_name, user_id=user_id, data=fields)
         )
         session.commit()
+        log_action(user_id, None, f"submit_form:{form_name}")
     finally:
         session.close()
     return Response(pdf, mimetype="application/pdf")
+
+
+@app.get("/audit/export")
+def audit_export():
+    fmt = request.args.get("format", "csv").lower()
+    session = get_session()
+    logs = session.query(AuditLog).order_by(AuditLog.created_at.desc()).all()
+    session.close()
+    if fmt == "pdf":
+        from fpdf import FPDF
+        pdf = FPDF()
+        pdf.add_page()
+        pdf.set_font("Arial", size=12)
+        pdf.cell(0, 10, "Audit Logs", ln=1)
+        for log in logs:
+            pdf.cell(0, 10, txt=f"{log.created_at.isoformat()} | user:{log.user_id} | doc:{log.doc_id} | {log.action}", ln=1)
+        return Response(pdf.output(dest="S").encode("latin-1"), mimetype="application/pdf")
+    else:
+        output = io.StringIO()
+        writer = csv.writer(output)
+        writer.writerow(["timestamp", "user_id", "doc_id", "action"])
+        for log in logs:
+            writer.writerow([log.created_at.isoformat(), log.user_id, log.doc_id, log.action])
+        return Response(
+            output.getvalue(),
+            mimetype="text/csv",
+            headers={"Content-Disposition": "attachment; filename=audit_logs.csv"},
+        )
 
 @app.post("/onlyoffice/callback/<path:doc_key>")
 def onlyoffice_callback(doc_key):
