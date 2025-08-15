@@ -1,45 +1,12 @@
 {% extends "base.html" %}
-{% block title %}Document Search{% endblock %}
+{% block title %}Search{% endblock %}
 {% block content %}
 <h1>Search Documents</h1>
-<form method="get" class="row g-2">
-  <div class="col-md-3"><input class="form-control" name="q" placeholder="Keyword" value="{{ keyword or '' }}"></div>
-  <div class="col-md-2"><input class="form-control" name="department" placeholder="Department" value="{{ filters.department or '' }}"></div>
-  <div class="col-md-2"><input class="form-control" name="status" placeholder="Status" value="{{ filters.status or '' }}"></div>
-  <div class="col-md-2"><input class="form-control" name="type" placeholder="Type" value="{{ filters.type or '' }}"></div>
+<form hx-get="{{ url_for('search_view') }}" hx-target="#search-results" hx-push-url="true" class="row g-2 mb-3">
+  <div class="col-md-10"><input class="form-control" type="search" name="q" placeholder="Keyword" value="{{ keyword or '' }}"></div>
   <div class="col-md-2"><button class="btn btn-primary w-100" type="submit">Search</button></div>
 </form>
-
-<div class="row mt-3">
-  <div class="col-md-3">
-    <h5>Facets</h5>
-    <strong>Department</strong>
-    <ul>
-    {% for val, count in facets.department.items() %}
-      <li><a href="{{ url_for('search_view', q=keyword, department=val) }}">{{ val }} ({{ count }})</a></li>
-    {% endfor %}
-    </ul>
-    <strong>Status</strong>
-    <ul>
-    {% for val, count in facets.status.items() %}
-      <li><a href="{{ url_for('search_view', q=keyword, status=val) }}">{{ val }} ({{ count }})</a></li>
-    {% endfor %}
-    </ul>
-    <strong>Type</strong>
-    <ul>
-    {% for val, count in facets.type.items() %}
-      <li><a href="{{ url_for('search_view', q=keyword, type=val) }}">{{ val }} ({{ count }})</a></li>
-    {% endfor %}
-    </ul>
-  </div>
-  <div class="col-md-9">
-    <ul>
-    {% for doc in results %}
-      <li>{{ doc.title }} ({{ doc.code }}) - {{ doc.department }} - {{ doc.status }} - {{ doc.type }}</li>
-    {% else %}
-      <li>No results found.</li>
-    {% endfor %}
-    </ul>
-  </div>
+<div id="search-results">
+  {% include 'search/results.html' %}
 </div>
 {% endblock %}
