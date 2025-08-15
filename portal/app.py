@@ -47,7 +47,10 @@ app.config.update(
     OIDC_CLIENT_SECRET=os.environ.get("OIDC_CLIENT_SECRET", ""),
     OIDC_ISSUER=os.environ.get("OIDC_ISSUER", ""),
     SESSION_COOKIE_HTTPONLY=True,
-    SESSION_COOKIE_SECURE=True,
+)
+
+app.config["SESSION_COOKIE_SECURE"] = (
+    os.environ.get("SESSION_COOKIE_SECURE", "true").lower() == "true"
 )
 
 CSRFProtect(app)
