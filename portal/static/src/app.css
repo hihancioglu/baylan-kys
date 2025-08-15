@@ -1,0 +1,5 @@
+@import "bootstrap/dist/css/bootstrap.css";
+/* custom styles */
+body {
+  padding-top: 60px;
+}

@@ -1,17 +1,17 @@
-<html>
-<body>
+{% extends "layout.html" %}
+{% block title %}Notification Settings{% endblock %}
+{% block content %}
 <h3>Notification Settings</h3>
 <form method="post">
-  <label>
-    <input type="checkbox" name="email_enabled" {% if settings.email_enabled %}checked{% endif %}>
-    Email
-  </label><br>
-  <label>
-    <input type="checkbox" name="webhook_enabled" {% if settings.webhook_enabled %}checked{% endif %}>
-    Webhook URL
-  </label>
-  <input type="text" name="webhook_url" value="{{ settings.webhook_url }}"><br>
-  <button type="submit">Save</button>
+  <div class="form-check">
+    <input class="form-check-input" type="checkbox" name="email_enabled" {% if settings.email_enabled %}checked{% endif %}>
+    <label class="form-check-label">Email</label>
+  </div>
+  <div class="form-check">
+    <input class="form-check-input" type="checkbox" name="webhook_enabled" {% if settings.webhook_enabled %}checked{% endif %}>
+    <label class="form-check-label">Webhook URL</label>
+  </div>
+  <input class="form-control my-2" type="text" name="webhook_url" value="{{ settings.webhook_url }}">
+  <button class="btn btn-primary" type="submit">Save</button>
 </form>
-</body>
-</html>
+{% endblock %}

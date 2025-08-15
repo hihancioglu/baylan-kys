@@ -28,8 +28,23 @@ from reports import (
 )
 from signing import create_signed_pdf
 
-app = Flask(__name__)
+app = Flask(__name__, static_folder="static/dist")
 app.secret_key = os.environ.get("SECRET_KEY", "dev")
+
+manifest_path = os.path.join(app.static_folder, "manifest.json")
+if os.path.exists(manifest_path):
+    with open(manifest_path) as f:
+        _asset_manifest = json.load(f)
+else:
+    _asset_manifest = {}
+
+
+def asset_url(name: str) -> str:
+    filename = _asset_manifest.get(name, name)
+    return url_for("static", filename=filename)
+
+
+app.jinja_env.globals["asset_url"] = asset_url
 
 ONLYOFFICE_INTERNAL_URL = os.environ["ONLYOFFICE_INTERNAL_URL"]  # http://onlyoffice
 ONLYOFFICE_PUBLIC_URL   = os.environ["ONLYOFFICE_PUBLIC_URL"]    # https://qdms.example.com/onlyoffice
@@ -58,7 +73,12 @@ def log_action(user_id, doc_id, action):
 
 @app.route("/")
 def index():
-    return jsonify(ok=True, msg="QDMS Portal running")
+    return render_template("index.html")
+
+
+@app.get("/health")
+def health():
+    return jsonify(status="ok")
 
 
 @app.get("/archive")
