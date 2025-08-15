@@ -1,5 +1,7 @@
 import os, json, time, base64, hmac, hashlib, csv, io
 from flask import Flask, request, jsonify, redirect, url_for, render_template, Response
+from flask_wtf.csrf import CSRFProtect
+from auth import auth_bp, init_app as auth_init
 from models import (
     Document,
     DocumentRevision,
@@ -30,6 +32,17 @@ from signing import create_signed_pdf
 
 app = Flask(__name__, static_folder="static/dist")
 app.secret_key = os.environ.get("SECRET_KEY", "dev")
+app.config.update(
+    OIDC_CLIENT_ID=os.environ.get("OIDC_CLIENT_ID", ""),
+    OIDC_CLIENT_SECRET=os.environ.get("OIDC_CLIENT_SECRET", ""),
+    OIDC_ISSUER=os.environ.get("OIDC_ISSUER", ""),
+    SESSION_COOKIE_HTTPONLY=True,
+    SESSION_COOKIE_SECURE=True,
+)
+
+CSRFProtect(app)
+auth_init(app)
+app.register_blueprint(auth_bp)
 
 manifest_path = os.path.join(app.static_folder, "manifest.json")
 if os.path.exists(manifest_path):
