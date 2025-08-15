@@ -51,11 +51,20 @@ app = Flask(__name__, static_folder="static/dist")
 app.secret_key = os.environ.get("SECRET_KEY", "dev")
 app.config.update(
     SESSION_COOKIE_HTTPONLY=True,
+    SESSION_COOKIE_SAMESITE="Lax",
 )
 
 app.config["SESSION_COOKIE_SECURE"] = (
     os.environ.get("SESSION_COOKIE_SECURE", "true").lower() == "true"
 )
+
+
+@app.after_request
+def set_security_headers(response):
+    response.headers["Content-Security-Policy"] = "default-src 'self'; frame-ancestors 'none'"
+    response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+    response.headers["X-Frame-Options"] = "DENY"
+    return response
 
 CSRFProtect(app)
 auth_init(app)
