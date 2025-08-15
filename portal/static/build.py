@@ -20,8 +20,9 @@ def build_file(name):
 if __name__ == '__main__':
     os.makedirs(DIST_DIR, exist_ok=True)
     manifest = {}
-    for fname in ['app.css', 'app.js']:
-        key, out = build_file(fname)
-        manifest[key] = out
+    for fname in os.listdir(SRC_DIR):
+        if fname.endswith(('.css', '.js')):
+            key, out = build_file(fname)
+            manifest[key] = out
     with open(os.path.join(DIST_DIR, 'manifest.json'), 'w') as f:
         json.dump(manifest, f, indent=2)

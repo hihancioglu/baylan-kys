@@ -132,6 +132,61 @@ def list_archived_documents():
     return jsonify(result)
 
 
+@app.get("/documents")
+@roles_required(RoleEnum.READER.value)
+def list_documents():
+    session = get_session()
+    query = session.query(Document)
+    filters = {}
+    code = request.args.get("code")
+    if code:
+        query = query.filter(Document.code == code)
+        filters["code"] = code
+    title = request.args.get("title")
+    if title:
+        query = query.filter(Document.title.ilike(f"%{title}%"))
+        filters["title"] = title
+    status = request.args.get("status")
+    if status:
+        query = query.filter(Document.status == status)
+        filters["status"] = status
+    department = request.args.get("department")
+    if department:
+        query = query.filter(Document.department == department)
+        filters["department"] = department
+    tag = request.args.get("tag")
+    if tag:
+        query = query.filter(Document.tags.contains(tag))
+        filters["tag"] = tag
+
+    page = int(request.args.get("page", 1))
+    page_size = int(request.args.get("page_size", 20))
+    total = query.count()
+    pages = (total + page_size - 1) // page_size
+    docs = (
+        query.order_by(Document.id)
+        .limit(page_size)
+        .offset((page - 1) * page_size)
+        .all()
+    )
+    session.close()
+
+    params = request.args.to_dict()
+    params.pop("page", None)
+    params.pop("page_size", None)
+    params["page_size"] = page_size
+
+    context = {
+        "documents": docs,
+        "page": page,
+        "pages": pages,
+        "filters": filters,
+        "params": params,
+    }
+    partial = bool(request.headers.get("HX-Request"))
+    return render_template("document_list.html", partial=partial, **context)
+
+
 @app.post("/documents")
 @roles_required(RoleEnum.CONTRIBUTOR.value)
 def create_document():
