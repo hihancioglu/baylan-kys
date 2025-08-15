@@ -22,7 +22,6 @@
       <td>
         <button class="btn btn-sm btn-success"
                 hx-post="{{ url_for('acknowledge_document', doc_id=doc.id) }}"
-                hx-vals='{"user_id":"{{ current_user.id }}"}'
                 hx-target="closest tr"
                 hx-swap="delete"
                 hx-on="htmx:afterRequest: document.getElementById('remaining').innerText = parseInt(document.getElementById('remaining').innerText) - 1">
