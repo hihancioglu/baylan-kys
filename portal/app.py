@@ -126,6 +126,20 @@ def log_action(user_id, doc_id, action):
         session.close()
 
 
+# -- Acknowledgement helpers -------------------------------------------------
+
+def _assign_acknowledgements(db, doc_id, user_ids):
+    """Create acknowledgement placeholders for given users."""
+    for uid in set(user_ids):
+        exists = (
+            db.query(Acknowledgement)
+            .filter_by(user_id=uid, doc_id=doc_id)
+            .first()
+        )
+        if not exists:
+            db.add(Acknowledgement(user_id=uid, doc_id=doc_id))
+
+
 # --- Real-time count streaming ---
 sse_clients = []
 
@@ -147,7 +161,12 @@ def _compute_counts(db, user_id, roles):
             (Acknowledgement.doc_id == Document.id)
             & (Acknowledgement.user_id == user_id),
         )
-        .filter(Acknowledgement.id.is_(None))
+        .filter(
+            or_(
+                Acknowledgement.id.is_(None),
+                Acknowledgement.acknowledged_at.is_(None),
+            )
+        )
         .count()
     )
     return {"approvals": approval_count, "acknowledgements": ack_count}
@@ -1174,6 +1193,39 @@ def save_revision(doc_id):
     return jsonify(ok=True, version=f"{doc.major_version}.{doc.minor_version}")
 
 
+@app.post("/documents/<int:id>/publish")
+@roles_required(RoleEnum.PUBLISHER.value)
+def publish_document(id: int):
+    db = get_session()
+    try:
+        doc = db.get(Document, id)
+        if not doc:
+            return "Not found", 404
+        doc.status = "Published"
+        user_ids = set()
+        for uid in request.form.getlist("users"):
+            try:
+                user_ids.add(int(uid))
+            except (TypeError, ValueError):
+                continue
+        role_names = request.form.getlist("roles")
+        if role_names:
+            roles = db.query(Role).filter(Role.name.in_(role_names)).all()
+            for role in roles:
+                for ur in role.users:
+                    user_ids.add(ur.user_id)
+        _assign_acknowledgements(db, doc.id, user_ids)
+        db.commit()
+        if user_ids:
+            notify_mandatory_read(doc, list(user_ids))
+        publisher = session.get("user")
+        if publisher:
+            log_action(publisher["id"], doc.id, "publish_document")
+        broadcast_counts()
+        return redirect(url_for("list_documents", status="Published"))
+    finally:
+        db.close()
+
 @app.post("/documents/<int:doc_id>/acknowledge")
 @roles_required(RoleEnum.READER.value)
 def acknowledge_document(doc_id):
@@ -1192,14 +1244,41 @@ def acknowledge_document(doc_id):
             .first()
         )
         if not ack:
-            ack = Acknowledgement(user_id=user_id, doc_id=doc_id)
+            ack = Acknowledgement(
+                user_id=user_id, doc_id=doc_id, acknowledged_at=datetime.utcnow()
+            )
             session.add(ack)
             session.commit()
             log_action(user_id, doc_id, "acknowledge_document")
             broadcast_counts()
-        return jsonify(ok=True, acknowledged_at=ack.acknowledged_at.isoformat())
+        elif ack.acknowledged_at is None:
+            ack.acknowledged_at = datetime.utcnow()
+            session.commit()
+            log_action(user_id, doc_id, "acknowledge_document")
+            broadcast_counts()
+        return jsonify(
+            ok=True, acknowledged_at=ack.acknowledged_at.isoformat()
+        )
     finally:
         session.close()
+
+
+@app.post("/ack/assign")
+@roles_required(RoleEnum.PUBLISHER.value)
+def assign_acknowledgements_endpoint():
+    data = request.get_json(silent=True) or {}
+    doc_id = data.get("doc_id")
+    user_ids = data.get("user_ids", [])
+    if not doc_id:
+        return jsonify(error="doc_id required"), 400
+    db = get_session()
+    try:
+        _assign_acknowledgements(db, doc_id, user_ids)
+        db.commit()
+        broadcast_counts()
+        return jsonify(ok=True)
+    finally:
+        db.close()
 
 
 @app.get("/acknowledgements")
@@ -1229,7 +1308,7 @@ def acknowledgements():
                 .filter_by(user_id=user_id, doc_id=doc.id)
                 .first()
             )
-            if not ack:
+            if not ack or ack.acknowledged_at is None:
                 pending.append(doc)
 
         remaining = len(pending)
@@ -1297,7 +1376,7 @@ def notifications(user_id):
                 .filter_by(user_id=user_id, doc_id=doc.id)
                 .first()
             )
-            if not ack:
+            if not ack or ack.acknowledged_at is None:
                 pending.append({"doc_id": doc.id, "doc_key": doc.doc_key})
         return jsonify(pending_acknowledgements=pending)
     finally:

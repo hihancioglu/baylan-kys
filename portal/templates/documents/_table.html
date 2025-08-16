@@ -22,7 +22,7 @@
       <tr>
         <td>{{ doc.code }}</td>
         <td>{{ doc.title }}</td>
-        <td><span class="badge badge-status-{{ doc.status }}">{{ doc.status }}</span></td>
+        <td><span class="badge badge-status-{{ doc.status|lower }}">{{ doc.status }}</span></td>
         <td>{{ doc.department }}</td>
         <td>{{ doc.tags }}</td>
         <td class="actions">

@@ -156,6 +156,11 @@ a:focus {
   color: #ffffff;
 }
 
+.badge-status-published {
+  background-color: #198754;
+  color: #ffffff;
+}
+
 .alert-primary {
   background-color: #005ea2;
   color: #ffffff;

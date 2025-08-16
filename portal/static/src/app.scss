@@ -116,6 +116,11 @@ a:focus {
   color: $color-background;
 }
 
+.badge-status-published {
+  background-color: $status-approved;
+  color: $color-background;
+}
+
 .alert-primary {
   background-color: $color-primary;
   color: $color-background;

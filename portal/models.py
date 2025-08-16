@@ -134,7 +134,7 @@ class Acknowledgement(Base):
     id = Column(Integer, primary_key=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     doc_id = Column(Integer, ForeignKey("documents.id"), nullable=False)
-    acknowledged_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    acknowledged_at = Column(DateTime, nullable=True)
 
     user = relationship("User")
     document = relationship("Document")
