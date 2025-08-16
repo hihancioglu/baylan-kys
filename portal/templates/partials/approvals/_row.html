@@ -1,5 +1,5 @@
 <tr id="step-{{ step.id }}">
-  <td>{{ step.document.title }}</td>
+  <td><a href="{{ url_for('approval_detail', id=step.id) }}">{{ step.document.title }}</a></td>
   <td>{{ step.step_order }}</td>
   <td>{{ step.status }}</td>
   <td>{{ step.comment or '' }}</td>
