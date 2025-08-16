@@ -14,6 +14,11 @@ document.addEventListener('showToast', (event) => {
   displayToast(event.detail);
 });
 
+document.addEventListener('ackCount', (event) => {
+  const el = document.getElementById('ack-count');
+  if (el) el.textContent = event.detail;
+});
+
 document.body.addEventListener('htmx:responseError', (event) => {
   displayToast(event.detail.xhr.response || 'Request failed');
   if (event.detail.target) {

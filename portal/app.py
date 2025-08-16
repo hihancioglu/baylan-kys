@@ -1585,9 +1585,11 @@ def ack_confirm(id: int):
                 tr.passed = True
                 tr.completed_at = datetime.utcnow()
                 db.commit()
+        counts = _compute_counts(db, user_id, session.get("roles", []))
+        new_count = counts["acknowledgements"]
 
         resp = make_response(jsonify(ok=True))
-        resp.headers["HX-Trigger"] = json.dumps({"showToast": "Acknowledged"})
+        resp.headers["HX-Trigger"] = json.dumps({"ackCount": new_count, "showToast": "Acknowledged"})
         broadcast_counts()
         return resp
     finally:
