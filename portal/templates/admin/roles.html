@@ -22,7 +22,7 @@
   </div>
   <button class="btn btn-primary" type="submit">Assign</button>
 </form>
-<script>
+<script nonce="{{ csp_nonce }}">
 const form = document.getElementById('roleForm');
 form.addEventListener('submit', async (e) => {
   e.preventDefault();

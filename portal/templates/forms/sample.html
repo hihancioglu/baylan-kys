@@ -6,7 +6,7 @@
   <div id="form-container"></div>
   <button type="submit" class="btn btn-primary">Submit</button>
 </form>
-<script type="module">
+<script type="module" nonce="{{ csp_nonce }}">
   import { createInput, attachHelpText, attachValidation, attachTooltip } from '/static/src/forms/index.js';
   const container = document.getElementById('form-container');
   const emailField = createInput({ id: 'email', name: 'email', label: 'Email', type: 'email', required: true, copyable: true });

@@ -10,12 +10,12 @@
   <!-- OnlyOffice editor iframe placeholder -->
   <iframe id="docEditor" class="w-100 h-100 border-0" title="Document editor" loading="lazy"></iframe>
 </div>
-<script>
+<script nonce="{{ csp_nonce }}">
   const editorConfig = {{ config | tojson }};
   const editorToken = {{ token | tojson }};
 </script>
 <script src="{{ editor_js }}"></script>
-<script>
+<script nonce="{{ csp_nonce }}">
   if (editorToken && window.DocsAPI && window.DocsAPI.setRequestHeaders) {
     window.DocsAPI.setRequestHeaders([{ header: '{{ token_header|default('Authorization') }}', value: editorToken }]);
   }
