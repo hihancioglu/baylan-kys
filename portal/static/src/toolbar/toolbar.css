@@ -1,0 +1,28 @@
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+
+.toolbar button {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  padding: var(--spacing-xs) var(--spacing-sm);
+  font-size: var(--font-size-sm);
+  border-radius: var(--radius-sm);
+}
+
+.toolbar button svg {
+  width: 1em;
+  height: 1em;
+}
+
+[data-density="dense"] .toolbar {
+  gap: var(--spacing-xs);
+}
+
+[data-density="dense"] .toolbar button {
+  padding: var(--spacing-xs);
+  font-size: var(--font-size-xs);
+}
