@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h1>{{ doc.title }} Training Quiz</h1>
+{% if error %}
+<div class="alert alert-danger">{{ error }}</div>
+{% endif %}
+<form method="post" action="{{ url_for('training_submit', id=doc.id) }}">
+  {% for q in questions %}
+  <div class="mb-3">
+    <p>{{ q.text }}</p>
+    {% for val, label in q.options %}
+    <div class="form-check">
+      <input class="form-check-input" type="radio" name="{{ q.id }}" id="{{ q.id }}_{{ val }}" value="{{ val }}">
+      <label class="form-check-label" for="{{ q.id }}_{{ val }}">{{ label }}</label>
+    </div>
+    {% endfor %}
+  </div>
+  {% endfor %}
+  <button type="submit" class="btn btn-primary">Submit</button>
+</form>
+{% endblock %}

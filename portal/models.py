@@ -13,6 +13,7 @@ from sqlalchemy import (
     Enum,
     UniqueConstraint,
     Boolean,
+    Float,
 )
 from sqlalchemy.orm import declarative_base, relationship, sessionmaker, scoped_session
 
@@ -160,10 +161,14 @@ class TrainingResult(Base):
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     score = Column(Integer, default=0)
     max_score = Column(Integer, default=0)
+    incorrect = Column(Integer, default=0)
+    success_rate = Column(Float, default=0.0)
     passed = Column(Boolean, default=False)
     completed_at = Column(DateTime, default=datetime.utcnow)
+    ack_id = Column(Integer, ForeignKey("acknowledgements.id"))
 
     user = relationship("User")
+    acknowledgement = relationship("Acknowledgement")
 
 
 class FormSubmission(Base):

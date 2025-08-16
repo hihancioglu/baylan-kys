@@ -126,6 +126,28 @@ def log_action(user_id, doc_id, action):
         session.close()
 
 
+# Demo quiz questions
+QUIZ_QUESTIONS = [
+    {
+        "id": "q1",
+        "text": "Sample question 1?",
+        "options": [("a", "Option A"), ("b", "Option B"), ("c", "Option C")],
+        "answer": "a",
+    },
+    {
+        "id": "q2",
+        "text": "Sample question 2?",
+        "options": [("a", "Option A"), ("b", "Option B"), ("c", "Option C")],
+        "answer": "b",
+    },
+]
+QUIZ_ANSWERS = {q["id"]: q["answer"] for q in QUIZ_QUESTIONS}
+
+
+def quiz_questions():
+    return [{k: q[k] for k in ("id", "text", "options")} for q in QUIZ_QUESTIONS]
+
+
 # -- Acknowledgement helpers -------------------------------------------------
 
 def _assign_acknowledgements(db, doc_id, user_ids):
@@ -1467,7 +1489,11 @@ def ack_confirm(id: int):
             db.commit()
             log_action(user_id, ack.doc_id, "ack_confirm")
 
-            tr = db.query(TrainingResult).filter_by(user_id=user_id).first()
+            tr = (
+                db.query(TrainingResult)
+                .filter_by(user_id=user_id, ack_id=id)
+                .first()
+            )
             if tr and not tr.passed:
                 tr.passed = True
                 tr.completed_at = datetime.utcnow()
@@ -1674,6 +1700,101 @@ def delete_token(token_id):
     return redirect(url_for("user_settings", user_id=user_id))
 
 
+@app.get("/training/<int:id>")
+@roles_required(RoleEnum.READER.value)
+def training_quiz(id: int):
+    user = session.get("user")
+    if not user:
+        return redirect(url_for("auth.login"))
+    user_id = user.get("id")
+    db = get_session()
+    try:
+        doc = db.get(Document, id)
+        if not doc:
+            return "Document not found", 404
+        ack = (
+            db.query(Acknowledgement)
+            .filter_by(doc_id=id, user_id=user_id)
+            .first()
+        )
+        if not ack:
+            return "Acknowledgement not found", 404
+        doc_data = {"id": doc.id, "title": doc.title}
+    finally:
+        db.close()
+    context = {
+        "doc": doc_data,
+        "questions": quiz_questions(),
+        "breadcrumbs": [
+            {"title": "Home", "url": url_for("index")},
+            {"title": "Training"},
+        ],
+    }
+    return render_template("training/quiz.html", **context)
+
+
+@app.post("/training/<int:id>/submit")
+@roles_required(RoleEnum.READER.value)
+def training_submit(id: int):
+    user = session.get("user")
+    if not user:
+        return redirect(url_for("auth.login"))
+    user_id = user.get("id")
+    answers = request.form.to_dict()
+    total = len(QUIZ_ANSWERS)
+    correct = sum(1 for q, a in QUIZ_ANSWERS.items() if answers.get(q) == a)
+    incorrect = total - correct
+    success_rate = (correct / total * 100) if total else 0
+    passed = correct == total
+    db = get_session()
+    try:
+        doc = db.get(Document, id)
+        if not doc:
+            return "Document not found", 404
+        ack = (
+            db.query(Acknowledgement)
+            .filter_by(doc_id=id, user_id=user_id)
+            .first()
+        )
+        if not ack:
+            return "Acknowledgement not found", 404
+        tr = TrainingResult(
+            user_id=user_id,
+            score=correct,
+            max_score=total,
+            incorrect=incorrect,
+            success_rate=success_rate,
+            passed=passed,
+            ack_id=ack.id,
+        )
+        db.add(tr)
+        if passed and ack.acknowledged_at is None:
+            ack.acknowledged_at = datetime.utcnow()
+        db.commit()
+        doc_data = {"id": doc.id, "title": doc.title}
+    finally:
+        db.close()
+    log_action(user_id, doc_data["id"], "training_submit")
+    notify_user(
+        user_id,
+        "Training result",
+        f"You {'passed' if passed else 'failed'} the training for document {doc_data['title']}.",
+    )
+    if passed:
+        broadcast_counts()
+        return redirect(url_for("acknowledgements"))
+    return render_template(
+        "training/quiz.html",
+        doc=doc_data,
+        questions=quiz_questions(),
+        error="Please try again",
+        breadcrumbs=[
+            {"title": "Home", "url": url_for("index")},
+            {"title": "Training"},
+        ],
+    )
+
+
 @app.post("/training/evaluate")
 @roles_required(RoleEnum.QUALITY_ADMIN.value)
 def training_evaluate():
@@ -1685,6 +1806,8 @@ def training_evaluate():
     # Demo correct answers
     correct = {"q1": "a", "q2": "b"}
     score = sum(1 for q, a in correct.items() if answers.get(q) == a)
+    incorrect = len(correct) - score
+    success_rate = (score / len(correct) * 100) if correct else 0
     passed = score == len(correct)
     session = get_session()
     try:
@@ -1693,6 +1816,8 @@ def training_evaluate():
                 user_id=user_id,
                 score=score,
                 max_score=len(correct),
+                incorrect=incorrect,
+                success_rate=success_rate,
                 passed=passed,
             )
         )
