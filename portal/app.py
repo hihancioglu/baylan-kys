@@ -279,8 +279,9 @@ def dashboard():
             "Form ABC revised",
         ],
         "search_shortcuts": [
-            "All Documents",
-            "My Approvals",
+            ("All Documents", "/documents"),
+            ("My Approvals", "/approvals"),
+            ("Yeni Doküman", "/documents/new"),
         ],
     }
     return render_template("dashboard.html", **context)
@@ -341,8 +342,9 @@ def dashboard_cards_shortcuts():
         "partials/dashboard/_cards.html",
         card="shortcuts",
         search_shortcuts=[
-            "All Documents",
-            "My Approvals",
+            ("All Documents", "/documents"),
+            ("My Approvals", "/approvals"),
+            ("Yeni Doküman", "/documents/new"),
         ],
     )
 
