@@ -15,5 +15,6 @@
   "filters/select.js": "filters/select.js",
   "filters/date-range.js": "filters/date-range.js",
   "toolbar/toolbar.css": "toolbar/toolbar.css",
-  "toolbar/toolbar.js": "toolbar/toolbar.js"
+  "toolbar/toolbar.js": "toolbar/toolbar.js",
+  "quick_search.js": "quick_search-53a45077.js"
 }

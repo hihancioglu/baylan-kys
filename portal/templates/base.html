@@ -11,6 +11,9 @@
     .skip-link:focus{top:0;}
     .container{width:100%;margin:0 auto;}
     .icon{width:1em;height:1em;vertical-align:-0.125em;fill:currentColor;}
+    .quick-search-overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.5);z-index:1100;}
+    .quick-search-box{max-width:600px;margin:10vh auto;background:#fff;padding:1rem;border-radius:.5rem;}
+    .quick-search-overlay .list-group-item{cursor:pointer;}
   </style>
   <link rel="preload" href="{{ asset_url('app.css') }}" as="style" onload="this.onload=null;this.rel='stylesheet'">
   <noscript><link rel="stylesheet" href="{{ asset_url('app.css') }}"></noscript>
@@ -49,6 +52,12 @@
     </main>
   </div>
 </div>
+<div id="quick-search-panel" class="quick-search-overlay d-none" role="dialog" aria-modal="true">
+  <div class="quick-search-box">
+    <input type="text" id="quick-search-input" class="form-control" placeholder="Search documents..." aria-label="Quick search" />
+    <ul id="quick-search-results" class="list-group mt-2"></ul>
+  </div>
+</div>
 <div class="offcanvas offcanvas-start" tabindex="-1" id="sidebarOffcanvas" aria-labelledby="sidebarOffcanvasLabel">
   <div class="offcanvas-header">
     <h5 id="sidebarOffcanvasLabel">Menu</h5>
@@ -62,6 +71,7 @@
 {% include 'partials/_skeleton.html' %}
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 <script src="{{ asset_url('app.js') }}" defer></script>
+<script src="{{ asset_url('quick_search.js') }}" defer></script>
 <script>
   document.body.addEventListener('htmx:configRequest', function (event) {
     var token = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
