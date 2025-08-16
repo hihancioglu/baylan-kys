@@ -1,14 +1,22 @@
 {% extends "base.html" %}
 {% block title %}Document Detail{% endblock %}
 {% block page_actions %}
-{% if has_role('CONTRIBUTOR') %}
-<a class="btn btn-primary" href="{{ url_for('edit_document', doc_id=doc.id) }}">Edit</a>
-{% if doc.status == 'Draft' %}
-<button class="btn btn-secondary" data-bs-toggle="modal" data-bs-target="#reviewerModal">Gözden Geçirmeye Gönder</button>
-{% elif doc.status == 'Published' %}
-<button class="btn btn-warning" data-bs-toggle="modal" data-bs-target="#reviseModal">Revizyon Başlat</button>
-{% endif %}
-{% endif %}
+<link rel="stylesheet" href="{{ asset_url('toolbar/toolbar.css') }}">
+<div class="toolbar" data-component="toolbar">
+  {% if has_role('CONTRIBUTOR') %}
+  <a class="btn btn-primary" href="{{ url_for('edit_document', doc_id=doc.id) }}">Edit</a>
+  {% if doc.status == 'Draft' %}
+  <button type="button" class="btn btn-secondary" data-bs-toggle="modal" data-bs-target="#reviewerModal">Gözden Geçirmeye Gönder</button>
+  {% elif doc.status == 'Published' %}
+  <button type="button" class="btn btn-warning" data-bs-toggle="modal" data-bs-target="#reviseModal">Revizyon Başlat</button>
+  {% endif %}
+  {% endif %}
+  {% if has_role('PUBLISHER') %}
+  <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#publishModal">Yayınla</button>
+  {% endif %}
+  <a class="btn btn-outline-secondary" href="{{ url_for('compare_document_versions', doc_id=doc.id) }}">Karşılaştır</a>
+</div>
+<script src="{{ asset_url('toolbar/toolbar.js') }}" defer></script>
 {% endblock %}
 {% block content %}
 <header class="mb-4">
@@ -42,7 +50,7 @@
 
 <div class="modal fade" id="reviseModal" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog">
-    <form class="modal-content" method="post" action="{{ url_for('revise_document', id=doc.id) }}">
+      <form class="modal-content" method="post" action="{{ url_for('revise_document', id=doc.id) }}">
       <div class="modal-header">
         <h5 class="modal-title">Revizyon Başlat</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -60,17 +68,18 @@
           <textarea class="form-control" id="revision_notes" name="revision_notes"></textarea>
         </div>
       </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">İptal</button>
-        <button type="submit" class="btn btn-primary">Başlat</button>
-      </div>
-    </form>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">İptal</button>
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button type="submit" class="btn btn-primary" data-bs-dismiss="modal">Başlat</button>
+        </div>
+      </form>
+    </div>
   </div>
-</div>
 
-<div class="modal fade" id="reviewerModal" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog">
-    <form class="modal-content" hx-post="{{ url_for('start_workflow') }}" hx-target="closest .modal" hx-swap="none">
+  <div class="modal fade" id="reviewerModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <form class="modal-content" hx-post="/documents/{{ doc.id }}/workflow/start" hx-target="closest .modal" hx-swap="none">
       <div class="modal-header">
         <h5 class="modal-title">Reviewer Seç</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -81,16 +90,50 @@
           <input class="form-check-input" type="checkbox" name="reviewers" value="{{ user.id }}" id="rev-{{ user.id }}">
           <label class="form-check-label" for="rev-{{ user.id }}">{{ user.username }}</label>
         </div>
-        {% endfor %}
-        <input type="hidden" name="doc_id" value="{{ doc.id }}">
+          {% endfor %}
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">İptal</button>
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button type="submit" class="btn btn-primary" data-bs-dismiss="modal">Gönder</button>
+        </div>
+        </form>
       </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">İptal</button>
-        <button type="submit" class="btn btn-primary">Gönder</button>
-      </div>
-    </form>
-  </div>
-</div>
+    </div>
 
-<script src="{{ asset_url('document_detail.js') }}" defer></script>
-{% endblock %}
+  <div class="modal fade" id="publishModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+      <form class="modal-content" hx-post="{{ url_for('publish_document', id=doc.id) }}" hx-target="closest .modal" hx-swap="none">
+        <div class="modal-header">
+          <h5 class="modal-title">Yayınla</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="mb-3">
+            <label for="publish-users" class="form-label">Users</label>
+            <select id="publish-users" name="users" class="form-select" multiple>
+              {% for u in users %}
+              <option value="{{ u.id }}">{{ u.username }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="mb-3">
+            <label for="publish-roles" class="form-label">Roles</label>
+            <select id="publish-roles" name="roles" class="form-select" multiple>
+              {% for r in roles %}
+              <option value="{{ r.name }}">{{ r.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">İptal</button>
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button type="submit" class="btn btn-primary" data-bs-dismiss="modal">Yayınla</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="{{ asset_url('document_detail.js') }}" defer></script>
+  {% endblock %}
