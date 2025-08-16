@@ -1,35 +1,22 @@
-{% macro render_card(title, items, empty_text, endpoint) %}
-<div class="col-md-6 mb-3">
-  <div class="card" hx-get="{{ endpoint }}" hx-trigger="load, every 10s" hx-target="this">
-    <div class="card-header">{{ title }}</div>
-    <div class="card-body">
-      {% if items %}
-        <ul class="list-unstyled mb-0">
-        {% for item in items %}
-          <li>{{ item }}</li>
-        {% endfor %}
-        </ul>
-      {% else %}
-        <p class="text-muted mb-0">{{ empty_text }}</p>
-      {% endif %}
-    </div>
-  </div>
-</div>
+{% macro render_items(items, empty_text) %}
+  {% if items %}
+    <ul class="list-unstyled mb-0">
+    {% for item in items %}
+      <li>{{ item }}</li>
+    {% endfor %}
+    </ul>
+  {% else %}
+    <p class="text-muted mb-0">{{ empty_text }}</p>
+  {% endif %}
 {% endmacro %}
 
 {% if card == 'pending' %}
-  {{ render_card('Pending Approvals', pending_approvals, 'No pending approvals.', url_for('dashboard_cards_pending')) }}
+  {{ render_items(pending_approvals, 'No pending approvals.') }}
 {% elif card == 'mandatory' %}
-  {{ render_card('Mandatory Reading', mandatory_reading, 'No mandatory documents.', url_for('dashboard_cards_mandatory')) }}
+  {{ render_items(mandatory_reading, 'No mandatory documents.') }}
 {% elif card == 'recent' %}
-  {{ render_card('Recent Revisions', recent_revisions, 'No recent revisions.', url_for('dashboard_cards_recent')) }}
-{% elif card == 'quick' %}
-  {{ render_card('Quick Access', quick_access, 'No quick links available.', url_for('dashboard_cards_quick')) }}
-{% else %}
-<div class="row">
-  {{ render_card('Pending Approvals', pending_approvals, 'No pending approvals.', url_for('dashboard_cards_pending')) }}
-  {{ render_card('Mandatory Reading', mandatory_reading, 'No mandatory documents.', url_for('dashboard_cards_mandatory')) }}
-  {{ render_card('Recent Revisions', recent_revisions, 'No recent revisions.', url_for('dashboard_cards_recent')) }}
-  {{ render_card('Quick Access', quick_access, 'No quick links available.', url_for('dashboard_cards_quick')) }}
-</div>
+  {{ render_items(recent_revisions, 'No recent changes.') }}
+{% elif card == 'shortcuts' %}
+  {{ render_items(search_shortcuts, 'No search shortcuts available.') }}
 {% endif %}
+
