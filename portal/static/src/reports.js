@@ -11,12 +11,13 @@ async function fetchData(kind, startInput, endInput) {
 
 function updateLinks(kind, startInput, endInput, csvLink, pdfLink) {
   const params = new URLSearchParams();
+  params.set('kind', kind);
   if (startInput.value) params.set('start', startInput.value);
   if (endInput.value) params.set('end', endInput.value);
-  params.set('format', 'csv');
-  csvLink.href = `/reports/${kind}?${params.toString()}`;
-  params.set('format', 'pdf');
-  pdfLink.href = `/reports/${kind}?${params.toString()}`;
+  params.set('type', 'csv');
+  csvLink.href = `/reports/export?${params.toString()}`;
+  params.set('type', 'pdf');
+  pdfLink.href = `/reports/export?${params.toString()}`;
 }
 
 // Reading compliance
