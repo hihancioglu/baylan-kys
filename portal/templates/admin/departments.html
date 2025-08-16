@@ -16,7 +16,7 @@
   <input class="form-control" name="name" placeholder="Department name">
   <button class="btn btn-primary mt-2" type="submit">Add</button>
 </form>
-<script>
+<script nonce="{{ csp_nonce }}">
 const form = document.getElementById('deptForm');
 form.addEventListener('submit', async (e) => {
   e.preventDefault();
