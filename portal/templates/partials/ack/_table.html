@@ -16,7 +16,7 @@
       <td>{{ item.status }}</td>
       <td>{{ item.due_date }}</td>
       <td>
-        <form hx-post="{{ url_for('acknowledge_document', doc_id=item.id) }}"
+        <form hx-post="{{ url_for('ack.confirm', id=item.id) }}"
               hx-target="closest tr"
               hx-swap="delete"
               hx-on="htmx:afterRequest: document.getElementById('ack-count').innerText = parseInt(document.getElementById('ack-count').innerText) - 1">

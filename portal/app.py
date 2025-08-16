@@ -1379,6 +1379,108 @@ def assign_acknowledgements_endpoint():
         db.close()
 
 
+@app.route("/ack", methods=["GET"], endpoint="ack.list")
+@roles_required(RoleEnum.READER.value)
+def ack_list():
+    """Display pending acknowledgements for the current user."""
+    user = session.get("user")
+    if not user:
+        return redirect(url_for("auth.login"))
+    user_id = user.get("id")
+    db = get_session()
+    try:
+        query = (
+            db.query(Document)
+            .filter(Document.status == "Published")
+            .outerjoin(
+                Acknowledgement,
+                (Acknowledgement.doc_id == Document.id)
+                & (Acknowledgement.user_id == user_id),
+            )
+            .filter(
+                or_(
+                    Acknowledgement.id.is_(None),
+                    Acknowledgement.acknowledged_at.is_(None),
+                )
+            )
+        )
+
+        filters = {}
+        status = request.args.get("status")
+        if status:
+            query = query.filter(Document.status == status)
+            filters["status"] = status
+        due = request.args.get("due")
+        if due:
+            try:
+                due_dt = datetime.fromisoformat(due)
+                query = query.filter(Document.created_at <= due_dt)
+                filters["due"] = due
+            except ValueError:
+                pass
+
+        docs = query.order_by(Document.id).all()
+        acknowledgements = [
+            {
+                "id": d.id,
+                "code": d.code,
+                "title": d.title,
+                "status": d.status,
+                "due_date": (d.created_at.date().isoformat() if d.created_at else None),
+            }
+            for d in docs
+        ]
+        context = {
+            "acknowledgements": acknowledgements,
+            "remaining": len(acknowledgements),
+            "filters": filters,
+        }
+        context["breadcrumbs"] = [
+            {"title": "Home", "url": url_for("index")},
+            {"title": "Acknowledgements"},
+        ]
+        partial = bool(request.headers.get("HX-Request"))
+        return render_template("ack/list.html", partial=partial, **context)
+    finally:
+        db.close()
+
+
+@app.post("/ack/<int:id>/confirm", endpoint="ack.confirm")
+@roles_required(RoleEnum.READER.value)
+def ack_confirm(id: int):
+    """Mark an acknowledgement as confirmed."""
+    user = session.get("user")
+    if not user:
+        return jsonify(error="user not logged in"), 401
+    user_id = user.get("id")
+    db = get_session()
+    try:
+        ack = (
+            db.query(Acknowledgement)
+            .filter_by(id=id, user_id=user_id)
+            .first()
+        )
+        if not ack:
+            return jsonify(error="acknowledgement not found"), 404
+        if ack.acknowledged_at is None:
+            ack.acknowledged_at = datetime.utcnow()
+            db.commit()
+            log_action(user_id, ack.doc_id, "ack_confirm")
+
+            tr = db.query(TrainingResult).filter_by(user_id=user_id).first()
+            if tr and not tr.passed:
+                tr.passed = True
+                tr.completed_at = datetime.utcnow()
+                db.commit()
+
+        resp = make_response(jsonify(ok=True))
+        resp.headers["HX-Trigger"] = json.dumps({"showToast": "Acknowledged"})
+        broadcast_counts()
+        return resp
+    finally:
+        db.close()
+
+
 @app.get("/acknowledgements")
 @roles_required(RoleEnum.READER.value)
 def acknowledgements():
