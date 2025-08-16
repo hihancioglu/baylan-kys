@@ -107,6 +107,19 @@ services:
     volumes:
       - portal_static:/app/portal/static/dist
 
+  scheduler:
+    image: python:3.12-slim
+    working_dir: /app
+    volumes:
+      - "./portal:/app"
+    command: >
+      sh -c "pip install -r requirements.txt &&
+             ( while :; do python archive_job.py; sleep 86400; done ) &
+             ( while :; do python periodic_review.py; sleep 31536000; done ) &
+             wait"
+    depends_on: [ portal ]
+    networks: [ qdms ]
+
   nginx:
     image: nginx:1.27-alpine
     restart: unless-stopped
