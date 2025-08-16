@@ -19,52 +19,40 @@ function updateLinks(kind, startInput, endInput, csvLink, pdfLink) {
   pdfLink.href = `/reports/${kind}?${params.toString()}`;
 }
 
-// Pending approvals
-const pendingStart = document.getElementById('pending-start');
-const pendingEnd = document.getElementById('pending-end');
-const pendingCount = document.getElementById('pending-count');
-const pendingCsv = document.getElementById('pending-csv');
-const pendingPdf = document.getElementById('pending-pdf');
+// Reading compliance
+const readingStart = document.getElementById('reading-start');
+const readingEnd = document.getElementById('reading-end');
+const readingRate = document.getElementById('reading-rate');
+const readingCsv = document.getElementById('reading-csv');
+const readingPdf = document.getElementById('reading-pdf');
 
-async function updatePending() {
-  const data = await fetchData('pending-approvals', pendingStart, pendingEnd);
-  pendingCount.textContent = data.length;
-  updateLinks('pending-approvals', pendingStart, pendingEnd, pendingCsv, pendingPdf);
-}
-
-pendingStart.addEventListener('change', updatePending);
-pendingEnd.addEventListener('change', updatePending);
-updatePending();
-
-// Compliance rate
-const complianceStart = document.getElementById('compliance-start');
-const complianceEnd = document.getElementById('compliance-end');
-const complianceRate = document.getElementById('compliance-rate');
-const complianceCsv = document.getElementById('compliance-csv');
-const compliancePdf = document.getElementById('compliance-pdf');
-
-async function updateCompliance() {
-  const data = await fetchData('training', complianceStart, complianceEnd);
+async function updateReading() {
+  readingRate.innerHTML = '<span class="placeholder col-6"></span>';
+  const data = await fetchData('training', readingStart, readingEnd);
   const total = data.length;
   const passed = data.filter(r => r.passed).length;
   const rate = total ? Math.round((passed / total) * 100) : 0;
-  complianceRate.textContent = rate + '%';
-  updateLinks('training', complianceStart, complianceEnd, complianceCsv, compliancePdf);
+  readingRate.textContent = rate + '%';
+  updateLinks('training', readingStart, readingEnd, readingCsv, readingPdf);
 }
 
-complianceStart.addEventListener('change', updateCompliance);
-complianceEnd.addEventListener('change', updateCompliance);
-updateCompliance();
+readingStart.addEventListener('change', updateReading);
+readingEnd.addEventListener('change', updateReading);
+updateReading();
 
-// Recent changes chart
-const changesStart = document.getElementById('changes-start');
-const changesEnd = document.getElementById('changes-end');
-const changesCsv = document.getElementById('changes-csv');
-const changesPdf = document.getElementById('changes-pdf');
-let changesChart;
+// Pending approval trends
+const trendStart = document.getElementById('trend-start');
+const trendEnd = document.getElementById('trend-end');
+const trendCsv = document.getElementById('trend-csv');
+const trendPdf = document.getElementById('trend-pdf');
+const trendChartCanvas = document.getElementById('trend-chart');
+const trendLoading = document.getElementById('trend-chart-loading');
+let trendChart;
 
-async function updateChanges() {
-  const data = await fetchData('revisions', changesStart, changesEnd);
+async function updateTrend() {
+  trendChartCanvas.classList.add('d-none');
+  trendLoading.classList.remove('d-none');
+  const data = await fetchData('pending-approvals', trendStart, trendEnd);
   const counts = {};
   data.forEach(r => {
     const d = r.created_at.slice(0, 10);
@@ -72,20 +60,21 @@ async function updateChanges() {
   });
   const labels = Object.keys(counts).sort();
   const values = labels.map(l => counts[l]);
-  const ctx = document.getElementById('changes-chart');
-  if (changesChart) {
-    changesChart.destroy();
+  if (trendChart) {
+    trendChart.destroy();
   }
-  changesChart = new Chart(ctx, {
+  trendChart = new Chart(trendChartCanvas, {
     type: 'line',
     data: {
       labels: labels,
-      datasets: [{ label: 'Revisions', data: values }]
+      datasets: [{ label: 'Pending', data: values }]
     },
   });
-  updateLinks('revisions', changesStart, changesEnd, changesCsv, changesPdf);
+  trendLoading.classList.add('d-none');
+  trendChartCanvas.classList.remove('d-none');
+  updateLinks('pending-approvals', trendStart, trendEnd, trendCsv, trendPdf);
 }
 
-changesStart.addEventListener('change', updateChanges);
-changesEnd.addEventListener('change', updateChanges);
-updateChanges();
+trendStart.addEventListener('change', updateTrend);
+trendEnd.addEventListener('change', updateTrend);
+updateTrend();
