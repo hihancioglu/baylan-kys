@@ -27,10 +27,10 @@ if __name__ == '__main__':
     manifest = {}
     for root, _, files in os.walk(SRC_DIR):
         rel_dir = os.path.relpath(root, SRC_DIR)
-        hash_name = rel_dir == '.'
         for fname in files:
             if fname.endswith(('.css', '.js')):
                 rel_path = fname if rel_dir == '.' else os.path.join(rel_dir, fname)
+                hash_name = rel_dir == '.' and fname != 'tokens.js'
                 key, out_rel = build_file(os.path.join(root, fname), rel_path, hash_name)
                 manifest[key] = out_rel
     with open(os.path.join(DIST_DIR, 'manifest.json'), 'w') as f:
