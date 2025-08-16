@@ -59,6 +59,13 @@ services:
     # Eğer büyük dosyalar/çok kullanıcı planı varsa CPU/RAM artırın
     networks: [qdms]
 
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.13.4
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+    networks: [qdms]
+
   portal:
     build: ./portal
     restart: unless-stopped
@@ -88,12 +95,14 @@ services:
       LDAP_PASSWORD: ${LDAP_PASSWORD}
       LDAP_SEARCH_FILTER: ${LDAP_SEARCH_FILTER}
       PORTAL_JWT_SECRET: ${PORTAL_JWT_SECRET}
+      ELASTIC_URL: ${ELASTIC_URL}
     depends_on:
       - postgres
       - redis
       - minio
       - minio-setup
       - onlyoffice
+      - elasticsearch
     networks: [qdms]
 
   nginx:
