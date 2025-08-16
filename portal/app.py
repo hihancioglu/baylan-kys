@@ -1396,6 +1396,11 @@ def publish_document(id: int):
         if publisher:
             log_action(publisher["id"], doc.id, "publish_document")
         broadcast_counts()
+        if request.headers.get("HX-Request"):
+            resp = make_response("", 204)
+            resp.headers["HX-Redirect"] = url_for("document_detail", doc_id=doc.id)
+            resp.headers["HX-Trigger"] = json.dumps({"showToast": "Saved"})
+            return resp
         return redirect(url_for("list_documents", status="Published"))
     finally:
         db.close()
@@ -1416,6 +1421,11 @@ def republish_document(doc_id: int):
         if publisher:
             log_action(publisher["id"], doc.id, "republish_document")
         broadcast_counts()
+        if request.headers.get("HX-Request"):
+            resp = make_response("", 204)
+            resp.headers["HX-Redirect"] = url_for("document_detail", doc_id=doc.id)
+            resp.headers["HX-Trigger"] = json.dumps({"showToast": "Saved"})
+            return resp
         return redirect(url_for("list_documents", status="archived"))
     finally:
         db.close()
