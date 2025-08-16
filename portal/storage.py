@@ -6,9 +6,9 @@ import boto3
 from botocore.client import Config
 
 S3_ENDPOINT = os.getenv("S3_ENDPOINT")
-S3_ACCESS_KEY = os.getenv("S3_ACCESS_KEY")
-S3_SECRET_KEY = os.getenv("S3_SECRET_KEY")
-S3_BUCKET = os.getenv("S3_BUCKET")
+S3_ACCESS_KEY = os.getenv("S3_ACCESS_KEY") or os.getenv("S3_ACCESS_KEY_ID")
+S3_SECRET_KEY = os.getenv("S3_SECRET_KEY") or os.getenv("S3_SECRET_ACCESS_KEY")
+S3_BUCKET = os.getenv("S3_BUCKET") or os.getenv("S3_BUCKET_MAIN")
 ARCHIVE_PREFIX = os.getenv("ARCHIVE_PREFIX", "archive/")
 
 _s3 = boto3.client(
