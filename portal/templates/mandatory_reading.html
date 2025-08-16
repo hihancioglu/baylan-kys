@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% block title %}Mandatory Reading{% endblock %}
+{% block content %}
+<h1 class="mb-3">Mandatory Reading</h1>
+
+<div class="mb-3">
+  <div class="btn-group" role="group" aria-label="Filter">
+    <a href="{{ url_for('mandatory_reading', filter='all') }}" class="btn btn-outline-primary{% if filter=='all' %} active{% endif %}">Show All</a>
+    <a href="{{ url_for('mandatory_reading', filter='unread') }}" class="btn btn-outline-primary{% if filter=='unread' %} active{% endif %}">Unread Only</a>
+  </div>
+</div>
+
+<form id="bulk-confirm-form" class="mb-2" hx-post="{{ url_for('confirm_assignments_bulk') }}" hx-include=".assignment-checkbox:checked" hx-target="#reading-table tbody" hx-swap="outerHTML">
+  <button id="bulk-confirm" class="btn btn-success btn-sm" type="submit" disabled>Confirm Selected</button>
+</form>
+
+<table class="table table-striped" id="reading-table">
+  <thead class="table-light">
+    <tr>
+      <th scope="col"><input type="checkbox" id="select-all" class="form-check-input" aria-label="Select all assignments"></th>
+      <th scope="col">Assignee</th>
+      <th scope="col">Read Date</th>
+      <th scope="col">Confirm</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for assignment in assignments %}
+    <tr id="assignment-{{ assignment.id }}" data-assignment-id="{{ assignment.id }}">
+      <td><input type="checkbox" class="form-check-input assignment-checkbox" value="{{ assignment.id }}" aria-label="Select {{ assignment.assignee }}"></td>
+      <td>{{ assignment.assignee }}</td>
+      <td>{{ assignment.read_date or 'Unread' }}</td>
+      <td>
+        {% if not assignment.confirmed %}
+        <button class="btn btn-sm btn-success confirm-btn" hx-post="{{ url_for('confirm_assignment', assignment_id=assignment.id) }}" hx-target="#assignment-{{ assignment.id }}" hx-swap="outerHTML">Confirm</button>
+        {% else %}
+        Confirmed
+        {% endif %}
+      </td>
+    </tr>
+    {% else %}
+    <tr><td colspan="4" class="text-center">No assignments found.</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+<script>
+(function(){
+  const selectAll = document.getElementById('select-all');
+  const bulkConfirm = document.getElementById('bulk-confirm');
+
+  function updateBulk(){
+    const any = document.querySelectorAll('.assignment-checkbox:checked').length > 0;
+    bulkConfirm.disabled = !any;
+  }
+
+  selectAll.addEventListener('change', () => {
+    document.querySelectorAll('.assignment-checkbox').forEach(cb => cb.checked = selectAll.checked);
+    updateBulk();
+  });
+  document.querySelectorAll('.assignment-checkbox').forEach(cb => cb.addEventListener('change', updateBulk));
+})();
+</script>
+{% endblock %}
