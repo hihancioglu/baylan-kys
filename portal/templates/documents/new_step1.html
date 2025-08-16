@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block title %}New Document - Step 1{% endblock %}
+{% block content %}
+<h1 class="fw-bold" style="font-size: var(--font-size-lg); margin-bottom: var(--spacing-md);">New Document - Step 1</h1>
+<form method="post" action="{{ url_for('new_document', step=1) }}">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <div class="mb-3">
+    <label for="code" class="form-label">Code</label>
+    <input type="text" class="form-control{% if errors.code %} is-invalid{% endif %}" id="code" name="code" value="{{ form.code or '' }}">
+    {% if errors.code %}<div class="invalid-feedback">{{ errors.code }}</div>{% endif %}
+  </div>
+  <div class="mb-3">
+    <label for="title" class="form-label">Title</label>
+    <input type="text" class="form-control{% if errors.title %} is-invalid{% endif %}" id="title" name="title" value="{{ form.title or '' }}">
+    {% if errors.title %}<div class="invalid-feedback">{{ errors.title }}</div>{% endif %}
+  </div>
+  <button type="submit" class="btn btn-primary">Next</button>
+</form>
+{% endblock %}
