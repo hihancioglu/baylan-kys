@@ -4,7 +4,7 @@
 <div id="editor-wrapper" style="height:80vh;">
   <div id="editor" style="height:100%;"></div>
 </div>
-<script nonce="{{ csp_nonce }}">
+<script>
   window.editorConfig = {{ config | tojson }};
   window.editorToken = {{ token | tojson }};
   window.editorTokenHeader = {{ token_header | tojson }};
