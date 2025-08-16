@@ -6,7 +6,7 @@
   <p><strong>Username:</strong> {{ current_user.username }}</p>
   <p><strong>User ID:</strong> {{ current_user.id }}</p>
 </div>
-<form id="preferences-form" class="" onsubmit="return false;">
+<form id="preferences-form" class="">
   <div class="mb-3">
     <label for="pref-language" class="form-label">Language</label>
     <select id="pref-language" class="form-select">
@@ -29,33 +29,5 @@
     </select>
   </div>
 </form>
-<script>
-(function() {
-  function setPref(key, value) {
-    localStorage.setItem(key, value);
-    document.cookie = key + '=' + value + ';path=/;max-age=31536000';
-  }
-  const langSel = document.getElementById('pref-language');
-  const themeSel = document.getElementById('pref-theme');
-  const densitySel = document.getElementById('pref-density');
-  const initLang = localStorage.getItem('pref-language') || 'en';
-  const initTheme = localStorage.getItem('pref-theme') || 'light';
-  const initDensity = localStorage.getItem('pref-density') || 'comfortable';
-  langSel.value = initLang;
-  themeSel.value = initTheme;
-  densitySel.value = initDensity;
-  langSel.addEventListener('change', (e) => {
-    setPref('pref-language', e.target.value);
-    document.documentElement.lang = e.target.value;
-  });
-  themeSel.addEventListener('change', (e) => {
-    setPref('pref-theme', e.target.value);
-    document.documentElement.setAttribute('data-bs-theme', e.target.value);
-  });
-  densitySel.addEventListener('change', (e) => {
-    setPref('pref-density', e.target.value);
-    document.documentElement.setAttribute('data-density', e.target.value);
-  });
-})();
-</script>
+<script src="{{ asset_url('profile_index.js') }}" defer></script>
 {% endblock %}

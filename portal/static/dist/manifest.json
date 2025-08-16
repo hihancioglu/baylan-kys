@@ -9,6 +9,8 @@
   "tokens.js": "tokens-f03c821c.js",
   "reports.js": "reports-04f367aa.js",
   "data-table.js": "data-table-bce5885b.js",
+  "base.js": "base-656fa28f.js",
+  "profile_index.js": "profile_index-e0733369.js",
   "filters/multi-tag.js": "filters/multi-tag.js",
   "filters/text.js": "filters/text.js",
   "filters/index.js": "filters/index.js",
