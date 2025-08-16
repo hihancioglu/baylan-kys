@@ -52,23 +52,32 @@ def _render_output(rows: List[Dict], fmt: str) -> Tuple[bytes, str, str]:
 def revision_report(start: Optional[datetime] = None, end: Optional[datetime] = None) -> List[Dict]:
     session = get_session()
     try:
-        query = session.query(DocumentRevision).join(Document)
+        query = (
+            session.query(
+                Document.title,
+                DocumentRevision.major_version,
+                DocumentRevision.minor_version,
+                DocumentRevision.created_at,
+            )
+            .join(Document)
+            .order_by(None)
+        )
         if start:
             query = query.filter(DocumentRevision.created_at >= start)
         if end:
             query = query.filter(DocumentRevision.created_at <= end)
-        rows = [
+        results = query.all()
+        return [
             {
-                "document": r.document.title,
-                "major": r.major_version,
-                "minor": r.minor_version,
-                "created_at": r.created_at.isoformat(),
+                "document": title,
+                "major": major,
+                "minor": minor,
+                "created_at": created.isoformat(),
             }
-            for r in query.all()
+            for title, major, minor, created in results
         ]
     finally:
         session.close()
-    return rows
 
 
 def training_compliance_report(
@@ -76,23 +85,32 @@ def training_compliance_report(
 ) -> List[Dict]:
     session = get_session()
     try:
-        query = session.query(TrainingResult).join(User)
+        query = (
+            session.query(
+                User.username,
+                TrainingResult.score,
+                TrainingResult.passed,
+                TrainingResult.completed_at,
+            )
+            .join(User)
+            .order_by(None)
+        )
         if start:
             query = query.filter(TrainingResult.completed_at >= start)
         if end:
             query = query.filter(TrainingResult.completed_at <= end)
-        rows = [
+        results = query.all()
+        return [
             {
-                "user": t.user.username,
-                "score": t.score,
-                "passed": t.passed,
-                "completed_at": t.completed_at.isoformat(),
+                "user": username,
+                "score": score,
+                "passed": passed,
+                "completed_at": completed.isoformat(),
             }
-            for t in query.all()
+            for username, score, passed, completed in results
         ]
     finally:
         session.close()
-    return rows
 
 
 def pending_approvals_report(
@@ -101,37 +119,44 @@ def pending_approvals_report(
     session = get_session()
     try:
         query = (
-            session.query(WorkflowStep)
+            session.query(
+                Document.title,
+                WorkflowStep.step_order,
+                WorkflowStep.approver,
+                Document.created_at,
+            )
             .join(Document)
             .filter(WorkflowStep.status == "Pending")
+            .order_by(None)
         )
         if start:
             query = query.filter(Document.created_at >= start)
         if end:
             query = query.filter(Document.created_at <= end)
-        rows = [
+        results = query.all()
+        return [
             {
-                "document": s.document.title,
-                "step_order": s.step_order,
-                "approver": s.approver,
-                "created_at": s.document.created_at.isoformat(),
+                "document": title,
+                "step_order": step_order,
+                "approver": approver,
+                "created_at": created.isoformat(),
             }
-            for s in query.all()
+            for title, step_order, approver, created in results
         ]
     finally:
         session.close()
-    return rows
 
 
 def build_report(
     kind: str, fmt: str, start: Optional[datetime] = None, end: Optional[datetime] = None
 ) -> Tuple[bytes, str, str]:
-    if kind == "revisions":
-        rows = revision_report(start, end)
-    elif kind == "training":
-        rows = training_compliance_report(start, end)
-    elif kind == "pending-approvals":
-        rows = pending_approvals_report(start, end)
-    else:
+    mapping = {
+        "revisions": revision_report,
+        "training": training_compliance_report,
+        "pending-approvals": pending_approvals_report,
+    }
+    fn = mapping.get(kind)
+    if not fn:
         raise ValueError("unknown report type")
+    rows = fn(start, end)
     return _render_output(rows, fmt)

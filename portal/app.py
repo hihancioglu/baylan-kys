@@ -944,11 +944,31 @@ def search_view():
 @roles_required(RoleEnum.AUDITOR.value, RoleEnum.QUALITY_ADMIN.value)
 def reports_index():
     return render_template(
-        "reports.html",
+        "reports/index.html",
         breadcrumbs=[
             {"title": "Home", "url": url_for("index")},
             {"title": "Reports"},
         ],
+    )
+
+
+@app.get("/reports/export")
+@roles_required(RoleEnum.AUDITOR.value, RoleEnum.QUALITY_ADMIN.value)
+def reports_export():
+    kind = request.args.get("kind", "revisions")
+    fmt = request.args.get("type", "csv").lower()
+    start = request.args.get("start")
+    end = request.args.get("end")
+    start_dt = datetime.fromisoformat(start) if start else None
+    end_dt = datetime.fromisoformat(end) if end else None
+    try:
+        content, mime, ext = build_report(kind, fmt, start_dt, end_dt)
+    except ValueError:
+        return jsonify(error="unknown report or format"), 400
+    return Response(
+        content,
+        mimetype=mime,
+        headers={"Content-Disposition": f"attachment; filename={kind}.{ext}"},
     )
 
 
