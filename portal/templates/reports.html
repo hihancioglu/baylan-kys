@@ -3,46 +3,35 @@
 {% block content %}
 <h1>Reports Dashboard</h1>
 <div class="row">
-  <div class="col-md-4">
+  <div class="col-md-6">
     <div class="card mb-3">
       <div class="card-body">
-        <h5 class="card-title">Pending Approvals</h5>
+        <h5 class="card-title">Reading Compliance</h5>
         <div class="d-flex mb-2">
-          <input type="date" id="pending-start" class="form-control form-control-sm me-2">
-          <input type="date" id="pending-end" class="form-control form-control-sm">
+          <input type="date" id="reading-start" class="form-control form-control-sm me-2">
+          <input type="date" id="reading-end" class="form-control form-control-sm">
         </div>
-        <p class="display-6" id="pending-count">0</p>
-        <a id="pending-csv" class="btn btn-sm btn-outline-primary me-1">CSV</a>
-        <a id="pending-pdf" class="btn btn-sm btn-outline-primary">PDF</a>
+        <p class="display-6" id="reading-rate"><span class="placeholder col-6"></span></p>
+        <a id="reading-csv" class="btn btn-sm btn-outline-primary me-1">CSV</a>
+        <a id="reading-pdf" class="btn btn-sm btn-outline-primary">PDF</a>
       </div>
     </div>
   </div>
-  <div class="col-md-4">
+  <div class="col-md-6">
     <div class="card mb-3">
       <div class="card-body">
-        <h5 class="card-title">Compliance Rate</h5>
+        <h5 class="card-title">Pending Approval Trends</h5>
         <div class="d-flex mb-2">
-          <input type="date" id="compliance-start" class="form-control form-control-sm me-2">
-          <input type="date" id="compliance-end" class="form-control form-control-sm">
+          <input type="date" id="trend-start" class="form-control form-control-sm me-2">
+          <input type="date" id="trend-end" class="form-control form-control-sm">
         </div>
-        <p class="display-6" id="compliance-rate">0%</p>
-        <a id="compliance-csv" class="btn btn-sm btn-outline-primary me-1">CSV</a>
-        <a id="compliance-pdf" class="btn btn-sm btn-outline-primary">PDF</a>
-      </div>
-    </div>
-  </div>
-  <div class="col-md-4">
-    <div class="card mb-3">
-      <div class="card-body">
-        <h5 class="card-title">Recent Changes</h5>
-        <div class="d-flex mb-2">
-          <input type="date" id="changes-start" class="form-control form-control-sm me-2">
-          <input type="date" id="changes-end" class="form-control form-control-sm">
+        <div id="trend-chart-loading" class="placeholder-glow">
+          <div class="placeholder col-12" style="height:150px;"></div>
         </div>
-        <canvas id="changes-chart" height="150"></canvas>
+        <canvas id="trend-chart" height="150" class="d-none"></canvas>
         <div class="mt-2">
-          <a id="changes-csv" class="btn btn-sm btn-outline-primary me-1">CSV</a>
-          <a id="changes-pdf" class="btn btn-sm btn-outline-primary">PDF</a>
+          <a id="trend-csv" class="btn btn-sm btn-outline-primary me-1">CSV</a>
+          <a id="trend-pdf" class="btn btn-sm btn-outline-primary">PDF</a>
         </div>
       </div>
     </div>

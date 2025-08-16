@@ -114,6 +114,7 @@ def pending_approvals_report(
                 "document": s.document.title,
                 "step_order": s.step_order,
                 "approver": s.approver,
+                "created_at": s.document.created_at.isoformat(),
             }
             for s in query.all()
         ]
