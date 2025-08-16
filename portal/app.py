@@ -69,7 +69,10 @@ app.config["SESSION_COOKIE_SECURE"] = (
 
 @app.after_request
 def set_security_headers(response):
-    response.headers["Content-Security-Policy"] = "default-src 'self'; frame-ancestors 'none'"
+    response.headers["Content-Security-Policy"] = (
+        "default-src 'self'; frame-ancestors 'none'; "
+        "style-src 'self' https://cdn.jsdelivr.net 'unsafe-inline'"
+    )
     response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
     response.headers["X-Frame-Options"] = "DENY"
     return response
