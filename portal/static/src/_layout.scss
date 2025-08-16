@@ -1,0 +1,26 @@
+@use "../css/tokens" as *;
+
+/* Layout component styles */
+.navbar.sticky-top {
+  z-index: $z-sticky;
+}
+
+.sidebar {
+  padding: $spacing-md 0;
+}
+
+.content-container {
+  padding: $spacing-md;
+}
+
+@media (min-width: $breakpoint-md) {
+  .content-container {
+    padding: $spacing-lg;
+  }
+}
+
+@media (min-width: $breakpoint-lg) {
+  .content-container {
+    padding: $spacing-xl;
+  }
+}

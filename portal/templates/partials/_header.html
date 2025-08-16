@@ -1,5 +1,10 @@
-<nav class="navbar navbar-expand-lg navbar-dark bg-primary fixed-top" aria-label="Global navigation">
-  <div class="container">
+<nav class="navbar navbar-expand-lg navbar-dark bg-primary sticky-top" aria-label="Global navigation">
+  <div class="container-fluid">
+    <button class="navbar-toggler d-md-none me-2" type="button"
+            data-bs-toggle="offcanvas" data-bs-target="#sidebarOffcanvas"
+            aria-controls="sidebarOffcanvas" aria-label="Toggle navigation">
+      <span class="navbar-toggler-icon"></span>
+    </button>
     <a class="navbar-brand" href="/">Portal</a>
 
     <form class="d-none d-lg-flex ms-auto me-3" role="search" action="{{ url_for('search_view') }}" method="get">

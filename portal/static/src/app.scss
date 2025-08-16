@@ -1,9 +1,9 @@
 @import "bootstrap/dist/css/bootstrap.css";
 @use "../css/tokens" as *;
+@use "layout";
 
 /* custom styles */
 body {
-  padding-top: 60px;
   color: $color-text;
   background-color: $color-background;
 }
@@ -33,6 +33,12 @@ body {
 @media (min-width: $breakpoint-lg) {
   .container {
     max-width: $breakpoint-lg;
+  }
+}
+
+@media (min-width: $breakpoint-xl) {
+  .container {
+    max-width: $breakpoint-xl;
   }
 }
 
@@ -108,9 +114,6 @@ a:focus {
 
 /* Responsive layout */
 @media (max-width: ($breakpoint-sm - 1)) {
-  body {
-    padding-top: 56px;
-  }
   .container {
     padding: 0 $spacing-md;
   }
@@ -120,18 +123,24 @@ a:focus {
 }
 
 @media (min-width: $breakpoint-sm) and (max-width: ($breakpoint-md - 1)) {
-  body {
-    padding-top: 58px;
-  }
   .container {
     padding: 0 $spacing-lg;
   }
 }
 
-@media (min-width: $breakpoint-md) {
-  body {
-    padding-top: 60px;
+@media (min-width: $breakpoint-md) and (max-width: ($breakpoint-lg - 1)) {
+  .container {
+    padding: 0 $spacing-xl;
   }
+}
+
+@media (min-width: $breakpoint-lg) and (max-width: ($breakpoint-xl - 1)) {
+  .container {
+    padding: 0 $spacing-xl;
+  }
+}
+
+@media (min-width: $breakpoint-xl) {
   .container {
     padding: 0 $spacing-xl;
   }

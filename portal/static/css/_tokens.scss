@@ -43,6 +43,7 @@ $z-tooltip: 1070;
 $breakpoint-sm: 600px;
 $breakpoint-md: 1024px;
 $breakpoint-lg: 1280px;
+$breakpoint-xl: 1440px;
 
 // Export as CSS variables
 :root {
@@ -83,4 +84,5 @@ $breakpoint-lg: 1280px;
   --breakpoint-sm: #{$breakpoint-sm};
   --breakpoint-md: #{$breakpoint-md};
   --breakpoint-lg: #{$breakpoint-lg};
+  --breakpoint-xl: #{$breakpoint-xl};
 }
