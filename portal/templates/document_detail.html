@@ -5,6 +5,8 @@
 <a class="btn btn-primary" href="{{ url_for('edit_document', doc_id=doc.id) }}">Edit</a>
 {% if doc.status == 'Draft' %}
 <button class="btn btn-secondary" data-bs-toggle="modal" data-bs-target="#reviewerModal">Gözden Geçirmeye Gönder</button>
+{% elif doc.status == 'Published' %}
+<button class="btn btn-warning" data-bs-toggle="modal" data-bs-target="#reviseModal">Revizyon Başlat</button>
 {% endif %}
 {% endif %}
 {% endblock %}
@@ -35,6 +37,34 @@
   </div>
   <div id="tab-relations" class="{% if active_tab != 'relations' %}d-none{% endif %}">
     <p>No related records.</p>
+  </div>
+</div>
+
+<div class="modal fade" id="reviseModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <form class="modal-content" method="post" action="{{ url_for('revise_document', id=doc.id) }}">
+      <div class="modal-header">
+        <h5 class="modal-title">Revizyon Başlat</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="mb-3">
+          <label for="version_type" class="form-label">Versiyon Türü</label>
+          <select class="form-select" id="version_type" name="version_type">
+            <option value="minor">Minor {{ doc.major_version }}.{{ doc.minor_version + 1 }}</option>
+            <option value="major">Major {{ doc.major_version + 1 }}.0</option>
+          </select>
+        </div>
+        <div class="mb-3">
+          <label for="revision_notes" class="form-label">Revizyon Notları</label>
+          <textarea class="form-control" id="revision_notes" name="revision_notes"></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">İptal</button>
+        <button type="submit" class="btn btn-primary">Başlat</button>
+      </div>
+    </form>
   </div>
 </div>
 
