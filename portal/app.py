@@ -37,7 +37,12 @@ from search import index_document
 from sqlalchemy import func, or_
 from ocr import extract_text
 from docxf_render import render_form_to_pdf
-from notifications import notify_revision_time, notify_mandatory_read
+from notifications import (
+    notify_revision_time,
+    notify_mandatory_read,
+    notify_approval_queue,
+    notify_user,
+)
 from reports import (
     build_report,
     revision_report,
@@ -634,6 +639,51 @@ def approval_queue():
         db.close()
 
 
+@app.route("/approvals/<int:id>", methods=["GET"])
+@roles_required(RoleEnum.APPROVER.value, RoleEnum.REVIEWER.value)
+def approval_detail(id: int):
+    db = get_session()
+    try:
+        step = db.get(WorkflowStep, id)
+        if not step:
+            return "Not found", 404
+        doc = step.document
+        user = session.get("user")
+        config = {
+            "document": {
+                "fileType": "docx",
+                "key": f"{doc.doc_key}",
+                "title": doc.title or doc.doc_key.split("/")[-1],
+                "url": f"{os.environ['S3_ENDPOINT']}/local/{doc.doc_key}",
+                "permissions": {"download": True},
+            },
+            "documentType": "text",
+            "editorConfig": {
+                "user": {"id": user["id"], "name": user["name"]} if user else {},
+                "mode": "view",
+            },
+        }
+        token = sign_payload(config)
+        if user:
+            log_action(user["id"], doc.id, "view_approval")
+        breadcrumbs = [
+            {"title": "Home", "url": url_for("index")},
+            {"title": "Approvals", "url": url_for("approval_queue")},
+            {"title": doc.title},
+        ]
+        return render_template(
+            "approvals/detail.html",
+            editor_js=f"{ONLYOFFICE_PUBLIC_URL}/web-apps/apps/api/documents/api.js",
+            config=config,
+            token=token,
+            token_header=ONLYOFFICE_JWT_HEADER,
+            step=step,
+            breadcrumbs=breadcrumbs,
+        )
+    finally:
+        db.close()
+
+
 @app.post("/approvals/<int:step_id>/approve")
 @roles_required(RoleEnum.APPROVER.value, RoleEnum.REVIEWER.value)
 def approve_step(step_id: int):
@@ -646,6 +696,24 @@ def approve_step(step_id: int):
         step.approved_at = datetime.utcnow()
         step.comment = request.form.get("comment")
         db.commit()
+        user = session.get("user")
+        if user:
+            log_action(user["id"], step.doc_id, "approved")
+        next_step = (
+            db.query(WorkflowStep)
+            .filter(
+                WorkflowStep.doc_id == step.doc_id,
+                WorkflowStep.step_order > step.step_order,
+                WorkflowStep.status == "Pending",
+            )
+            .order_by(WorkflowStep.step_order)
+            .first()
+        )
+        if next_step:
+            role = db.query(Role).filter_by(name=next_step.approver).first()
+            if role:
+                ids = [ur.user_id for ur in db.query(UserRole).filter_by(role_id=role.id).all()]
+                notify_approval_queue(step.document, ids)
         broadcast_counts()
         db.refresh(step)
         html = render_template("partials/approvals/_row.html", step=step)
@@ -665,8 +733,19 @@ def reject_step(step_id: int):
         if not step:
             return "Not found", 404
         step.status = "Rejected"
+        step.approved_at = datetime.utcnow()
         step.comment = request.form.get("comment")
         db.commit()
+        user = session.get("user")
+        if user:
+            log_action(user["id"], step.doc_id, "rejected")
+        owner_id = getattr(step.document, "owner_id", None)
+        if owner_id:
+            notify_user(
+                owner_id,
+                f"Document {step.document.title} rejected",
+                step.comment or f"Document {step.document.title} was rejected.",
+            )
         broadcast_counts()
         db.refresh(step)
         html = render_template("partials/approvals/_row.html", step=step)
