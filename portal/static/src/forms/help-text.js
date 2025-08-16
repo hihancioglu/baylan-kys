@@ -1,0 +1,12 @@
+export function attachHelpText(input, text) {
+  const id = `${input.id || input.name}-help`;
+  const div = document.createElement('div');
+  div.id = id;
+  div.className = 'form-text';
+  div.textContent = text;
+  input.setAttribute('aria-describedby', id);
+  input.parentNode.appendChild(div);
+  return div;
+}
+
+export default { attachHelpText };

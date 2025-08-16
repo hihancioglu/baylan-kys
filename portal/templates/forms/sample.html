@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}Sample Form{% endblock %}
+{% block content %}
+<h1>Sample Form</h1>
+<form id="sample-form" novalidate>
+  <div id="form-container"></div>
+  <button type="submit" class="btn btn-primary">Submit</button>
+</form>
+<script type="module">
+  import { createInput, attachHelpText, attachValidation, attachTooltip } from '/static/src/forms/index.js';
+  const container = document.getElementById('form-container');
+  const emailField = createInput({ id: 'email', name: 'email', label: 'Email', type: 'email', required: true, copyable: true });
+  container.appendChild(emailField.wrapper);
+  attachHelpText(emailField.input, "We'll never share your email.");
+  attachTooltip(emailField.input, 'Enter a valid email address');
+  const emailValidator = attachValidation(emailField.input, (value) => {
+    if (!value) return 'Email is required.';
+    if (!/^[^@]+@[^@]+\.[^@]+$/.test(value)) return 'Must be a valid email.';
+    return '';
+  });
+  document.getElementById('sample-form').addEventListener('submit', (e) => {
+    e.preventDefault();
+    if (emailValidator.validate()) {
+      alert(`Submitted: ${emailField.input.value}`);
+    }
+  });
+</script>
+{% endblock %}
