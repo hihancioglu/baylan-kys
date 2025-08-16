@@ -263,14 +263,19 @@ def notifications_stream():
 
 def _get_pending_approvals(db, limit: int = 5):
     roles = session.get("roles", [])
-    steps = (
+    query = (
         db.query(WorkflowStep)
         .join(Document)
-        .filter(
-            WorkflowStep.status == "Pending",
-            WorkflowStep.approver.in_(roles),
-        )
-        .order_by(WorkflowStep.id.desc())
+        .filter(WorkflowStep.status == "Pending")
+    )
+    if roles:
+        query = query.filter(WorkflowStep.approver.in_(roles))
+    else:
+        # If user has no roles, only fetch steps with no specific approver
+        query = query.filter(WorkflowStep.approver.is_(None))
+
+    steps = (
+        query.order_by(WorkflowStep.id.desc())
         .limit(limit)
         .all()
     )
