@@ -541,6 +541,37 @@ def revert_document(doc_id: int, revision_id: int):
     return redirect(url_for("document_detail", doc_id=doc_id))
 
 
+@app.post("/documents/<int:id>/revise")
+@roles_required(RoleEnum.CONTRIBUTOR.value)
+def revise_document(id: int):
+    db = get_session()
+    doc = db.get(Document, id)
+    if not doc:
+        db.close()
+        return "Document not found", 404
+    version_type = request.form.get("version_type", "minor")
+    notes = request.form.get("revision_notes")
+    old_rev = DocumentRevision(
+        doc_id=doc.id,
+        major_version=doc.major_version,
+        minor_version=doc.minor_version,
+        revision_notes=doc.revision_notes,
+    )
+    db.add(old_rev)
+    if version_type == "major":
+        doc.major_version += 1
+        doc.minor_version = 0
+    else:
+        doc.minor_version += 1
+    doc.status = "Draft"
+    doc.revision_notes = notes
+    db.commit()
+    user = session.get("user") or {}
+    log_action(user.get("id"), doc.id, "start_revision")
+    db.close()
+    return redirect(url_for("edit_document", doc_id=id))
+
+
 @app.post("/documents")
 @roles_required(RoleEnum.CONTRIBUTOR.value)
 def create_document():
