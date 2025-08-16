@@ -2,7 +2,11 @@
   {% if items %}
     <ul class="list-unstyled mb-0">
     {% for item in items %}
-      <li>{{ item }}</li>
+      {% if item[1] is defined %}
+        <li><a href="{{ item[1] }}">{{ item[0] }}</a></li>
+      {% else %}
+        <li>{{ item }}</li>
+      {% endif %}
     {% endfor %}
     </ul>
   {% else %}
