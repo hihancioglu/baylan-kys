@@ -446,9 +446,30 @@ def documents_table():
     return render_template("documents/_table.html", **context)
 
 
-@app.route("/documents/new", methods=["GET"])
+@app.route("/documents/new", methods=["GET", "POST"])
 @roles_required(RoleEnum.CONTRIBUTOR.value)
 def new_document():
+    step = request.args.get("step") or request.form.get("step") or "1"
+    data = session.get("new_doc", {})
+
+    if request.method == "POST":
+        data.update(request.form.to_dict())
+        session["new_doc"] = data
+
+        if step == "1":
+            return redirect(url_for("new_document", step=2))
+        if step == "2":
+            return redirect(url_for("new_document", step=3))
+        if step == "3":
+            form_data = session.pop("new_doc", {})
+            user = session.get("user")
+            roles = session.get("roles", [])
+            with app.test_request_context("/documents", method="POST", data=form_data):
+                session["user"] = user
+                session["roles"] = roles
+                return create_document()
+
+    template = f"documents/new_step{step}.html"
     context = {
         "breadcrumbs": [
             {"title": "Home", "url": url_for("index")},
@@ -456,9 +477,10 @@ def new_document():
             {"title": "New"},
         ],
         "errors": {},
-        "form": {},
+        "form": data,
+        "step": int(step),
     }
-    return render_template("documents/new.html", **context)
+    return render_template(template, **context)
 
 
 @app.get("/documents/<int:doc_id>")
