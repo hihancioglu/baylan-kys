@@ -16,7 +16,7 @@
   {% endif %}
   <a class="btn btn-outline-secondary" href="{{ url_for('compare_document_versions', doc_id=doc.id) }}">Karşılaştır</a>
 </div>
-<script src="{{ asset_url('toolbar/toolbar.js') }}" defer></script>
+<script type="module" src="{{ asset_url('toolbar/toolbar.js') }}"></script>
 {% endblock %}
 {% block content %}
 <header class="mb-4">
@@ -135,7 +135,7 @@
     </div>
   </div>
 
-  <script src="{{ asset_url('document_detail.js') }}" defer></script>
+  <script type="module" src="{{ asset_url('document_detail.js') }}"></script>
   <script defer>
     document.getElementById('confirm-revise-btn').addEventListener('click', function (e) {
       if (!confirm('Revizyonu başlatmak istediğinize emin misiniz?')) {

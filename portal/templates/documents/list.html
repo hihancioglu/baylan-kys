@@ -8,7 +8,7 @@
   <a href="#" class="btn btn-outline-primary" data-action="export"><svg class="icon"><use xlink:href="#icon-download"></use></svg><span>Export</span></a>
   <button type="button" class="btn btn-outline-secondary" data-action="filter"><svg class="icon"><use xlink:href="#icon-filter"></use></svg><span>Filter</span></button>
 </div>
-<script src="{{ asset_url('toolbar/toolbar.js') }}" defer></script>
+<script type="module" src="{{ asset_url('toolbar/toolbar.js') }}"></script>
 {% endblock %}
 {% block content %}
   <h1 class="fw-bold" style="font-size: var(--font-size-lg); margin-bottom: var(--spacing-md);">Documents</h1>
@@ -42,5 +42,5 @@
 <div id="document-table">
   {% include 'documents/_table.html' %}
 </div>
-<script src="{{ asset_url('document_list.js') }}" defer></script>
+<script type="module" src="{{ asset_url('document_list.js') }}"></script>
 {% endblock %}

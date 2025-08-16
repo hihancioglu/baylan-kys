@@ -10,5 +10,5 @@
   window.editorTokenHeader = {{ token_header | tojson }};
 </script>
 <script src="{{ editor_js }}"></script>
-<script src="{{ asset_url('document_edit.js') }}" defer></script>
+<script type="module" src="{{ asset_url('document_edit.js') }}"></script>
 {% endblock %}
