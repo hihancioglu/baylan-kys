@@ -261,30 +261,88 @@ def notifications_stream():
 
     return Response(stream(), mimetype="text/event-stream")
 
+
+def _get_pending_approvals(db, limit: int = 5):
+    roles = session.get("roles", [])
+    steps = (
+        db.query(WorkflowStep)
+        .join(Document)
+        .filter(
+            WorkflowStep.status == "Pending",
+            WorkflowStep.approver.in_(roles),
+        )
+        .order_by(WorkflowStep.id.desc())
+        .limit(limit)
+        .all()
+    )
+    return [
+        (s.document.title, url_for("approval_detail", id=s.id)) for s in steps
+    ]
+
+
+def _get_mandatory_reading(db, user_id: int | None, limit: int = 5):
+    if not user_id:
+        return []
+    docs = (
+        db.query(Document)
+        .filter(Document.status == "Published")
+        .outerjoin(
+            Acknowledgement,
+            (Acknowledgement.doc_id == Document.id)
+            & (Acknowledgement.user_id == user_id),
+        )
+        .filter(
+            or_(
+                Acknowledgement.id.is_(None),
+                Acknowledgement.acknowledged_at.is_(None),
+            )
+        )
+        .order_by(Document.id.desc())
+        .limit(limit)
+        .all()
+    )
+    return [
+        (d.title, url_for("document_detail", doc_id=d.id)) for d in docs
+    ]
+
+
+def _get_recent_revisions(db, limit: int = 5):
+    revisions = (
+        db.query(DocumentRevision)
+        .join(Document)
+        .order_by(DocumentRevision.created_at.desc())
+        .limit(limit)
+        .all()
+    )
+    return [
+        (
+            r.document.title,
+            url_for("document_detail", doc_id=r.doc_id, revision_id=r.id),
+        )
+        for r in revisions
+    ]
+
 @app.route("/")
 @login_required
 def dashboard():
-    context = {
-        "breadcrumbs": [{"title": "Dashboard"}],
-        "pending_approvals": [
-            "Quarterly Report Q1",
-            "Budget Proposal FY24",
-        ],
-        "mandatory_reading": [
-            "Safety Guidelines",
-            "Employee Handbook",
-        ],
-        "recent_revisions": [
-            "Procedure XYZ updated",
-            "Form ABC revised",
-        ],
-        "search_shortcuts": [
-            ("All Documents", "/documents"),
-            ("My Approvals", "/approvals"),
-            ("Yeni Doküman", "/documents/new"),
-        ],
-    }
-    return render_template("dashboard.html", **context)
+    db = get_session()
+    try:
+        user = session.get("user") or {}
+        user_id = user.get("id")
+        context = {
+            "breadcrumbs": [{"title": "Dashboard"}],
+            "pending_approvals": _get_pending_approvals(db),
+            "mandatory_reading": _get_mandatory_reading(db, user_id),
+            "recent_revisions": _get_recent_revisions(db),
+            "search_shortcuts": [
+                ("All Documents", url_for("list_documents")),
+                ("My Approvals", url_for("approval_queue")),
+                ("Yeni Doküman", url_for("new_document")),
+            ],
+        }
+        return render_template("dashboard.html", **context)
+    finally:
+        db.close()
 
 
 @app.get("/profile")
@@ -299,40 +357,47 @@ def profile_view():
 @app.get("/dashboard/cards/pending")
 @login_required
 def dashboard_cards_pending():
-    return render_template(
-        "partials/dashboard/_cards.html",
-        card="pending",
-        pending_approvals=[
-            "Quarterly Report Q1",
-            "Budget Proposal FY24",
-        ],
-    )
+    db = get_session()
+    try:
+        pending = _get_pending_approvals(db)
+        return render_template(
+            "partials/dashboard/_cards.html",
+            card="pending",
+            pending_approvals=pending,
+        )
+    finally:
+        db.close()
 
 
 @app.get("/dashboard/cards/mandatory")
 @login_required
 def dashboard_cards_mandatory():
-    return render_template(
-        "partials/dashboard/_cards.html",
-        card="mandatory",
-        mandatory_reading=[
-            "Safety Guidelines",
-            "Employee Handbook",
-        ],
-    )
+    db = get_session()
+    try:
+        user = session.get("user") or {}
+        mandatory = _get_mandatory_reading(db, user.get("id"))
+        return render_template(
+            "partials/dashboard/_cards.html",
+            card="mandatory",
+            mandatory_reading=mandatory,
+        )
+    finally:
+        db.close()
 
 
 @app.get("/dashboard/cards/recent")
 @login_required
 def dashboard_cards_recent():
-    return render_template(
-        "partials/dashboard/_cards.html",
-        card="recent",
-        recent_revisions=[
-            "Procedure XYZ updated",
-            "Form ABC revised",
-        ],
-    )
+    db = get_session()
+    try:
+        recent = _get_recent_revisions(db)
+        return render_template(
+            "partials/dashboard/_cards.html",
+            card="recent",
+            recent_revisions=recent,
+        )
+    finally:
+        db.close()
 
 
 @app.get("/dashboard/cards/shortcuts")
