@@ -271,7 +271,8 @@ class DepartmentVisibility(Base):
     name = Column(String, unique=True, nullable=False)
     visible = Column(Boolean, default=True, nullable=False)
 
-Base.metadata.create_all(engine)
+# Database schema migrations are now managed via Alembic. Tables are created
+# through explicit migration scripts rather than automatic metadata creation.
 
 def get_session():
     return SessionLocal()
@@ -300,5 +301,4 @@ def seed_roles_and_users():
     finally:
         session.close()
 
-
-seed_roles_and_users()
+# Initial data seeding should be invoked manually after applying migrations.

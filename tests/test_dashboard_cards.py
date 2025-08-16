@@ -20,18 +20,19 @@ from flask import url_for
 import pytest
 
 from portal.models import (
-    Base,
-    engine,
     SessionLocal,
     Document,
     WorkflowStep,
     DocumentRevision,
 )
 from portal.app import app
+from alembic.config import Config
+from alembic import command
 
 
-# Create database schema
-Base.metadata.create_all(bind=engine)
+# Apply database migrations
+alembic_cfg = Config(str(Path(__file__).resolve().parent.parent / "alembic.ini"))
+command.upgrade(alembic_cfg, "head")
 
 # Populate sample data
 session = SessionLocal()
