@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+{% block title %}Approval Queue{% endblock %}
+{% block content %}
+<h1 class="mb-3">Approval Queue</h1>
+
+<div class="mb-3">
+  <div class="btn-group" role="group" aria-label="Filter">
+    <a href="{{ url_for('approval_queue', filter='all') }}" class="btn btn-outline-primary{% if filter=='all' %} active{% endif %}">All</a>
+    <a href="{{ url_for('approval_queue', filter='pending') }}" class="btn btn-outline-primary{% if filter=='pending' %} active{% endif %}">Pending</a>
+    <a href="{{ url_for('approval_queue', filter='approved') }}" class="btn btn-outline-primary{% if filter=='approved' %} active{% endif %}">Approved</a>
+    <a href="{{ url_for('approval_queue', filter='rejected') }}" class="btn btn-outline-primary{% if filter=='rejected' %} active{% endif %}">Rejected</a>
+  </div>
+</div>
+
+<div class="mb-2">
+  <button id="bulk-approve" class="btn btn-success btn-sm" disabled data-bs-toggle="modal" data-bs-target="#bulkActionModal" data-action="approve">Approve Selected</button>
+  <button id="bulk-reject" class="btn btn-danger btn-sm" disabled data-bs-toggle="modal" data-bs-target="#bulkActionModal" data-action="reject">Reject Selected</button>
+</div>
+
+<table class="table table-striped" id="queue-table">
+  <thead class="table-light">
+    <tr>
+      <th><input type="checkbox" id="select-all" class="form-check-input"></th>
+      <th>Document</th>
+      <th>Step</th>
+      <th>Status</th>
+      <th>Actions</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for step in steps %}
+    <tr id="step-{{ step.id }}" data-step-id="{{ step.id }}">
+      <td><input type="checkbox" class="form-check-input step-checkbox" value="{{ step.id }}"></td>
+      <td>{{ step.document.title }}</td>
+      <td>{{ step.step_order }}</td>
+      <td class="status">{{ step.status }}</td>
+      <td>
+        {% if step.status == 'Pending' %}
+        <button class="btn btn-success btn-sm" hx-post="{{ url_for('approve_step', step_id=step.id) }}" hx-target="#step-{{ step.id }}" hx-swap="outerHTML">Approve</button>
+        <button class="btn btn-danger btn-sm" hx-post="{{ url_for('reject_step', step_id=step.id) }}" hx-target="#step-{{ step.id }}" hx-swap="outerHTML">Reject</button>
+        {% else %}
+        {{ step.status }}
+        {% endif %}
+      </td>
+    </tr>
+    {% else %}
+    <tr><td colspan="5" class="text-center">No pending approvals.</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+<div class="modal fade" id="bulkActionModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="bulkActionTitle"></h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <form id="bulk-action-form" hx-post="" hx-include=".step-checkbox:checked" hx-target="#queue-table tbody" hx-swap="innerHTML">
+        <div class="modal-body">Are you sure you want to proceed?</div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-primary">Confirm</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  const selectAll = document.getElementById('select-all');
+  const bulkApprove = document.getElementById('bulk-approve');
+  const bulkReject = document.getElementById('bulk-reject');
+
+  function updateBulkButtons(){
+    const any = document.querySelectorAll('.step-checkbox:checked').length > 0;
+    bulkApprove.disabled = bulkReject.disabled = !any;
+  }
+
+  selectAll.addEventListener('change', () => {
+    document.querySelectorAll('.step-checkbox').forEach(cb => cb.checked = selectAll.checked);
+    updateBulkButtons();
+  });
+  document.querySelectorAll('.step-checkbox').forEach(cb => cb.addEventListener('change', updateBulkButtons));
+
+  const bulkModal = document.getElementById('bulkActionModal');
+  bulkModal.addEventListener('show.bs.modal', event => {
+    const button = event.relatedTarget;
+    const action = button.getAttribute('data-action');
+    const form = document.getElementById('bulk-action-form');
+    form.setAttribute('hx-post', `/approvals/bulk_${action}`);
+    const confirmBtn = form.querySelector('.btn-primary');
+    confirmBtn.className = `btn btn-${action==='approve'?'success':'danger'}`;
+    confirmBtn.textContent = action.charAt(0).toUpperCase() + action.slice(1);
+    document.getElementById('bulkActionTitle').textContent = `${confirmBtn.textContent} selected steps?`;
+  });
+
+  document.body.addEventListener('htmx:afterSwap', (evt) => {
+    const row = evt.detail.target;
+    if (row.matches('tr[data-step-id]')) {
+      row.classList.add('table-info');
+      setTimeout(()=>row.classList.remove('table-info'), 1000);
+      const id = row.dataset.stepId;
+      const toastEl = document.getElementById('action-toast');
+      toastEl.querySelector('.toast-body').innerHTML = `Action applied. <button class="btn btn-link btn-sm p-0 ms-2" hx-post="/approvals/${id}/undo" hx-target="#step-${id}" hx-swap="outerHTML">Undo</button>`;
+      const toast = bootstrap.Toast.getOrCreateInstance(toastEl, {delay:5000});
+      toast.show();
+    }
+  });
+})();
+</script>
+{% endblock %}
