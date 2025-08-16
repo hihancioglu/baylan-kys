@@ -104,6 +104,8 @@ services:
       - onlyoffice
       - elasticsearch
     networks: [qdms]
+    volumes:
+      - portal_static:/app/static/dist
 
   nginx:
     image: nginx:1.27-alpine
@@ -113,6 +115,7 @@ services:
       - onlyoffice
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - portal_static:/app/static/dist:ro
       - nginx_cache:/var/cache/nginx
       # SSL sertifikası kullanacaksanız aşağıyı açın ve dosyaları koyun
       # - ./nginx/certs:/etc/nginx/certs:ro
@@ -126,6 +129,8 @@ volumes:
   redisdata:
   miniodata:
   nginx_cache:
+
+  portal_static:
 
 networks:
   qdms:
