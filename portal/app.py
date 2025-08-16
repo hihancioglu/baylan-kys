@@ -377,6 +377,13 @@ def document_detail(doc_id: int):
             .filter_by(id=revision_id, doc_id=doc_id)
             .first()
         )
+    reviewers = (
+        session.query(User)
+        .join(UserRole)
+        .join(Role)
+        .filter(Role.name == RoleEnum.REVIEWER.value)
+        .all()
+    )
     session.close()
     partial = bool(request.headers.get("HX-Request"))
     template = (
@@ -387,6 +394,7 @@ def document_detail(doc_id: int):
         doc=doc,
         revisions=revisions,
         revision=revision,
+        reviewers=reviewers,
         active_tab="versions" if revision_id else "summary",
         breadcrumbs=[
             {"title": "Home", "url": url_for("index")},
@@ -394,6 +402,34 @@ def document_detail(doc_id: int):
             {"title": doc.title},
         ],
     )
+
+
+@app.post("/workflow/start")
+@roles_required(RoleEnum.CONTRIBUTOR.value)
+def start_workflow():
+    user = session.get("user")
+    if not user:
+        return jsonify(error="user not logged in"), 401
+    doc_id = request.form.get("doc_id", type=int)
+    reviewer_ids = [int(r) for r in request.form.getlist("reviewers") if r]
+    db = get_session()
+    try:
+        doc = db.get(Document, doc_id)
+        if not doc:
+            return jsonify(error="document not found"), 404
+        doc.status = "Review"
+        steps = [
+            WorkflowStep(doc_id=doc_id, step_order=i, approver=str(rid))
+            for i, rid in enumerate(reviewer_ids, start=1)
+        ]
+        db.add_all(steps)
+        db.commit()
+        log_action(user["id"], doc_id, "start_workflow")
+        db.refresh(doc)
+        notify_revision_time(doc, reviewer_ids)
+        return jsonify(ok=True)
+    finally:
+        db.close()
 
 
 @app.get("/documents/<int:doc_id>/compare")
