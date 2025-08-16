@@ -1,0 +1,1 @@
+import { getToken } from './tokens';import { initFilters } from './filters/index.js';getToken('color-primary');document.addEventListener('DOMContentLoaded', () => {const form = document.querySelector('[data-component="filters"]');initFilters(form);});document.addEventListener('htmx:afterSwap', function (evt) {if (evt.target.id === 'document-table') {window.scrollTo(0, 0);}});
