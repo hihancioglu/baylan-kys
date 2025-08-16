@@ -5,6 +5,10 @@ $color-primary-dark: #003a75;
 $color-text: #1a1a1a;
 $color-background: #ffffff;
 
+// Status colors
+$status-draft: #6c757d;
+$status-approved: #198754;
+
 // Typography scale
 $font-size-xxs: 0.75rem;
 $font-size-xs: 0.875rem;
@@ -51,6 +55,8 @@ $breakpoint-xl: 1440px;
   --color-primary-dark: #{$color-primary-dark};
   --color-text: #{$color-text};
   --color-background: #{$color-background};
+  --status-draft: #{$status-draft};
+  --status-approved: #{$status-approved};
 
   --font-size-xxs: #{$font-size-xxs};
   --font-size-xs: #{$font-size-xs};
