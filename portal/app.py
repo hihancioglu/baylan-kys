@@ -321,6 +321,15 @@ def _get_recent_revisions(db, limit: int = 5):
         for r in revisions
     ]
 
+
+def _get_search_shortcuts(limit: int = 5):
+    shortcuts = [
+        ("All Documents", url_for("list_documents")),
+        ("My Approvals", url_for("approval_queue")),
+        ("Yeni Doküman", url_for("new_document")),
+    ]
+    return shortcuts[:limit]
+
 @app.route("/")
 @login_required
 def dashboard():
@@ -333,11 +342,7 @@ def dashboard():
             "pending_approvals": _get_pending_approvals(db),
             "mandatory_reading": _get_mandatory_reading(db, user_id),
             "recent_revisions": _get_recent_revisions(db),
-            "search_shortcuts": [
-                ("All Documents", url_for("list_documents")),
-                ("My Approvals", url_for("approval_queue")),
-                ("Yeni Doküman", url_for("new_document")),
-            ],
+            "search_shortcuts": _get_search_shortcuts(),
         }
         return render_template("dashboard.html", **context)
     finally:
@@ -405,12 +410,62 @@ def dashboard_cards_shortcuts():
     return render_template(
         "partials/dashboard/_cards.html",
         card="shortcuts",
-        search_shortcuts=[
-            ("All Documents", "/documents"),
-            ("My Approvals", "/approvals"),
-            ("Yeni Doküman", "/documents/new"),
-        ],
+        search_shortcuts=_get_search_shortcuts(),
     )
+
+
+@app.get("/api/dashboard/pending-approvals")
+@login_required
+def api_dashboard_pending_approvals():
+    limit = request.args.get("limit", type=int) or 5
+    db = get_session()
+    try:
+        items = _get_pending_approvals(db, limit)
+        return jsonify({"items": items, "error": None})
+    except Exception as e:
+        return jsonify({"items": [], "error": str(e)}), 500
+    finally:
+        db.close()
+
+
+@app.get("/api/dashboard/mandatory-reading")
+@login_required
+def api_dashboard_mandatory_reading():
+    limit = request.args.get("limit", type=int) or 5
+    db = get_session()
+    try:
+        user = session.get("user") or {}
+        items = _get_mandatory_reading(db, user.get("id"), limit)
+        return jsonify({"items": items, "error": None})
+    except Exception as e:
+        return jsonify({"items": [], "error": str(e)}), 500
+    finally:
+        db.close()
+
+
+@app.get("/api/dashboard/recent-changes")
+@login_required
+def api_dashboard_recent_changes():
+    limit = request.args.get("limit", type=int) or 5
+    db = get_session()
+    try:
+        items = _get_recent_revisions(db, limit)
+        return jsonify({"items": items, "error": None})
+    except Exception as e:
+        return jsonify({"items": [], "error": str(e)}), 500
+    finally:
+        db.close()
+
+
+@app.get("/api/dashboard/search-shortcuts")
+@login_required
+def api_dashboard_search_shortcuts():
+    limit = request.args.get("limit", type=int) or 5
+    try:
+        items = _get_search_shortcuts(limit)
+        return jsonify({"items": items, "error": None})
+    except Exception as e:
+        return jsonify({"items": [], "error": str(e)}), 500
 
 
 @app.get("/health")
