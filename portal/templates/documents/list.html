@@ -2,12 +2,32 @@
 {% block title %}Documents{% endblock %}
 {% block content %}
 <h1>Documents</h1>
-<form hx-get="{{ url_for('documents_table') }}" hx-target="#document-table" hx-push-url="true" class="row g-2 mb-3">
-  <div class="col-md-3"><input class="form-control" name="status" placeholder="Status" value="{{ filters.status or '' }}"></div>
-  <div class="col-md-3"><input class="form-control" name="department" placeholder="Department" value="{{ filters.department or '' }}"></div>
-  <div class="col-md-3"><input class="form-control" name="tag" placeholder="Tag" value="{{ filters.tag or '' }}"></div>
+<form hx-get="{{ url_for('documents_table') }}" hx-target="#document-table" hx-push-url="true" class="row g-2 mb-3" data-component="filters">
+  <div class="col-md-3"><input class="form-control" name="q" placeholder="Search" value="{{ filters.q or '' }}" data-filter="text"></div>
+  <div class="col-md-3">
+    <select class="form-select" name="status" data-filter="select">
+      <option value="">Any status</option>
+      <option value="draft" {% if filters.status=='draft' %}selected{% endif %}>Draft</option>
+      <option value="approved" {% if filters.status=='approved' %}selected{% endif %}>Approved</option>
+    </select>
+  </div>
+  <div class="col-md-3">
+    <select class="form-select" multiple name="tags" data-filter="multi-tag">
+      {% for t in filters.tags or [] %}
+      <option value="{{ t }}" selected>{{ t }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="col-md-3">
+    <div class="d-flex">
+      <input type="date" class="form-control me-1" name="start" value="{{ filters.start or '' }}" data-filter="date-start">
+      <input type="date" class="form-control" name="end" value="{{ filters.end or '' }}" data-filter="date-end">
+    </div>
+  </div>
   <div class="col-md-3"><button class="btn btn-primary w-100" type="submit">Filter</button></div>
+  <div class="col-md-3"><button class="btn btn-outline-secondary w-100" type="button" data-action="clear-filters">Clear</button></div>
 </form>
+<div id="active-filters" class="mb-3" data-active-filters></div>
 <div id="document-table">
   {% include 'documents/_table.html' %}
 </div>

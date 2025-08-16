@@ -1,0 +1,60 @@
+import initTextFilter from './text.js';
+import initSelectFilter from './select.js';
+import initMultiTagFilter from './multi-tag.js';
+import initDateRangeFilter from './date-range.js';
+
+export function initFilters(form) {
+  if (!form) return;
+
+  const instances = [];
+  form.querySelectorAll('[data-filter="text"]').forEach(el => instances.push(initTextFilter(el)));
+  form.querySelectorAll('[data-filter="select"]').forEach(el => instances.push(initSelectFilter(el)));
+  form.querySelectorAll('[data-filter="multi-tag"]').forEach(el => instances.push(initMultiTagFilter(el)));
+  const start = form.querySelector('[data-filter="date-start"]');
+  const end = form.querySelector('[data-filter="date-end"]');
+  if (start && end) instances.push(initDateRangeFilter(start, end));
+
+  const badgeContainer = document.querySelector('[data-active-filters]') || document.getElementById('active-filters');
+
+  function updateBadges() {
+    if (!badgeContainer) return;
+    badgeContainer.innerHTML = '';
+    instances.forEach(inst => {
+      inst.getValues().forEach(info => {
+        const span = document.createElement('span');
+        span.className = 'badge bg-info text-dark me-1 mb-1';
+        span.textContent = `${info.label}: ${info.value}`;
+        span.style.cursor = 'pointer';
+        span.addEventListener('click', () => {
+          if (inst.clearValue) inst.clearValue(info.value);
+          else inst.clear();
+          form.dispatchEvent(new Event('change', { bubbles: true }));
+        });
+        badgeContainer.appendChild(span);
+      });
+    });
+    badgeContainer.style.display = badgeContainer.children.length ? '' : 'none';
+  }
+
+  form.addEventListener('change', () => {
+    updateBadges();
+    if (form.hasAttribute('hx-get')) {
+      form.requestSubmit();
+    }
+  });
+  updateBadges();
+
+  const clearBtn = form.querySelector('[data-action="clear-filters"]');
+  if (clearBtn) {
+    clearBtn.addEventListener('click', () => {
+      instances.forEach(i => i.clear());
+      form.reset();
+      updateBadges();
+      if (form.hasAttribute('hx-get')) {
+        form.requestSubmit();
+      }
+    });
+  }
+}
+
+export default { initFilters };
