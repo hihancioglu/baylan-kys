@@ -471,6 +471,7 @@ def document_detail(doc_id: int):
         return "Document not found", 404
 
     revision_id = request.args.get("revision_id", type=int)
+    tab = request.args.get("tab")
     revisions = (
         session.query(DocumentRevision)
         .filter_by(doc_id=doc_id)
@@ -502,7 +503,7 @@ def document_detail(doc_id: int):
         revisions=revisions,
         revision=revision,
         reviewers=reviewers,
-        active_tab="versions" if revision_id else "summary",
+        active_tab="versions" if (revision_id or tab == "versions") else "summary",
         breadcrumbs=[
             {"title": "Home", "url": url_for("index")},
             {"title": "Documents", "url": url_for("list_documents")},
@@ -661,7 +662,7 @@ def rollback_document(doc_id: int):
     user = session.get("user") or {}
     log_action(user.get("id"), doc.id, "rollback_document")
     db.close()
-    return redirect(url_for("document_detail", doc_id=doc_id))
+    return redirect(url_for("document_detail", doc_id=doc_id, tab="versions"))
 
 
 @app.post("/documents/<int:id>/revise")
