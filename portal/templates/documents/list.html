@@ -11,8 +11,8 @@
 <script src="{{ asset_url('toolbar/toolbar.js') }}" defer></script>
 {% endblock %}
 {% block content %}
-<h1>Documents</h1>
-<form hx-get="{{ url_for('documents_table') }}" hx-target="#document-table" hx-push-url="true" class="row g-2 mb-3 d-none" data-component="filters">
+  <h1 class="fw-bold" style="font-size: var(--font-size-lg); margin-bottom: var(--spacing-md);">Documents</h1>
+  <form hx-get="{{ url_for('documents_table') }}" hx-target="#document-table" hx-push-url="true" class="row d-none" data-component="filters" style="gap: var(--spacing-sm); margin-bottom: var(--spacing-md);">
   <div class="col-md-3"><input class="form-control" name="q" placeholder="Search" value="{{ filters.q or '' }}" data-filter="text"></div>
   <div class="col-md-3">
     <select class="form-select" name="status" data-filter="select">
@@ -37,7 +37,7 @@
   <div class="col-md-3"><button class="btn btn-primary w-100" type="submit">Filter</button></div>
   <div class="col-md-3"><button class="btn btn-outline-secondary w-100" type="button" data-action="clear-filters">Clear</button></div>
 </form>
-<div id="active-filters" class="mb-3" data-active-filters></div>
+  <div id="active-filters" data-active-filters style="margin-bottom: var(--spacing-md);"></div>
 <div id="document-table">
   {% include 'documents/_table.html' %}
 </div>

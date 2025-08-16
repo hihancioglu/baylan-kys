@@ -106,10 +106,38 @@ a:focus {
   border-radius: $radius-sm;
 }
 
+.badge-status-draft {
+  background-color: $status-draft;
+  color: $color-background;
+}
+
+.badge-status-approved {
+  background-color: $status-approved;
+  color: $color-background;
+}
+
 .alert-primary {
   background-color: $color-primary;
   color: $color-background;
   border-radius: $radius-md;
+}
+
+.table.document-table {
+  font-size: $font-size-xs;
+}
+
+.table.document-table th,
+.table.document-table td {
+  padding: $spacing-xs;
+}
+
+.table.document-table td.actions {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.table.document-table td.actions .btn {
+  margin-left: $spacing-xs;
 }
 
 /* Responsive layout */

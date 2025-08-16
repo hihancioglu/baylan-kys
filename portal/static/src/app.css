@@ -4,6 +4,8 @@
   --color-primary-dark: #003a75;
   --color-text: #1a1a1a;
   --color-background: #ffffff;
+  --status-draft: #6c757d;
+  --status-approved: #198754;
 
   --font-size-xxs: 0.75rem;
   --font-size-xs: 0.875rem;
@@ -144,10 +146,38 @@ a:focus {
   border-radius: 2px;
 }
 
+.badge-status-draft {
+  background-color: #6c757d;
+  color: #ffffff;
+}
+
+.badge-status-approved {
+  background-color: #198754;
+  color: #ffffff;
+}
+
 .alert-primary {
   background-color: #005ea2;
   color: #ffffff;
   border-radius: 4px;
+}
+
+.table.document-table {
+  font-size: var(--font-size-xs);
+}
+
+.table.document-table th,
+.table.document-table td {
+  padding: var(--spacing-xs);
+}
+
+.table.document-table td.actions {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.table.document-table td.actions .btn {
+  margin-left: var(--spacing-xs);
 }
 
 /* Layout components */
