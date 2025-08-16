@@ -42,6 +42,8 @@ from notifications import (
     notify_mandatory_read,
     notify_approval_queue,
     notify_user,
+    subscribe,
+    unsubscribe,
 )
 from reports import (
     build_report,
@@ -228,6 +230,34 @@ def sse_events():
                 yield f"data: {data}\n\n"
         finally:
             sse_clients.remove(client)
+
+    return Response(stream(), mimetype="text/event-stream")
+
+
+@app.get("/notifications/stream")
+@login_required
+def notifications_stream():
+    user = session.get("user")
+    if not user:
+        return "Unauthorized", 401
+    user_id = user.get("id")
+    q = subscribe(user_id)
+
+    db = get_session()
+    pending = db.query(Notification).filter_by(user_id=user_id, read=False).all()
+
+    def stream():
+        for n in pending:
+            yield f"data: {json.dumps({'id': n.id, 'message': n.message})}\n\n"
+            n.read = True
+        db.commit()
+        try:
+            while True:
+                data = q.get()
+                yield f"data: {data}\n\n"
+        finally:
+            unsubscribe(user_id, q)
+            db.close()
 
     return Response(stream(), mimetype="text/event-stream")
 
@@ -1393,8 +1423,11 @@ def assign_acknowledgements_endpoint():
         return jsonify(error="doc_id required"), 400
     db = get_session()
     try:
+        doc = db.get(Document, doc_id)
         _assign_acknowledgements(db, doc_id, user_ids)
         db.commit()
+        if doc and user_ids:
+            notify_mandatory_read(doc, user_ids)
         broadcast_counts()
         return jsonify(ok=True)
     finally:
