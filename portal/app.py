@@ -9,7 +9,6 @@ from flask import (
     Response,
     session,
     make_response,
-    g,
 )
 from flask_wtf.csrf import CSRFProtect
 from auth import auth_bp, init_app as auth_init, login_required, roles_required
@@ -68,19 +67,8 @@ app.config["SESSION_COOKIE_SECURE"] = (
 )
 
 
-@app.before_request
-def add_csp_nonce():
-    g.csp_nonce = secrets.token_urlsafe(16)
-
-
 @app.after_request
 def set_security_headers(response):
-    nonce = getattr(g, "csp_nonce", "")
-    response.headers["Content-Security-Policy"] = (
-        "default-src 'self'; frame-ancestors 'none'; "
-        "style-src 'self' https://cdn.jsdelivr.net 'unsafe-inline'; "
-        f"script-src 'self' https://cdn.jsdelivr.net 'nonce-{nonce}'"
-    )
     response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
     response.headers["X-Frame-Options"] = "DENY"
     return response
@@ -112,11 +100,6 @@ def inject_user():
     def has_role(role):
         return role in roles
     return {"current_user": user, "user_roles": roles, "has_role": has_role}
-
-
-@app.context_processor
-def inject_csp_nonce():
-    return {"csp_nonce": getattr(g, "csp_nonce", "")}
 
 ONLYOFFICE_INTERNAL_URL = os.environ["ONLYOFFICE_INTERNAL_URL"]  # http://onlyoffice
 ONLYOFFICE_PUBLIC_URL   = os.environ["ONLYOFFICE_PUBLIC_URL"]    # https://qdms.example.com/onlyoffice
