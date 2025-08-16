@@ -24,15 +24,14 @@ from portal.models import (
     Document,
     WorkflowStep,
     DocumentRevision,
+    Base,
+    engine,
 )
 from portal.app import app
-from alembic.config import Config
-from alembic import command
 
 
-# Apply database migrations
-alembic_cfg = Config(str(Path(__file__).resolve().parent.parent / "alembic.ini"))
-command.upgrade(alembic_cfg, "head")
+# Create database schema
+Base.metadata.create_all(bind=engine)
 
 # Populate sample data
 session = SessionLocal()
