@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}New Document{% endblock %}
+{% block content %}
+<h1 class="fw-bold" style="font-size: var(--font-size-lg); margin-bottom: var(--spacing-md);">New Document</h1>
+<form method="post" action="{{ url_for('create_document') }}">
+  <div class="mb-3">
+    <label for="code" class="form-label">Code</label>
+    <input type="text" class="form-control{% if errors.code %} is-invalid{% endif %}" id="code" name="code" value="{{ form.code or '' }}">
+    {% if errors.code %}<div class="invalid-feedback">{{ errors.code }}</div>{% endif %}
+  </div>
+  <div class="mb-3">
+    <label for="title" class="form-label">Title</label>
+    <input type="text" class="form-control{% if errors.title %} is-invalid{% endif %}" id="title" name="title" value="{{ form.title or '' }}">
+    {% if errors.title %}<div class="invalid-feedback">{{ errors.title }}</div>{% endif %}
+  </div>
+  <div class="mb-3">
+    <label for="department" class="form-label">Department</label>
+    <input type="text" class="form-control{% if errors.department %} is-invalid{% endif %}" id="department" name="department" value="{{ form.department or '' }}">
+    {% if errors.department %}<div class="invalid-feedback">{{ errors.department }}</div>{% endif %}
+  </div>
+  <div class="mb-3">
+    <label for="type" class="form-label">Type</label>
+    <input type="text" class="form-control{% if errors.type %} is-invalid{% endif %}" id="type" name="type" value="{{ form.type or '' }}">
+    {% if errors.type %}<div class="invalid-feedback">{{ errors.type }}</div>{% endif %}
+  </div>
+  <button type="submit" class="btn btn-primary">Create</button>
+</form>
+{% endblock %}
