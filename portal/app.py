@@ -266,10 +266,22 @@ def notifications_stream():
 def dashboard():
     context = {
         "breadcrumbs": [{"title": "Dashboard"}],
-        "pending_approvals": [],
-        "mandatory_reading": [],
-        "recent_revisions": [],
-        "search_shortcuts": [],
+        "pending_approvals": [
+            "Quarterly Report Q1",
+            "Budget Proposal FY24",
+        ],
+        "mandatory_reading": [
+            "Safety Guidelines",
+            "Employee Handbook",
+        ],
+        "recent_revisions": [
+            "Procedure XYZ updated",
+            "Form ABC revised",
+        ],
+        "search_shortcuts": [
+            "All Documents",
+            "My Approvals",
+        ],
     }
     return render_template("dashboard.html", **context)
 
@@ -289,7 +301,10 @@ def dashboard_cards_pending():
     return render_template(
         "partials/dashboard/_cards.html",
         card="pending",
-        pending_approvals=[],
+        pending_approvals=[
+            "Quarterly Report Q1",
+            "Budget Proposal FY24",
+        ],
     )
 
 
@@ -299,7 +314,10 @@ def dashboard_cards_mandatory():
     return render_template(
         "partials/dashboard/_cards.html",
         card="mandatory",
-        mandatory_reading=[],
+        mandatory_reading=[
+            "Safety Guidelines",
+            "Employee Handbook",
+        ],
     )
 
 
@@ -309,7 +327,10 @@ def dashboard_cards_recent():
     return render_template(
         "partials/dashboard/_cards.html",
         card="recent",
-        recent_revisions=[],
+        recent_revisions=[
+            "Procedure XYZ updated",
+            "Form ABC revised",
+        ],
     )
 
 
@@ -319,7 +340,10 @@ def dashboard_cards_shortcuts():
     return render_template(
         "partials/dashboard/_cards.html",
         card="shortcuts",
-        search_shortcuts=[],
+        search_shortcuts=[
+            "All Documents",
+            "My Approvals",
+        ],
     )
 
 
