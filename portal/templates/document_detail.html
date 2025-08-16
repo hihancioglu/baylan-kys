@@ -3,6 +3,9 @@
 {% block page_actions %}
 {% if has_role('CONTRIBUTOR') %}
 <a class="btn btn-primary" href="{{ url_for('edit_document', doc_id=doc.id) }}">Edit</a>
+{% if doc.status == 'Draft' %}
+<button class="btn btn-secondary" data-bs-toggle="modal" data-bs-target="#reviewerModal">Gözden Geçirmeye Gönder</button>
+{% endif %}
 {% endif %}
 {% endblock %}
 {% block content %}
@@ -34,5 +37,30 @@
     <p>No related records.</p>
   </div>
 </div>
+
+<div class="modal fade" id="reviewerModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <form class="modal-content" hx-post="{{ url_for('start_workflow') }}" hx-target="closest .modal" hx-swap="none">
+      <div class="modal-header">
+        <h5 class="modal-title">Reviewer Seç</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        {% for user in reviewers %}
+        <div class="form-check">
+          <input class="form-check-input" type="checkbox" name="reviewers" value="{{ user.id }}" id="rev-{{ user.id }}">
+          <label class="form-check-label" for="rev-{{ user.id }}">{{ user.username }}</label>
+        </div>
+        {% endfor %}
+        <input type="hidden" name="doc_id" value="{{ doc.id }}">
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">İptal</button>
+        <button type="submit" class="btn btn-primary">Gönder</button>
+      </div>
+    </form>
+  </div>
+</div>
+
 <script src="{{ asset_url('document_detail.js') }}" defer></script>
 {% endblock %}
