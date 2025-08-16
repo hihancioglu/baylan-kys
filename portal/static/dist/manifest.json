@@ -13,5 +13,7 @@
   "filters/text.js": "filters/text.js",
   "filters/index.js": "filters/index.js",
   "filters/select.js": "filters/select.js",
-  "filters/date-range.js": "filters/date-range.js"
+  "filters/date-range.js": "filters/date-range.js",
+  "toolbar/toolbar.css": "toolbar/toolbar.css",
+  "toolbar/toolbar.js": "toolbar/toolbar.js"
 }

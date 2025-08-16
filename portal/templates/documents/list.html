@@ -1,8 +1,18 @@
 {% extends "base.html" %}
 {% block title %}Documents{% endblock %}
+{% block page_actions %}
+<link rel="stylesheet" href="{{ asset_url('toolbar/toolbar.css') }}">
+<div class="toolbar" data-component="toolbar" data-variant="icon-text">
+  <a href="#" class="btn btn-primary" data-action="new"><svg class="icon"><use xlink:href="#icon-plus"></use></svg><span>New</span></a>
+  <a href="#" class="btn btn-outline-primary" data-action="import"><svg class="icon"><use xlink:href="#icon-upload"></use></svg><span>Import</span></a>
+  <a href="#" class="btn btn-outline-primary" data-action="export"><svg class="icon"><use xlink:href="#icon-download"></use></svg><span>Export</span></a>
+  <button type="button" class="btn btn-outline-secondary" data-action="filter"><svg class="icon"><use xlink:href="#icon-filter"></use></svg><span>Filter</span></button>
+</div>
+<script src="{{ asset_url('toolbar/toolbar.js') }}" defer></script>
+{% endblock %}
 {% block content %}
 <h1>Documents</h1>
-<form hx-get="{{ url_for('documents_table') }}" hx-target="#document-table" hx-push-url="true" class="row g-2 mb-3" data-component="filters">
+<form hx-get="{{ url_for('documents_table') }}" hx-target="#document-table" hx-push-url="true" class="row g-2 mb-3 d-none" data-component="filters">
   <div class="col-md-3"><input class="form-control" name="q" placeholder="Search" value="{{ filters.q or '' }}" data-filter="text"></div>
   <div class="col-md-3">
     <select class="form-select" name="status" data-filter="select">
