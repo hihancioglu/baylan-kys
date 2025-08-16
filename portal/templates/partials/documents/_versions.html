@@ -1,47 +1,39 @@
-<ul class="nav nav-tabs" id="document-tabs">
-  <li class="nav-item"><a class="nav-link {% if active_tab == 'summary' %}active{% endif %}" href="#" data-tab="summary">Summary</a></li>
-  <li class="nav-item"><a class="nav-link {% if active_tab == 'versions' %}active{% endif %}" href="#" data-tab="versions">Versions</a></li>
-  <li class="nav-item"><a class="nav-link {% if active_tab == 'related' %}active{% endif %}" href="#" data-tab="related">Related Records</a></li>
-</ul>
-<div class="mt-3">
-  <div id="tab-summary" class="{% if active_tab != 'summary' %}d-none{% endif %}">
-    <p>{{ doc.revision_notes or 'No summary available.' }}</p>
+{% if revision %}
+<div>
+  <h3>Version {{ revision.major_version }}.{{ revision.minor_version }}</h3>
+  <p>{{ revision.revision_notes or 'No revision notes.' }}</p>
+  <div class="d-flex gap-2">
+    <button class="btn btn-secondary" hx-get="{{ url_for('document_detail', doc_id=doc.id) }}" hx-target="#tab-versions" hx-push-url="false">Back</button>
+    <button class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#revertModal">Revert to previous version</button>
   </div>
-  <div id="tab-versions" class="{% if active_tab != 'versions' %}d-none{% endif %}">
-    {% if revision %}
-    <div>
-      <h3>Version {{ revision.major_version }}.{{ revision.minor_version }}</h3>
-      <p>{{ revision.revision_notes or 'No revision notes.' }}</p>
-      <div class="d-flex gap-2">
-        <button class="btn btn-secondary" hx-get="{{ url_for('document_detail', doc_id=doc.id) }}" hx-target="#version-area" hx-push-url="false">Back</button>
-        <button class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#revertModal">Revert to previous version</button>
-      </div>
-      <div class="modal fade" id="revertModal" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog">
-          <div class="modal-content">
-            <div class="modal-header">
-              <h5 class="modal-title">Revert to version {{ revision.major_version }}.{{ revision.minor_version }}?</h5>
-              <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">Are you sure you want to revert to this version?</div>
-            <div class="modal-footer">
-              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-              <form hx-post="{{ url_for('revert_document', doc_id=doc.id, revision_id=revision.id) }}" hx-target="#version-area" hx-swap="outerHTML">
-                <button type="submit" class="btn btn-danger" data-bs-dismiss="modal">Revert</button>
-              </form>
-            </div>
-          </div>
+  <div class="modal fade" id="revertModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Revert to version {{ revision.major_version }}.{{ revision.minor_version }}?</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">Are you sure you want to revert to this version?</div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <form hx-post="{{ url_for('revert_document', doc_id=doc.id, revision_id=revision.id) }}" hx-target="#tab-versions" hx-swap="innerHTML">
+            <button type="submit" class="btn btn-danger" data-bs-dismiss="modal">Revert</button>
+          </form>
         </div>
       </div>
     </div>
-    {% else %}
-    <form method="get" action="{{ url_for('compare_document_versions', doc_id=doc.id) }}">
+  </div>
+</div>
+{% else %}
+<form method="get" action="{{ url_for('compare_document_versions', doc_id=doc.id) }}">
+  <div class="row">
+    <div class="col-md-8">
       <ul class="list-group">
         {% for rev in revisions %}
         <li class="list-group-item d-flex justify-content-between align-items-center">
           <div class="d-flex align-items-center">
-            <input class="form-check-input me-2" type="checkbox" name="rev_id" value="{{ rev.id }}" id="rev-{{ rev.id }}">
-            <a hx-get="{{ url_for('document_detail', doc_id=doc.id, revision_id=rev.id) }}" hx-target="#version-area" hx-push-url="false">{{ rev.major_version }}.{{ rev.minor_version }}</a>
+            <input class="form-check-input me-2 version-checkbox" type="checkbox" name="rev_id" value="{{ rev.id }}" id="rev-{{ rev.id }}" data-label="{{ rev.major_version }}.{{ rev.minor_version }}">
+            <a hx-get="{{ url_for('document_detail', doc_id=doc.id, revision_id=rev.id) }}" hx-target="#tab-versions" hx-push-url="false">{{ rev.major_version }}.{{ rev.minor_version }}</a>
           </div>
           <small class="text-muted">{{ rev.created_at.strftime('%Y-%m-%d') if rev.created_at else '' }}</small>
         </li>
@@ -49,12 +41,12 @@
         <li class="list-group-item">No versions found.</li>
         {% endfor %}
       </ul>
-      <button type="submit" class="btn btn-primary mt-2">Compare</button>
-    </form>
-    {% endif %}
+      <button type="submit" id="compare-button" class="btn btn-secondary mt-2" disabled>Compare</button>
+    </div>
+    <div class="col-md-4">
+      <h5>Selected Versions</h5>
+      <ul id="selected-versions" class="list-group"></ul>
+    </div>
   </div>
-  <div id="tab-related" class="{% if active_tab != 'related' %}d-none{% endif %}">
-    <p>No related records.</p>
-  </div>
-</div>
-
+</form>
+{% endif %}

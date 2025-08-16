@@ -365,7 +365,7 @@ def document_detail(doc_id: int):
     session.close()
     partial = bool(request.headers.get("HX-Request"))
     template = (
-        "partials/documents/_versions.html" if partial else "documents/detail.html"
+        "partials/documents/_versions.html" if partial else "document_detail.html"
     )
     return render_template(
         template,

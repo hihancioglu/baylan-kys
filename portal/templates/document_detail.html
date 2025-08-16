@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}Document Detail{% endblock %}
+{% block page_actions %}
+{% if has_role('CONTRIBUTOR') %}
+<a class="btn btn-primary" href="{{ url_for('edit_document', doc_id=doc.id) }}">Edit</a>
+{% endif %}
+{% endblock %}
+{% block content %}
+<header class="mb-4">
+  <h1>{{ doc.title }}</h1>
+  <div class="text-muted">
+    <span class="me-3"><strong>Code:</strong> {{ doc.code }}</span>
+    <span class="me-3"><strong>Status:</strong> {{ doc.status }}</span>
+    <span class="me-3"><strong>Tags:</strong> {{ doc.tags }}</span>
+  </div>
+</header>
+<ul class="nav nav-tabs" id="document-tabs">
+  <li class="nav-item"><a class="nav-link {% if active_tab == 'summary' %}active{% endif %}" href="#" data-tab="summary">Summary</a></li>
+  <li class="nav-item"><a class="nav-link {% if active_tab == 'versions' %}active{% endif %}" href="#" data-tab="versions">Versions</a></li>
+  <li class="nav-item"><a class="nav-link {% if active_tab == 'notes' %}active{% endif %}" href="#" data-tab="notes">Revision Notes</a></li>
+  <li class="nav-item"><a class="nav-link {% if active_tab == 'relations' %}active{% endif %}" href="#" data-tab="relations">Relations</a></li>
+</ul>
+<div class="mt-3">
+  <div id="tab-summary" class="{% if active_tab != 'summary' %}d-none{% endif %}">
+    <p>{{ doc.revision_notes or 'No summary available.' }}</p>
+  </div>
+  <div id="tab-versions" class="{% if active_tab != 'versions' %}d-none{% endif %}">
+    {% include 'partials/documents/_versions.html' %}
+  </div>
+  <div id="tab-notes" class="{% if active_tab != 'notes' %}d-none{% endif %}">
+    <p>{{ revision.revision_notes if revision else doc.revision_notes or 'No revision notes.' }}</p>
+  </div>
+  <div id="tab-relations" class="{% if active_tab != 'relations' %}d-none{% endif %}">
+    <p>No related records.</p>
+  </div>
+</div>
+<script src="{{ asset_url('document_detail.js') }}" defer></script>
+{% endblock %}
