@@ -1,17 +1,26 @@
+{% set p = request.path %}
 <nav aria-label="Sidebar navigation">
   <ul class="nav flex-column mt-4">
     {% if has_role('reader') %}
-    <li class="nav-item"><a class="nav-link" href="/">Dashboard</a></li>
-    <li class="nav-item"><a class="nav-link" href="/documents">Documents</a></li>
-    <li class="nav-item"><a class="nav-link" href="/mandatory-reading">Mandatory Reading</a></li>
+    <li class="nav-item"><a class="nav-link {% if p == '/' %}active{% endif %}" href="/">Dashboard</a></li>
+    {% endif %}
+    {% if has_role('reader') %}
+    <li class="nav-item"><a class="nav-link {% if p.startswith('/documents') %}active{% endif %}" href="/documents">Documents</a></li>
+    {% endif %}
+    {% if has_role('reader') %}
+    <li class="nav-item"><a class="nav-link {% if p.startswith('/mandatory-reading') %}active{% endif %}" href="/mandatory-reading">Mandatory Reading</a></li>
     {% endif %}
     {% if has_role('approver') %}
-    <li class="nav-item"><a class="nav-link" href="/approvals">Approvals</a></li>
+    <li class="nav-item"><a class="nav-link {% if p.startswith('/approvals') %}active{% endif %}" href="/approvals">Approvals</a></li>
     {% endif %}
-    <li class="nav-item"><a class="nav-link" href="/search">Search</a></li>
-    <li class="nav-item"><a class="nav-link" href="/reports">Reports</a></li>
+    {% if has_role('reader') %}
+    <li class="nav-item"><a class="nav-link {% if p.startswith('/search') %}active{% endif %}" href="/search">Search</a></li>
+    {% endif %}
+    {% if has_role('reader') %}
+    <li class="nav-item"><a class="nav-link {% if p.startswith('/reports') %}active{% endif %}" href="/reports">Reports</a></li>
+    {% endif %}
     {% if has_role('quality_admin') %}
-    <li class="nav-item"><a class="nav-link" href="/settings">Settings</a></li>
+    <li class="nav-item"><a class="nav-link {% if p.startswith('/settings') %}active{% endif %}" href="/settings">Settings</a></li>
     {% endif %}
   </ul>
 </nav>
