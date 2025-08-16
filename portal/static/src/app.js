@@ -62,3 +62,27 @@ function connectEvents() {
 }
 
 connectEvents();
+
+function connectNotifications() {
+  const evt = new EventSource('/notifications/stream');
+  evt.onmessage = (e) => {
+    try {
+      const data = JSON.parse(e.data);
+      displayToast(data.message);
+      const panel = document.getElementById('notification-list');
+      if (panel) {
+        const li = document.createElement('li');
+        li.textContent = data.message;
+        panel.prepend(li);
+      }
+    } catch (err) {
+      console.error('Failed to parse notification', err);
+    }
+  };
+  evt.onerror = () => {
+    evt.close();
+    setTimeout(connectNotifications, 1000);
+  };
+}
+
+connectNotifications();

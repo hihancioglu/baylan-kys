@@ -1,12 +1,30 @@
 import os
 import smtplib
+import json
 from email.message import EmailMessage
+from queue import Queue
 import requests
-from models import get_session, User, UserSetting
+from models import get_session, User, UserSetting, Notification
 
 SMTP_SERVER = os.environ.get("SMTP_SERVER", "localhost")
 SMTP_PORT = int(os.environ.get("SMTP_PORT", "25"))
 SMTP_SENDER = os.environ.get("SMTP_SENDER", "noreply@example.com")
+
+# --- In-memory channel management for SSE clients ---
+_channels = {}
+
+
+def subscribe(user_id: int) -> Queue:
+    """Register an SSE client for the given user."""
+    q = Queue()
+    _channels.setdefault(user_id, []).append(q)
+    return q
+
+
+def unsubscribe(user_id: int, q: Queue) -> None:
+    """Remove an SSE client from the registry."""
+    if user_id in _channels and q in _channels[user_id]:
+        _channels[user_id].remove(q)
 
 def send_email(to: str, subject: str, body: str) -> None:
     msg = EmailMessage()
@@ -25,18 +43,31 @@ def notify_user(user_id: int, subject: str, body: str) -> None:
     try:
         user = session.get(User, user_id)
         settings = session.query(UserSetting).filter_by(user_id=user_id).first()
+        user_email = user.email if user else None
+
+        note = Notification(user_id=user_id, message=body)
+        session.add(note)
+        session.commit()
+        payload = json.dumps({"id": note.id, "message": note.message})
+
+        channels = _channels.get(user_id, [])
+        for q in channels:
+            q.put(payload)
+        if channels:
+            note.read = True
+            session.commit()
     finally:
         session.close()
     if not user:
         return
     if settings:
-        if settings.email_enabled and user.email:
-            send_email(user.email, subject, body)
+        if settings.email_enabled and user_email:
+            send_email(user_email, subject, body)
         if settings.webhook_enabled and settings.webhook_url:
             send_webhook(settings.webhook_url, body)
     else:
-        if user.email:
-            send_email(user.email, subject, body)
+        if user_email:
+            send_email(user_email, subject, body)
 
 def notify_approval_queue(doc, approver_ids):
     subject = f"Document {doc.title} awaiting approval"
