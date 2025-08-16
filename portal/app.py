@@ -339,6 +339,21 @@ def documents_table():
     return render_template("documents/_table.html", **context)
 
 
+@app.route("/documents/new", methods=["GET"])
+@roles_required(RoleEnum.CONTRIBUTOR.value)
+def new_document():
+    context = {
+        "breadcrumbs": [
+            {"title": "Home", "url": url_for("index")},
+            {"title": "Documents", "url": url_for("list_documents")},
+            {"title": "New"},
+        ],
+        "errors": {},
+        "form": {},
+    }
+    return render_template("documents/new.html", **context)
+
+
 @app.get("/documents/<int:doc_id>")
 @roles_required(RoleEnum.READER.value)
 def document_detail(doc_id: int):
@@ -469,28 +484,69 @@ def revert_document(doc_id: int, revision_id: int):
 @app.post("/documents")
 @roles_required(RoleEnum.CONTRIBUTOR.value)
 def create_document():
+    if request.form:
+        code = request.form.get("code", "").strip()
+        title = request.form.get("title", "").strip()
+        department = request.form.get("department", "").strip()
+        doc_type = request.form.get("type", "").strip()
+        errors = {}
+        if not code:
+            errors["code"] = "Code is required."
+        if not title:
+            errors["title"] = "Title is required."
+        if not department:
+            errors["department"] = "Department is required."
+        if not doc_type:
+            errors["type"] = "Type is required."
+        if errors:
+            context = {
+                "errors": errors,
+                "form": request.form.to_dict(),
+                "breadcrumbs": [
+                    {"title": "Home", "url": url_for("index")},
+                    {"title": "Documents", "url": url_for("list_documents")},
+                    {"title": "New"},
+                ],
+            }
+            return render_template("documents/new.html", **context), 400
+        session_db = get_session()
+        doc = Document(
+            doc_key=secrets.token_hex(16),
+            title=title,
+            code=code,
+            department=department,
+            process=doc_type,
+            status="Draft",
+        )
+        session_db.add(doc)
+        session_db.commit()
+        user = session.get("user") or {}
+        log_action(user.get("id"), doc.id, "create_document")
+        session_db.close()
+        return redirect(url_for("list_documents", status="Draft"))
     data = request.get_json(silent=True) or {}
     doc = Document(
-        doc_key=data.get("doc_key"),
+        doc_key=data.get("doc_key") or secrets.token_hex(16),
         title=data.get("title"),
         code=data.get("code"),
         tags=",".join(data.get("tags", [])) if isinstance(data.get("tags"), list) else data.get("tags"),
         department=data.get("department"),
         process=data.get("process"),
         retention_period=data.get("retention_period"),
+        status="Draft",
     )
-    session = get_session()
-    session.add(doc)
-    session.commit()
+    session_db = get_session()
+    session_db.add(doc)
+    session_db.commit()
     log_action(data.get("user_id"), doc.id, "create_document")
     content = ""
     if data.get("file_path"):
         content = extract_text(data["file_path"])
     index_document(doc, content)
-    user_ids = [u.id for u in session.query(User).all()]
+    user_ids = [u.id for u in session_db.query(User).all()]
     notify_mandatory_read(doc, user_ids)
     result = {"id": doc.id}
-    session.close()
+    session_db.close()
     return jsonify(result), 201
 
 
