@@ -1,0 +1,65 @@
+export function createInput({
+  id,
+  name,
+  label,
+  type = 'text',
+  value = '',
+  required = false,
+  copyable = false
+}) {
+  const wrapper = document.createElement('div');
+  wrapper.className = 'mb-3';
+
+  const labelEl = document.createElement('label');
+  labelEl.className = 'form-label';
+  labelEl.htmlFor = id;
+  labelEl.textContent = label;
+  if (required) {
+    const star = document.createElement('span');
+    star.className = 'text-danger ms-1';
+    star.textContent = '*';
+    star.setAttribute('aria-hidden', 'true');
+    labelEl.appendChild(star);
+    const sr = document.createElement('span');
+    sr.className = 'visually-hidden';
+    sr.textContent = 'required';
+    labelEl.appendChild(sr);
+  }
+  wrapper.appendChild(labelEl);
+
+  let inputContainer = wrapper;
+  if (copyable) {
+    const group = document.createElement('div');
+    group.className = 'input-group';
+    wrapper.appendChild(group);
+    inputContainer = group;
+  }
+
+  const input = document.createElement('input');
+  input.id = id;
+  input.name = name;
+  input.type = type;
+  input.value = value;
+  input.className = 'form-control';
+  if (required) {
+    input.required = true;
+    input.setAttribute('aria-required', 'true');
+  }
+  inputContainer.appendChild(input);
+
+  if (copyable) {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'btn btn-outline-secondary';
+    btn.textContent = 'Copy';
+    btn.setAttribute('aria-label', `Copy value of ${label}`);
+    btn.addEventListener('click', () => {
+      navigator.clipboard.writeText(input.value);
+    });
+    inputContainer.appendChild(btn);
+  }
+
+  return { wrapper, input, label: labelEl };
+}
+
+export default { createInput };
