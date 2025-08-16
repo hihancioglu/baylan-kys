@@ -1,10 +1,29 @@
-import hashlib, os, json
+import hashlib, os, json, re
 
 SRC_DIR = 'src'
 DIST_DIR = 'dist'
 
 def minify(content):
-    return ''.join(line.strip() for line in content.splitlines())
+    """Basic minifier for JS/CSS files.
+
+    Removes single-line ``//`` comments before collapsing whitespace and
+    newlines so that code following a comment does not become commented out.
+    This is a very small utility and intentionally simple; it does not handle
+    complex cases such as block comments or ``//`` appearing inside strings
+    without surrounding quotes.
+    """
+
+    lines = []
+    for line in content.splitlines():
+        # Strip trailing single-line comments. This looks for ``//`` preceded by
+        # whitespace to avoid removing protocol references like ``http://``.
+        line = re.sub(r"\s+//.*", "", line)
+        stripped = line.strip()
+        # Skip lines that are solely comments.
+        if stripped.startswith("//") or stripped == "":
+            continue
+        lines.append(stripped)
+    return ''.join(lines)
 
 def build_file(src_path, rel_path, hash_name):
     with open(src_path) as f:
