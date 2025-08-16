@@ -1,9 +1,10 @@
 {
-  "document_detail.js": "document_detail-5b9fb6d7.js",
   "tokens.js": "tokens-f03c821c.js",
   "document_edit.js": "document_edit-c3f5f07f.js",
   "reports.js": "reports-dc07090a.js",
   "app.js": "app-e2deecaf.js",
-  "app.css": "app-1fa79918.css",
-  "document_list.js": "document_list-fe3c6da0.js"
+  "document_detail.js": "document_detail-5b9fb6d7.js",
+  "document_list.js": "document_list-fe3c6da0.js",
+  "state-components.js": "state-components-eb13c719.js",
+  "app.css": "app-1fa79918.css"
 }
