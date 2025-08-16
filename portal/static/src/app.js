@@ -1,4 +1,4 @@
-import { getToken } from './tokens';
+import { getToken } from './tokens.js';
 // Bootstrap JavaScript is loaded globally via CDN in the base template,
 // so there's no need for an ES module import here.
 getToken('color-primary');

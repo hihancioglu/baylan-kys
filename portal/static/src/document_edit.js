@@ -1,4 +1,4 @@
-import { getToken } from './tokens';
+import { getToken } from './tokens.js';
 getToken('color-primary');
 
 document.addEventListener('DOMContentLoaded', () => {

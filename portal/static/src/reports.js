@@ -1,4 +1,4 @@
-import { getToken } from './tokens';
+import { getToken } from './tokens.js';
 getToken('color-primary');
 
 async function fetchData(kind, startInput, endInput) {
