@@ -71,7 +71,7 @@
         <div class="modal-footer">
           <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">İptal</button>
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-          <button type="submit" class="btn btn-primary" data-bs-dismiss="modal">Başlat</button>
+          <button type="submit" class="btn btn-primary" data-bs-dismiss="modal" id="confirm-revise-btn">Başlat</button>
         </div>
       </form>
     </div>
@@ -136,4 +136,12 @@
   </div>
 
   <script src="{{ asset_url('document_detail.js') }}" defer></script>
+  <script defer>
+    document.getElementById('confirm-revise-btn').addEventListener('click', function (e) {
+      if (!confirm('Revizyonu başlatmak istediğinize emin misiniz?')) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+    });
+  </script>
   {% endblock %}
