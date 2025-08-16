@@ -6,7 +6,7 @@
   <meta name="csrf-token" content="{{ csrf_token() }}">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
   <style>
-    body{padding-top:60px;color:#1a1a1a;background-color:#fff;}
+    body{color:#1a1a1a;background-color:#fff;}
     .skip-link{position:absolute;top:-40px;left:0;background:#fff;color:#005ea2;padding:8px;z-index:100;}
     .skip-link:focus{top:0;}
     .container{width:100%;margin:0 auto;}
@@ -33,20 +33,29 @@
   {% include 'partials/_header.html' %}
   {% endblock %}
 </header>
-<div class="container">
+<div class="container-fluid">
   <div class="row">
-    <aside class="col-md-2 d-none d-md-block bg-light sidebar" aria-label="Sidebar">
+    <aside class="sidebar col-md-4 col-lg-3 col-xl-2 d-none d-md-block bg-light" aria-label="Sidebar">
       {% block sidebar %}
       {% include 'partials/_sidebar.html' %}
       {% endblock %}
     </aside>
-    <main id="main-content" class="col-md-9 ms-sm-auto col-lg-10 px-md-4" tabindex="-1">
+    <main id="main-content" class="content-container col-12 col-md-8 col-lg-9 col-xl-10 ms-sm-auto" tabindex="-1">
       {% include 'partials/_breadcrumbs.html' %}
       <div class="d-flex justify-content-end mb-3">
         {% block page_actions %}{% endblock %}
       </div>
       {% block content %}{% endblock %}
     </main>
+  </div>
+</div>
+<div class="offcanvas offcanvas-start" tabindex="-1" id="sidebarOffcanvas" aria-labelledby="sidebarOffcanvasLabel">
+  <div class="offcanvas-header">
+    <h5 id="sidebarOffcanvasLabel">Menu</h5>
+    <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+  </div>
+  <div class="offcanvas-body">
+    {% include 'partials/_sidebar.html' %}
   </div>
 </div>
 {% include 'partials/_toasts.html' %}
