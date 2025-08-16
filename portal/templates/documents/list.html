@@ -17,8 +17,9 @@
   <div class="col-md-3">
     <select class="form-select" name="status" data-filter="select">
       <option value="">Any status</option>
-      <option value="draft" {% if filters.status=='draft' %}selected{% endif %}>Draft</option>
-      <option value="approved" {% if filters.status=='approved' %}selected{% endif %}>Approved</option>
+      <option value="Draft" {% if filters.status=='Draft' %}selected{% endif %}>Draft</option>
+      <option value="Approved" {% if filters.status=='Approved' %}selected{% endif %}>Approved</option>
+      <option value="Published" {% if filters.status=='Published' %}selected{% endif %}>Published</option>
     </select>
   </div>
   <div class="col-md-3">
