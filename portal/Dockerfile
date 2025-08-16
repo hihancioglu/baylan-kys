@@ -9,4 +9,6 @@ RUN apt-get update && \
 COPY requirements.txt .
 RUN pip install -r requirements.txt
 COPY . .
+RUN pip install libsass rcssmin jsmin
+RUN python static/build.py
 CMD ["python", "app.py"]
