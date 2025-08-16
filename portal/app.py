@@ -299,9 +299,11 @@ def _get_documents():
     query = session.query(Document)
     filters = {}
     status = request.args.get("status")
+    normalized_status = None
     if status:
-        query = query.filter(Document.status == status)
-        filters["status"] = status
+        normalized_status = status.capitalize()
+        query = query.filter(Document.status == normalized_status)
+        filters["status"] = normalized_status
     department = request.args.get("department")
     if department:
         query = query.filter(Document.department == department)
@@ -327,6 +329,8 @@ def _get_documents():
     params.pop("page", None)
     params.pop("page_size", None)
     params["page_size"] = page_size
+    if normalized_status:
+        params["status"] = normalized_status
 
     return docs, page, pages, filters, params
 
@@ -335,6 +339,9 @@ def _get_documents():
 @roles_required(RoleEnum.READER.value)
 def list_documents():
     docs, page, pages, filters, params = _get_documents()
+    template = "documents/list.html"
+    if request.args.get("status", "").lower() == "archived":
+        template = "documents/archived.html"
     context = {
         "documents": docs,
         "page": page,
@@ -346,7 +353,7 @@ def list_documents():
             {"title": "Documents"},
         ],
     }
-    return render_template("documents/list.html", **context)
+    return render_template(template, **context)
 
 
 @app.get("/documents/table")
@@ -1294,6 +1301,26 @@ def publish_document(id: int):
             log_action(publisher["id"], doc.id, "publish_document")
         broadcast_counts()
         return redirect(url_for("list_documents", status="Published"))
+    finally:
+        db.close()
+
+
+@app.post("/documents/<int:doc_id>/republish")
+@roles_required(RoleEnum.PUBLISHER.value)
+def republish_document(doc_id: int):
+    db = get_session()
+    try:
+        doc = db.get(Document, doc_id)
+        if not doc:
+            return "Not found", 404
+        doc.status = "Published"
+        doc.archived_at = None
+        db.commit()
+        publisher = session.get("user")
+        if publisher:
+            log_action(publisher["id"], doc.id, "republish_document")
+        broadcast_counts()
+        return redirect(url_for("list_documents", status="archived"))
     finally:
         db.close()
 
