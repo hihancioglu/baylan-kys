@@ -1,5 +1,3 @@
-import '../css/_tokens.scss';
-
 export function getToken(name) {
   return getComputedStyle(document.documentElement).getPropertyValue(`--${name}`).trim();
 }
