@@ -1,4 +1,4 @@
-import { getToken } from './tokens';
+import { getToken } from './tokens.js';
 import { initFilters } from './filters/index.js';
 getToken('color-primary');
 
