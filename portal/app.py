@@ -193,7 +193,7 @@ def dashboard():
         "pending_approvals": [],
         "mandatory_reading": [],
         "recent_revisions": [],
-        "quick_access": [],
+        "search_shortcuts": [],
     }
     return render_template("dashboard.html", **context)
 
@@ -237,13 +237,13 @@ def dashboard_cards_recent():
     )
 
 
-@app.get("/dashboard/cards/quick")
+@app.get("/dashboard/cards/shortcuts")
 @login_required
-def dashboard_cards_quick():
+def dashboard_cards_shortcuts():
     return render_template(
         "partials/dashboard/_cards.html",
-        card="quick",
-        quick_access=[],
+        card="shortcuts",
+        search_shortcuts=[],
     )
 
 
