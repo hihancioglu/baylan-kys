@@ -4,20 +4,22 @@
   <p>{{ revision.revision_notes or 'No revision notes.' }}</p>
   <div class="d-flex gap-2">
     <button class="btn btn-secondary" hx-get="{{ url_for('document_detail', doc_id=doc.id) }}" hx-target="#tab-versions" hx-push-url="false">Back</button>
-    <button class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#revertModal">Revert to previous version</button>
+    <button class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#rollbackModal">Bu sürüme dön</button>
   </div>
-  <div class="modal fade" id="revertModal" tabindex="-1" aria-hidden="true">
+  <div class="modal fade" id="rollbackModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog">
       <div class="modal-content">
         <div class="modal-header">
-          <h5 class="modal-title">Revert to version {{ revision.major_version }}.{{ revision.minor_version }}?</h5>
+          <h5 class="modal-title">{{ revision.major_version }}.{{ revision.minor_version }} sürümüne dönülsün mü?</h5>
           <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
         </div>
-        <div class="modal-body">Are you sure you want to revert to this version?</div>
+        <div class="modal-body">Bu sürüme dönmek istediğinizden emin misiniz?</div>
         <div class="modal-footer">
           <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-          <form hx-post="{{ url_for('revert_document', doc_id=doc.id, revision_id=revision.id) }}" hx-target="#tab-versions" hx-swap="innerHTML">
-            <button type="submit" class="btn btn-danger" data-bs-dismiss="modal">Revert</button>
+          <form method="post" action="{{ url_for('rollback_document', doc_id=doc.id) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="version" value="{{ revision.major_version }}.{{ revision.minor_version }}">
+            <button type="submit" class="btn btn-danger">Bu sürüme dön</button>
           </form>
         </div>
       </div>
