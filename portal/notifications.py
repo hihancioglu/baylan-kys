@@ -9,6 +9,9 @@ from models import get_session, User, UserSetting, Notification
 SMTP_SERVER = os.environ.get("SMTP_SERVER", "localhost")
 SMTP_PORT = int(os.environ.get("SMTP_PORT", "25"))
 SMTP_SENDER = os.environ.get("SMTP_SENDER", "noreply@example.com")
+# Default webhook URL used when a user has webhook notifications enabled
+# but has not configured a personal URL.
+WEBHOOK_URL_DEFAULT = os.environ.get("WEBHOOK_URL_DEFAULT")
 
 # --- In-memory channel management for SSE clients ---
 _channels = {}
@@ -39,6 +42,12 @@ def send_webhook(url: str, message: str) -> None:
     requests.post(url, json={"text": message})
 
 def notify_user(user_id: int, subject: str, body: str) -> None:
+    """Deliver a notification to the specified user.
+
+    When webhook notifications are enabled but the user does not specify a
+    webhook URL, this function falls back to ``WEBHOOK_URL_DEFAULT`` if it is
+    defined.
+    """
     session = get_session()
     try:
         user = session.get(User, user_id)
@@ -63,8 +72,13 @@ def notify_user(user_id: int, subject: str, body: str) -> None:
     if settings:
         if settings.email_enabled and user_email:
             send_email(user_email, subject, body)
-        if settings.webhook_enabled and settings.webhook_url:
-            send_webhook(settings.webhook_url, body)
+        if settings.webhook_enabled:
+            # Use a user-specific webhook URL if provided, otherwise fall back
+            # to the globally configured default. The webhook is only invoked
+            # when an actual URL is available.
+            webhook_url = settings.webhook_url or WEBHOOK_URL_DEFAULT
+            if webhook_url:
+                send_webhook(webhook_url, body)
     else:
         if user_email:
             send_email(user_email, subject, body)
