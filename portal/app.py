@@ -992,16 +992,7 @@ def rollback_document(doc_id: int):
     return redirect(url_for("document_detail", doc_id=doc_id, tab="versions"))
 
 
-@app.post("/documents/<int:id>/revise")
-@roles_required(RoleEnum.CONTRIBUTOR.value)
-def revise_document(id: int):
-    db = get_session()
-    doc = db.get(Document, id)
-    if not doc:
-        db.close()
-        return "Document not found", 404
-    version_type = request.form.get("version_type", "minor")
-    notes = request.form.get("revision_notes")
+def _start_revision(doc: Document, version_type: str, notes: str, user: dict, db):
     old_rev = DocumentRevision(
         doc_id=doc.id,
         major_version=doc.major_version,
@@ -1017,8 +1008,45 @@ def revise_document(id: int):
     doc.status = "Draft"
     doc.revision_notes = notes
     db.commit()
-    user = session.get("user") or {}
     log_action(user.get("id"), doc.id, "start_revision")
+    return doc
+
+
+@app.post("/api/documents/<int:id>/revise")
+@roles_required(RoleEnum.CONTRIBUTOR.value)
+def revise_document_api(id: int):
+    db = get_session()
+    doc = db.get(Document, id)
+    if not doc:
+        db.close()
+        return jsonify(error="Document not found"), 404
+    data = request.get_json() or {}
+    version_type = data.get("version_type", "minor")
+    notes = data.get("revision_notes")
+    user = session.get("user") or {}
+    doc = _start_revision(doc, version_type, notes, user, db)
+    resp = {
+        "doc_id": doc.id,
+        "major_version": doc.major_version,
+        "minor_version": doc.minor_version,
+        "status": doc.status,
+    }
+    db.close()
+    return jsonify(resp)
+
+
+@app.post("/documents/<int:id>/revise")
+@roles_required(RoleEnum.CONTRIBUTOR.value)
+def revise_document(id: int):
+    db = get_session()
+    doc = db.get(Document, id)
+    if not doc:
+        db.close()
+        return "Document not found", 404
+    version_type = request.form.get("version_type", "minor")
+    notes = request.form.get("revision_notes")
+    user = session.get("user") or {}
+    _start_revision(doc, version_type, notes, user, db)
     db.close()
     return redirect(url_for("edit_document", doc_id=id))
 
