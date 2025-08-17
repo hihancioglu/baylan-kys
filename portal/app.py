@@ -34,7 +34,7 @@ from models import (
     RoleEnum,
 )
 from search import index_document, search_documents
-from sqlalchemy import func, or_, and_
+from sqlalchemy import func, or_, and_, inspect
 from ocr import extract_text
 from docxf_render import render_form_and_store
 from notifications import (
@@ -289,10 +289,17 @@ def _get_pending_approvals(db, user_id: int | None, limit: int = 5):
         .join(Document)
         .filter(WorkflowStep.status == "Pending")
     )
-    if user_id is not None:
-        query = query.filter(WorkflowStep.user_id == user_id)
-    else:
-        query = query.filter(WorkflowStep.user_id.is_(None))
+
+    # Older deployments may not yet have the ``user_id`` column.
+    # Avoid referencing the column in queries unless it actually exists
+    # in the connected database to prevent ``UndefinedColumn`` errors.
+    inspector = inspect(db.get_bind())
+    columns = {c["name"] for c in inspector.get_columns("workflow_steps")}
+    if "user_id" in columns:
+        if user_id is not None:
+            query = query.filter(WorkflowStep.user_id == user_id)
+        else:
+            query = query.filter(WorkflowStep.user_id.is_(None))
 
     steps = (
         query.order_by(WorkflowStep.id.desc())
