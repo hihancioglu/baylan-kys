@@ -14,6 +14,21 @@
     <input type="text" class="form-control{% if errors.title %} is-invalid{% endif %}" id="title" name="title" value="{{ form.title or '' }}">
     {% if errors.title %}<div class="invalid-feedback">{{ errors.title }}</div>{% endif %}
   </div>
+  <div class="mb-3">
+    <label for="type" class="form-label">Type</label>
+    <input type="text" class="form-control{% if errors.type %} is-invalid{% endif %}" id="type" name="type" value="{{ form.type or '' }}">
+    {% if errors.type %}<div class="invalid-feedback">{{ errors.type }}</div>{% endif %}
+  </div>
+  <div class="mb-3">
+    <label for="department" class="form-label">Department</label>
+    <input type="text" class="form-control{% if errors.department %} is-invalid{% endif %}" id="department" name="department" value="{{ form.department or '' }}">
+    {% if errors.department %}<div class="invalid-feedback">{{ errors.department }}</div>{% endif %}
+  </div>
+  <div class="mb-3">
+    <label for="tags" class="form-label">Tags</label>
+    <input type="text" class="form-control{% if errors.tags %} is-invalid{% endif %}" id="tags" name="tags" value="{{ form.tags or '' }}" placeholder="tag1, tag2">
+    {% if errors.tags %}<div class="invalid-feedback">{{ errors.tags }}</div>{% endif %}
+  </div>
   <button type="submit" class="btn btn-primary">Next</button>
 </form>
 {% endblock %}

@@ -546,11 +546,19 @@ def new_document():
     data = session.get("new_doc", {})
 
     if request.method == "POST":
+        if step == "1":
+            data["code"] = request.form.get("code", "").strip()
+            data["title"] = request.form.get("title", "").strip()
+            data["type"] = request.form.get("type", "").strip()
+            data["department"] = request.form.get("department", "").strip()
+            tags = request.form.get("tags", "")
+            data["tags"] = ",".join([t.strip() for t in tags.split(",") if t.strip()])
+            session["new_doc"] = data
+            return redirect(url_for("new_document", step=2))
+
         data.update(request.form.to_dict())
         session["new_doc"] = data
 
-        if step == "1":
-            return redirect(url_for("new_document", step=2))
         if step == "2":
             return redirect(url_for("new_document", step=3))
         if step == "3":
