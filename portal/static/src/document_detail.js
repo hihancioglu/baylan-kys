@@ -77,9 +77,33 @@ function initVersionSelection() {
   }
 }
 
+function initWorkflowForm() {
+  const form = document.getElementById('workflow-form');
+  if (!form) return;
+  form.addEventListener('submit', async (evt) => {
+    evt.preventDefault();
+    const data = new FormData(form);
+    const payload = {
+      doc_id: data.get('doc_id'),
+      reviewers: data.getAll('reviewers[]'),
+      approvers: data.getAll('approvers[]'),
+    };
+    const csrf = data.get('csrf_token');
+    await fetch('/api/workflow/start', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': csrf,
+      },
+      body: JSON.stringify(payload),
+    });
+  });
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   initTabs();
   initVersionSelection();
+  initWorkflowForm();
 });
 
 document.addEventListener('htmx:afterSwap', (evt) => {
