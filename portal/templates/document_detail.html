@@ -87,19 +87,35 @@
 
   <div class="modal fade" id="reviewerModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog">
-        <form class="modal-content" hx-post="/api/workflow/start" hx-target="closest .modal" hx-swap="none">
+        <form id="workflow-form" class="modal-content">
       <div class="modal-header">
-        <h5 class="modal-title">Reviewer Seç</h5>
+        <h5 class="modal-title">Reviewer ve Onaylayıcı Seç</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
       <div class="modal-body">
-        {% for user in reviewers %}
-        <div class="form-check">
-          <input class="form-check-input" type="checkbox" name="reviewers" value="{{ user.id }}" id="rev-{{ user.id }}">
-          <label class="form-check-label" for="rev-{{ user.id }}">{{ user.username }}</label>
-        </div>
+        <div class="mb-3">
+          <label class="form-label d-block" for="reviewer-list">Reviewers</label>
+          <div id="reviewer-list">
+          {% for user in reviewers %}
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" name="reviewers[]" value="{{ user.id }}" id="rev-{{ user.id }}">
+            <label class="form-check-label" for="rev-{{ user.id }}">{{ user.username }}</label>
+          </div>
           {% endfor %}
+          </div>
         </div>
+        <div class="mb-3">
+          <label class="form-label d-block" for="approver-list">Approvers</label>
+          <div id="approver-list">
+          {% for user in approvers|default([]) %}
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" name="approvers[]" value="{{ user.id }}" id="app-{{ user.id }}">
+            <label class="form-check-label" for="app-{{ user.id }}">{{ user.username }}</label>
+          </div>
+          {% endfor %}
+          </div>
+        </div>
+      </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">İptal</button>
           <input type="hidden" name="doc_id" value="{{ doc.id }}">
