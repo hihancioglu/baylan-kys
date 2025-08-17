@@ -53,6 +53,7 @@ from reports import (
 )
 from signing import create_signed_pdf
 from storage import generate_presigned_url
+from permissions import permission_check
 from datetime import datetime
 from queue import Queue
 
@@ -747,6 +748,26 @@ def document_detail(doc_id: int):
             {"title": doc.title},
         ],
     )
+
+
+@app.get("/documents/<int:doc_id>/download")
+@roles_required(RoleEnum.READER.value)
+def download_document(doc_id: int):
+    """Provide a presigned download URL for a document."""
+    db = get_session()
+    try:
+        doc = db.get(Document, doc_id)
+        if not doc:
+            return "Document not found", 404
+        user = session.get("user")
+        if not user or not permission_check(user["id"], doc):
+            return "Forbidden", 403
+        url = generate_presigned_url(doc.doc_key)
+        if not url:
+            return "File not available", 404
+        return redirect(url)
+    finally:
+        db.close()
 
 
 @app.post("/workflow/start")
