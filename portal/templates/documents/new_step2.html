@@ -2,7 +2,7 @@
 {% block title %}New Document - Step 2{% endblock %}
 {% block content %}
 <h1 class="fw-bold" style="font-size: var(--font-size-lg); margin-bottom: var(--spacing-md);">New Document - Step 2</h1>
-<form method="post" action="{{ url_for('new_document', step=2) }}">
+<form method="post" action="{{ url_for('new_document', step=2) }}" enctype="multipart/form-data">
   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
   <div class="mb-3">
     <label for="department" class="form-label">Department</label>
@@ -13,6 +13,30 @@
     <label for="type" class="form-label">Type</label>
     <input type="text" class="form-control{% if errors.type %} is-invalid{% endif %}" id="type" name="type" value="{{ form.type or '' }}">
     {% if errors.type %}<div class="invalid-feedback">{{ errors.type }}</div>{% endif %}
+  </div>
+
+  <div class="mb-3">
+    <label for="template" class="form-label">Template</label>
+    <select class="form-select" id="template" name="template">
+      <option value="">-- Select Template --</option>
+      {% for group, files in template_options.items() %}
+        <optgroup label="{{ group|capitalize }}">
+          {% for file in files %}
+            <option value="{{ group }}/{{ file }}"{% if form.template == group ~ '/' ~ file %} selected{% endif %}>{{ file }}</option>
+          {% endfor %}
+        </optgroup>
+      {% endfor %}
+    </select>
+  </div>
+
+  <div class="mb-3">
+    <label for="upload_file" class="form-label">Upload File</label>
+    <input type="file" class="form-control" id="upload_file" name="upload_file">
+  </div>
+
+  <div class="mb-3 form-check">
+    <input type="checkbox" class="form-check-input" id="generate_docxf" name="generate_docxf" value="1"{% if form.generate_docxf %} checked{% endif %}>
+    <label class="form-check-label" for="generate_docxf">Generate from DOCXF</label>
   </div>
   <button type="submit" class="btn btn-primary">Next</button>
 </form>

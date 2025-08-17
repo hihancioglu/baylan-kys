@@ -556,11 +556,20 @@ def new_document():
             session["new_doc"] = data
             return redirect(url_for("new_document", step=2))
 
+        if step == "2":
+            data.update(request.form.to_dict())
+            uploaded = request.files.get("upload_file")
+            if uploaded and uploaded.filename:
+                file_data = base64.b64encode(uploaded.read()).decode("utf-8")
+                data["uploaded_file_name"] = uploaded.filename
+                data["uploaded_file_data"] = file_data
+            data["generate_docxf"] = bool(request.form.get("generate_docxf"))
+            session["new_doc"] = data
+            return redirect(url_for("new_document", step=3))
+
         data.update(request.form.to_dict())
         session["new_doc"] = data
 
-        if step == "2":
-            return redirect(url_for("new_document", step=3))
         if step == "3":
             form_data = session.pop("new_doc", {})
             user = session.get("user")
@@ -581,6 +590,14 @@ def new_document():
         "form": data,
         "step": int(step),
     }
+    if step == "2":
+        base_templates = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "templates"))
+        template_options = {}
+        for folder in ("forms", "procedures"):
+            path = os.path.join(base_templates, folder)
+            if os.path.isdir(path):
+                template_options[folder] = [f for f in os.listdir(path) if os.path.isfile(os.path.join(path, f))]
+        context["template_options"] = template_options
     return render_template(template, **context)
 
 
