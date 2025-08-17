@@ -34,7 +34,7 @@ from models import (
     RoleEnum,
 )
 from search import index_document
-from sqlalchemy import func, or_
+from sqlalchemy import func, or_, and_
 from ocr import extract_text
 from docxf_render import render_form_and_store
 from notifications import (
@@ -498,10 +498,10 @@ def _get_documents():
     if department:
         query = query.filter(Document.department == department)
         filters["department"] = department
-    tag = request.args.get("tag")
-    if tag:
-        query = query.filter(Document.tags.contains(tag))
-        filters["tag"] = tag
+    tags = request.args.getlist("tags")
+    if tags:
+        query = query.filter(and_(*[Document.tags.contains(t) for t in tags]))
+        filters["tags"] = tags
     q = request.args.get("q")
     if q:
         like = f"%{q}%"
@@ -1868,10 +1868,10 @@ def acknowledgements():
         if department:
             query = query.filter(Document.department == department)
             filters["department"] = department
-        tag = request.args.get("tag")
-        if tag:
-            query = query.filter(Document.tags.contains(tag))
-            filters["tag"] = tag
+        tags = request.args.getlist("tags")
+        if tags:
+            query = query.filter(and_(*[Document.tags.contains(t) for t in tags]))
+            filters["tags"] = tags
 
         pending = []
         for doc in query.order_by(Document.id).all():
