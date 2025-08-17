@@ -1799,7 +1799,7 @@ def list_users_api():
                 "id": u.id,
                 "username": u.username,
                 "email": u.email,
-                "roles": [ur.role.name for ur in u.roles],
+                "roles": [role.name for role in u.roles],
             }
             for u in users
         ]
@@ -2034,8 +2034,8 @@ def publish_document(id: int):
         if role_names:
             roles = db.query(Role).filter(Role.name.in_(role_names)).all()
             for role in roles:
-                for ur in role.users:
-                    user_ids.add(ur.user_id)
+                for user in role.users:
+                    user_ids.add(user.id)
         _assign_acknowledgements(db, doc.id, user_ids)
         db.commit()
         if user_ids:
@@ -2146,8 +2146,8 @@ def assign_acknowledgements_endpoint():
             elif isinstance(tgt, str):
                 role = db.query(Role).filter_by(name=tgt).first()
                 if role:
-                    for ur in role.users:
-                        user_ids.add(ur.user_id)
+                    for user in role.users:
+                        user_ids.add(user.id)
         _assign_acknowledgements(db, doc_id, user_ids)
         db.commit()
         if doc and user_ids:
