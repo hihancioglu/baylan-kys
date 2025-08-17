@@ -36,7 +36,7 @@ from models import (
 from search import index_document
 from sqlalchemy import func, or_
 from ocr import extract_text
-from docxf_render import render_form_to_pdf
+from docxf_render import render_form_and_store
 from notifications import (
     notify_revision_time,
     notify_mandatory_read,
@@ -2253,7 +2253,7 @@ def submit_form(form_name):
     fields = payload.get("fields", {})
     if not user_id:
         return jsonify(error="user_id required"), 400
-    pdf = render_form_to_pdf(form_name, fields)
+    pdf = render_form_and_store(form_name, fields)
     session = get_session()
     try:
         session.add(

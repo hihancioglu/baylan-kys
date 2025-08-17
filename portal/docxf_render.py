@@ -1,6 +1,9 @@
 import os
 import json
+from datetime import datetime
 import requests
+
+from storage import _s3, S3_BUCKET
 
 # Default OnlyOffice Document Server endpoint
 DOCUMENT_SERVER_URL = os.environ.get(
@@ -11,8 +14,8 @@ DOCUMENT_SERVER_URL = os.environ.get(
 TEMPLATE_ROOT = os.path.join(os.path.dirname(__file__), "..", "templates", "forms")
 
 
-def render_form_to_pdf(form_name: str, data: dict | None = None) -> bytes:
-    """Render a DOCXF template and return the resulting PDF bytes.
+def render_form(form_name: str, data: dict | None = None, outputtype: str = "pdf") -> bytes:
+    """Render a DOCXF template and return the resulting bytes for ``outputtype``.
 
     Parameters
     ----------
@@ -20,8 +23,10 @@ def render_form_to_pdf(form_name: str, data: dict | None = None) -> bytes:
         Name of the form template located under ``templates/forms`` without
         extension.
     data: dict | None
-        Optional form field values to be merged.  The data is forwarded to the
+        Optional form field values to be merged. The data is forwarded to the
         OnlyOffice Document Server; the server is expected to handle the merge.
+    outputtype: str
+        Desired output type (e.g. ``"pdf"`` or ``"docx"``).
     """
     template_path = os.path.join(TEMPLATE_ROOT, f"{form_name}.docxf")
     if not os.path.exists(template_path):
@@ -29,20 +34,39 @@ def render_form_to_pdf(form_name: str, data: dict | None = None) -> bytes:
 
     with open(template_path, "rb") as f:
         files = {
-            "file": (f"{form_name}.docxf", f, "application/vnd.openxmlformats-officedocument.wordprocessingml.document"),
+            "file": (
+                f"{form_name}.docxf",
+                f,
+                "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            ),
         }
         payload = {
             "async": False,
             "filetype": "docxf",
-            "outputtype": "pdf",
+            "outputtype": outputtype,
             "title": form_name,
         }
         # The Document Server expects JSON in a field named 'request'
-        data_field = {
-            "request": json.dumps(payload),
-        }
+        data_field = {"request": json.dumps(payload)}
         if data:
             data_field["data"] = json.dumps(data)
         response = requests.post(DOCUMENT_SERVER_URL, data=data_field, files=files)
     response.raise_for_status()
     return response.content
+
+
+def render_form_and_store(form_name: str, data: dict | None = None) -> bytes:
+    """Render a DOCXF form to DOCX and PDF and store both in S3.
+
+    Returns the PDF bytes.
+    """
+    timestamp = datetime.utcnow().strftime("%Y%m%d%H%M%S")
+    base_key = f"forms/{form_name}/{timestamp}/form"
+
+    docx_bytes = render_form(form_name, data, "docx")
+    pdf_bytes = render_form(form_name, data, "pdf")
+
+    _s3.put_object(Bucket=S3_BUCKET, Key=f"{base_key}.docx", Body=docx_bytes)
+    _s3.put_object(Bucket=S3_BUCKET, Key=f"{base_key}.pdf", Body=pdf_bytes)
+
+    return pdf_bytes
