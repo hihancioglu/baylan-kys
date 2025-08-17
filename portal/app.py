@@ -1953,18 +1953,35 @@ def acknowledge_document(doc_id):
 @app.post("/ack/assign")
 @roles_required(RoleEnum.PUBLISHER.value)
 def assign_acknowledgements_endpoint():
+    """Assign acknowledgements for the given document.
+
+    Expects JSON payload ``{"doc_id": int, "targets": [user_id|role_name, ...]}``
+    where each target is either a user ID (int) or a role name (str). Any
+    provided role name will be expanded to all users that have that role before
+    creating acknowledgement placeholders.
+    """
+
     data = request.get_json(silent=True) or {}
     doc_id = data.get("doc_id")
-    user_ids = data.get("user_ids", [])
+    targets = data.get("targets", [])
     if not doc_id:
         return jsonify(error="doc_id required"), 400
     db = get_session()
     try:
         doc = db.get(Document, doc_id)
+        user_ids = set()
+        for tgt in targets:
+            if isinstance(tgt, int) or (isinstance(tgt, str) and tgt.isdigit()):
+                user_ids.add(int(tgt))
+            elif isinstance(tgt, str):
+                role = db.query(Role).filter_by(name=tgt).first()
+                if role:
+                    for ur in role.users:
+                        user_ids.add(ur.user_id)
         _assign_acknowledgements(db, doc_id, user_ids)
         db.commit()
         if doc and user_ids:
-            notify_mandatory_read(doc, user_ids)
+            notify_mandatory_read(doc, list(user_ids))
         broadcast_counts()
         return jsonify(ok=True)
     finally:
