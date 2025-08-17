@@ -17,16 +17,24 @@
     <div class="col-md-3">
       <select class="form-select" name="status" data-filter="select">
         <option value="">Any status</option>
-        <option value="Draft" {% if filters.status=='Draft' %}selected{% endif %}>Draft</option>
-        <option value="Approved" {% if filters.status=='Approved' %}selected{% endif %}>Approved</option>
-        <option value="Published" {% if filters.status=='Published' %}selected{% endif %}>Published</option>
+        <option value="Draft" {% if filters.status=='Draft' %}selected{% endif %}>
+          Draft{% if facets.status %} ({{ facets.status.get('Draft', 0) }}){% endif %}
+        </option>
+        <option value="Approved" {% if filters.status=='Approved' %}selected{% endif %}>
+          Approved{% if facets.status %} ({{ facets.status.get('Approved', 0) }}){% endif %}
+        </option>
+        <option value="Published" {% if filters.status=='Published' %}selected{% endif %}>
+          Published{% if facets.status %} ({{ facets.status.get('Published', 0) }}){% endif %}
+        </option>
       </select>
     </div>
     <div class="col-md-3">
       <select class="form-select" name="department" data-filter="select">
         <option value="">Any department</option>
         {% for d in departments %}
-        <option value="{{ d }}" {% if filters.department == d %}selected{% endif %}>{{ d }}</option>
+        <option value="{{ d }}" {% if filters.department == d %}selected{% endif %}>
+          {{ d }}{% if facets.department %} ({{ facets.department.get(d, 0) }}){% endif %}
+        </option>
         {% endfor %}
       </select>
     </div>
