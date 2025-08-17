@@ -80,3 +80,28 @@ def test_publish_assigns_acknowledgements(client, app_models):
     ack_user_ids = {a.user_id for a in acks}
     assert ack_user_ids == {user1_id, user2_id, user3_id}
     session.close()
+
+
+def test_publish_rejects_unapproved_document(client, app_models):
+    app, m = app_models
+    m.Base.metadata.drop_all(bind=m.engine)
+    m.Base.metadata.create_all(bind=m.engine)
+    session = m.SessionLocal()
+    publisher = m.User(username="publisher")
+    doc = m.Document(doc_key="doc.docx", title="Doc", status="Draft")
+    session.add_all([publisher, doc])
+    session.commit()
+    doc_id = doc.id
+    publisher_id = publisher.id
+    session.close()
+
+    with client.session_transaction() as sess:
+        sess["user"] = {"id": publisher_id}
+        sess["roles"] = ["publisher"]
+
+    resp = client.post(f"/documents/{doc_id}/publish", data={})
+    assert resp.status_code == 400
+    session = m.SessionLocal()
+    doc = session.get(m.Document, doc_id)
+    assert doc.status == "Draft"
+    session.close()

@@ -1856,6 +1856,8 @@ def publish_document(id: int):
         doc = db.get(Document, id)
         if not doc:
             return "Not found", 404
+        if doc.status != "Approved":
+            return "Document not approved", 400
         doc.status = "Published"
         user_ids = set()
         for uid in request.form.getlist("users"):
