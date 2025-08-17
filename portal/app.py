@@ -280,17 +280,19 @@ def notifications_stream():
     pending = db.query(Notification).filter_by(user_id=user_id, read=False).all()
 
     def stream():
-        for n in pending:
-            yield f"data: {json.dumps({'id': n.id, 'message': n.message})}\n\n"
-            n.read = True
-        db.commit()
         try:
+            try:
+                for n in pending:
+                    yield f"data: {json.dumps({'id': n.id, 'message': n.message})}\n\n"
+                    n.read = True
+                db.commit()
+            finally:
+                db.close()
             while True:
                 data = q.get()
                 yield f"data: {data}\n\n"
         finally:
             unsubscribe(user_id, q)
-            db.close()
 
     return Response(stream(), mimetype="text/event-stream")
 
