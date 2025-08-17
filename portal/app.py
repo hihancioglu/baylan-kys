@@ -1969,6 +1969,10 @@ def assign_acknowledgements_endpoint():
     db = get_session()
     try:
         doc = db.get(Document, doc_id)
+        if not doc:
+            return jsonify(error="document not found"), 404
+        if doc.status != "Published":
+            return jsonify(error="document not published"), 400
         user_ids = set()
         for tgt in targets:
             if isinstance(tgt, int) or (isinstance(tgt, str) and tgt.isdigit()):
