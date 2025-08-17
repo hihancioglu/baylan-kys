@@ -93,9 +93,10 @@ def _cached_search(query_json: str):
 def search_documents(keyword: str, filters: dict, page: int = 1, per_page: int = 10):
     """Search for documents matching the given keyword and filters.
 
-    Returns a tuple of ``(results, facets)`` where ``results`` is a list of
-    matching documents and ``facets`` contains aggregation counts for the
-    ``department``, ``status`` and ``type`` fields.
+    Returns a tuple of ``(results, facets, total)`` where ``results`` is a list
+    of matching documents, ``facets`` contains aggregation counts for the
+    ``department``, ``status`` and ``type`` fields and ``total`` is the overall
+    number of hits.
     """
 
     if es is None:
@@ -131,7 +132,9 @@ def search_documents(keyword: str, filters: dict, page: int = 1, per_page: int =
         buckets = resp.get("aggregations", {}).get(facet, {}).get("buckets", [])
         aggs[facet] = {b["key"]: b["doc_count"] for b in buckets}
 
-    return results, aggs
+    total = resp.get("hits", {}).get("total", {}).get("value", 0)
+
+    return results, aggs, total
 
 
 create_index()

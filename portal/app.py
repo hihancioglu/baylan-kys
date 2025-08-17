@@ -33,7 +33,7 @@ from models import (
     get_session,
     RoleEnum,
 )
-from search import index_document
+from search import index_document, search_documents
 from sqlalchemy import func, or_, and_
 from ocr import extract_text
 from docxf_render import render_form_and_store
@@ -486,40 +486,93 @@ def list_archived_documents():
 
 def _get_documents():
     session = get_session()
-    query = session.query(Document)
-    filters = {}
+    filters: dict[str, object] = {}
+    facets: dict[str, dict] = {}
+
     status = request.args.get("status")
-    normalized_status = None
-    if status:
-        normalized_status = status.capitalize()
-        query = query.filter(Document.status == normalized_status)
-        filters["status"] = normalized_status
+    normalized_status = status.capitalize() if status else None
     department = request.args.get("department")
-    if department:
-        query = query.filter(Document.department == department)
-        filters["department"] = department
     tags = request.args.getlist("tags")
-    if tags:
-        query = query.filter(and_(*[Document.tags.contains(t) for t in tags]))
-        filters["tags"] = tags
     q = request.args.get("q")
-    if q:
-        like = f"%{q}%"
-        query = query.filter(
-            or_(Document.title.ilike(like), Document.code.ilike(like))
-        )
-        filters["q"] = q
 
     page = int(request.args.get("page", 1))
     page_size = int(request.args.get("page_size", 20))
-    total = query.count()
-    pages = (total + page_size - 1) // page_size
-    docs = (
-        query.order_by(Document.id)
-        .limit(page_size)
-        .offset((page - 1) * page_size)
-        .all()
-    )
+
+    use_search = bool(q or status or department)
+
+    if use_search:
+        search_filters = {}
+        if normalized_status:
+            search_filters["status"] = normalized_status
+            filters["status"] = normalized_status
+        if department:
+            search_filters["department"] = department
+            filters["department"] = department
+        if q:
+            filters["q"] = q
+        try:
+            results, facets, total = search_documents(
+                q, search_filters, page=page, per_page=page_size
+            )
+            ids = [int(r["id"]) for r in results]
+            query = session.query(Document).filter(Document.id.in_(ids))
+            docs = query.all()
+            docs = sorted(docs, key=lambda d: ids.index(d.id))
+            if tags:
+                docs = [d for d in docs if d.tags and all(t in d.tags for t in tags)]
+                filters["tags"] = tags
+            pages = (total + page_size - 1) // page_size
+        except RuntimeError:
+            query = session.query(Document)
+            if normalized_status:
+                query = query.filter(Document.status == normalized_status)
+                filters["status"] = normalized_status
+            if department:
+                query = query.filter(Document.department == department)
+                filters["department"] = department
+            if tags:
+                query = query.filter(and_(*[Document.tags.contains(t) for t in tags]))
+                filters["tags"] = tags
+            if q:
+                like = f"%{q}%"
+                query = query.filter(
+                    or_(Document.title.ilike(like), Document.code.ilike(like))
+                )
+                filters["q"] = q
+            total = query.count()
+            pages = (total + page_size - 1) // page_size
+            docs = (
+                query.order_by(Document.id)
+                .limit(page_size)
+                .offset((page - 1) * page_size)
+                .all()
+            )
+    else:
+        query = session.query(Document)
+        if normalized_status:
+            query = query.filter(Document.status == normalized_status)
+            filters["status"] = normalized_status
+        if department:
+            query = query.filter(Document.department == department)
+            filters["department"] = department
+        if tags:
+            query = query.filter(and_(*[Document.tags.contains(t) for t in tags]))
+            filters["tags"] = tags
+        if q:
+            like = f"%{q}%"
+            query = query.filter(
+                or_(Document.title.ilike(like), Document.code.ilike(like))
+            )
+            filters["q"] = q
+        total = query.count()
+        pages = (total + page_size - 1) // page_size
+        docs = (
+            query.order_by(Document.id)
+            .limit(page_size)
+            .offset((page - 1) * page_size)
+            .all()
+        )
+
     session.close()
 
     params = request.args.to_dict()
@@ -529,13 +582,13 @@ def _get_documents():
     if normalized_status:
         params["status"] = normalized_status
 
-    return docs, page, pages, filters, params
+    return docs, page, pages, filters, params, facets
 
 
 @app.get("/documents")
 @roles_required(RoleEnum.READER.value)
 def list_documents():
-    docs, page, pages, filters, params = _get_documents()
+    docs, page, pages, filters, params, facets = _get_documents()
     template = "documents/list.html"
     if request.args.get("status", "").lower() == "archived":
         template = "documents/archived.html"
@@ -550,6 +603,7 @@ def list_documents():
         "pages": pages,
         "filters": filters,
         "params": params,
+        "facets": facets,
         "breadcrumbs": [
             {"title": "Home", "url": url_for("index")},
             {"title": "Documents"},
@@ -562,13 +616,14 @@ def list_documents():
 @app.get("/documents/table")
 @roles_required(RoleEnum.READER.value)
 def documents_table():
-    docs, page, pages, filters, params = _get_documents()
+    docs, page, pages, filters, params, facets = _get_documents()
     context = {
         "documents": docs,
         "page": page,
         "pages": pages,
         "filters": filters,
         "params": params,
+        "facets": facets,
     }
     return render_template("documents/_table.html", **context)
 
