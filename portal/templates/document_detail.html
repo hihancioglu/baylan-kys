@@ -19,11 +19,18 @@
 <script type="module" src="{{ asset_url('toolbar/toolbar.js') }}"></script>
 {% endblock %}
 {% block content %}
+{% set status_classes = {
+  'Draft': 'bg-secondary',
+  'Review': 'bg-warning',
+  'Approved': 'bg-success',
+  'Published': 'bg-primary',
+  'Archived': 'bg-dark'
+} %}
 <header class="mb-4">
   <h1>{{ doc.title }}</h1>
   <div class="text-muted">
     <span class="me-3"><strong>Code:</strong> {{ doc.code }}</span>
-    <span class="me-3"><strong>Status:</strong> {{ doc.status }}</span>
+    <span class="me-3"><strong>Status:</strong> <span class="badge {{ status_classes.get(doc.status, 'bg-secondary') }}">{{ doc.status }}</span></span>
     <span class="me-3"><strong>Tags:</strong> {{ doc.tags }}</span>
   </div>
 </header>
