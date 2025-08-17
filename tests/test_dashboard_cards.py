@@ -70,7 +70,9 @@ def test_dashboard_card_endpoints(client):
         sess["roles"] = ["approver", "reader"]
 
     # Pending approvals
-    resp = client.get("/dashboard/cards/pending")
+    resp = client.get(
+        "/api/dashboard/cards/pending", headers={"HX-Request": "true"}
+    )
     assert resp.status_code == 200
     html = resp.get_data(as_text=True)
     with app.test_request_context():
@@ -79,7 +81,9 @@ def test_dashboard_card_endpoints(client):
     assert pending_url in html
 
     # Mandatory reading
-    resp = client.get("/dashboard/cards/mandatory")
+    resp = client.get(
+        "/api/dashboard/cards/mandatory", headers={"HX-Request": "true"}
+    )
     assert resp.status_code == 200
     html = resp.get_data(as_text=True)
     with app.test_request_context():
@@ -88,7 +92,9 @@ def test_dashboard_card_endpoints(client):
     assert mandatory_url in html
 
     # Recent revisions
-    resp = client.get("/dashboard/cards/recent")
+    resp = client.get(
+        "/api/dashboard/cards/recent", headers={"HX-Request": "true"}
+    )
     assert resp.status_code == 200
     html = resp.get_data(as_text=True)
     with app.test_request_context():

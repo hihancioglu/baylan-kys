@@ -363,7 +363,7 @@ def profile_view():
     )
 
 
-@app.get("/dashboard/cards/pending")
+@app.get("/api/dashboard/cards/pending")
 @login_required
 def dashboard_cards_pending():
     db = get_session()
@@ -378,7 +378,7 @@ def dashboard_cards_pending():
         db.close()
 
 
-@app.get("/dashboard/cards/mandatory")
+@app.get("/api/dashboard/cards/mandatory")
 @login_required
 def dashboard_cards_mandatory():
     db = get_session()
@@ -394,7 +394,7 @@ def dashboard_cards_mandatory():
         db.close()
 
 
-@app.get("/dashboard/cards/recent")
+@app.get("/api/dashboard/cards/recent")
 @login_required
 def dashboard_cards_recent():
     db = get_session()
@@ -409,7 +409,7 @@ def dashboard_cards_recent():
         db.close()
 
 
-@app.get("/dashboard/cards/shortcuts")
+@app.get("/api/dashboard/cards/shortcuts")
 @login_required
 def dashboard_cards_shortcuts():
     return render_template(

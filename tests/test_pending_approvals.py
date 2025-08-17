@@ -53,7 +53,9 @@ def test_pending_approvals_with_roles(client):
     with client.session_transaction() as sess:
         sess["user"] = {"id": 1, "name": "Tester"}
         sess["roles"] = ["approver"]
-    resp = client.get("/dashboard/cards/pending")
+    resp = client.get(
+        "/api/dashboard/cards/pending", headers={"HX-Request": "true"}
+    )
     assert resp.status_code == 200
     html = resp.get_data(as_text=True)
     with app.test_request_context():
@@ -69,7 +71,9 @@ def test_pending_approvals_no_roles(client):
     with client.session_transaction() as sess:
         sess["user"] = {"id": 1, "name": "Tester"}
         sess["roles"] = []
-    resp = client.get("/dashboard/cards/pending")
+    resp = client.get(
+        "/api/dashboard/cards/pending", headers={"HX-Request": "true"}
+    )
     assert resp.status_code == 200
     html = resp.get_data(as_text=True)
     with app.test_request_context():
