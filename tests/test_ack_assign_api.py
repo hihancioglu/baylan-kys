@@ -50,10 +50,8 @@ def test_assign_acknowledgements_role_targets(client, app_models):
     role = m.Role(name="ack_reader")
     session.add_all([publisher, user1, user2, role])
     session.commit()
-    session.add_all([
-        m.UserRole(user_id=user1.id, role_id=role.id),
-        m.UserRole(user_id=user2.id, role_id=role.id),
-    ])
+    user1.roles.append(role)
+    user2.roles.append(role)
     doc = m.Document(doc_key="ack_doc.docx", title="Ack Doc", status="Published")
     session.add(doc)
     session.commit()

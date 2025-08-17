@@ -17,7 +17,6 @@ from models import (
     DocumentRevision,
     User,
     Role,
-    UserRole,
     Acknowledgement,
     Notification,
     TrainingResult,
@@ -751,8 +750,7 @@ def document_detail(doc_id: int):
         )
     reviewers = (
         session.query(User)
-        .join(UserRole)
-        .join(Role)
+        .join(User.roles)
         .filter(Role.name == RoleEnum.REVIEWER.value)
         .all()
     )
@@ -1691,9 +1689,8 @@ def assign_role():
             role = Role(name=role_name)
             session.add(role)
             session.commit()
-        link = session.query(UserRole).filter_by(user_id=user.id, role_id=role.id).first()
-        if not link:
-            session.add(UserRole(user_id=user.id, role_id=role.id))
+        if role not in user.roles:
+            user.roles.append(role)
         session.commit()
         log_action(user_id, None, f"assign_role:{role_name}")
         return jsonify(ok=True)
@@ -1712,12 +1709,12 @@ def remove_role():
         return jsonify(error="user_id and role required"), 400
     session = get_session()
     try:
+        user = session.get(User, user_id)
         role = session.query(Role).filter_by(name=role_name).first()
-        if not role:
+        if not user or not role:
             return jsonify(error="role not found"), 404
-        link = session.query(UserRole).filter_by(user_id=user_id, role_id=role.id).first()
-        if link:
-            session.delete(link)
+        if role in user.roles:
+            user.roles.remove(role)
             session.commit()
             log_action(user_id, None, f"remove_role:{role_name}")
         return jsonify(ok=True)
