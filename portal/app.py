@@ -1084,6 +1084,50 @@ def rollback_document(doc_id: int):
     return redirect(url_for("document_detail", doc_id=doc_id, tab="versions"))
 
 
+@app.post("/api/documents/<int:doc_id>/rollback")
+@roles_required(RoleEnum.REVIEWER.value)
+def rollback_document_api(doc_id: int):
+    """Rollback document to a specific version via API."""
+    version_str = request.args.get("version") or ""
+    try:
+        major, minor = map(int, version_str.split("."))
+    except ValueError:
+        return jsonify(error="Invalid version"), 400
+    db = get_session()
+    doc = db.get(Document, doc_id)
+    if not doc:
+        db.close()
+        return jsonify(error="Document not found"), 404
+    rev = (
+        db.query(DocumentRevision)
+        .filter_by(doc_id=doc_id, major_version=major, minor_version=minor)
+        .first()
+    )
+    if not rev:
+        db.close()
+        return jsonify(error="Revision not found"), 404
+    current_rev = DocumentRevision(
+        doc_id=doc.id,
+        major_version=doc.major_version,
+        minor_version=doc.minor_version,
+        revision_notes=doc.revision_notes,
+    )
+    db.add(current_rev)
+    doc.major_version = rev.major_version
+    doc.minor_version = rev.minor_version
+    doc.revision_notes = rev.revision_notes
+    db.commit()
+    user = session.get("user") or {}
+    resp = {
+        "doc_id": doc.id,
+        "major_version": doc.major_version,
+        "minor_version": doc.minor_version,
+    }
+    log_action(user.get("id"), doc.id, "rollback_document")
+    db.close()
+    return jsonify(resp)
+
+
 def _start_revision(doc: Document, version_type: str, notes: str, user: dict, db):
     old_rev = DocumentRevision(
         doc_id=doc.id,
