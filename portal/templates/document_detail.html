@@ -87,7 +87,7 @@
 
   <div class="modal fade" id="reviewerModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog">
-        <form class="modal-content" hx-post="/documents/{{ doc.id }}/workflow/start" hx-target="closest .modal" hx-swap="none">
+        <form class="modal-content" hx-post="/api/workflow/start" hx-target="closest .modal" hx-swap="none">
       <div class="modal-header">
         <h5 class="modal-title">Reviewer Seç</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -102,6 +102,7 @@
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">İptal</button>
+          <input type="hidden" name="doc_id" value="{{ doc.id }}">
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
           <button type="submit" class="btn btn-primary" data-bs-dismiss="modal">Gönder</button>
         </div>
