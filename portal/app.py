@@ -149,6 +149,26 @@ def quiz_questions():
     return [{k: q[k] for k in ("id", "text", "options")} for q in QUIZ_QUESTIONS]
 
 
+def _format_tags(value):
+    """Validate and normalize tag input.
+
+    Accepts either a list of strings or a comma-separated string and returns
+    a comma-separated string of trimmed tags. Returns ``None`` if the input is
+    not in an acceptable format or results in no tags.
+    """
+
+    if isinstance(value, list):
+        if not all(isinstance(t, str) for t in value):
+            return None
+        tags = [t.strip() for t in value if isinstance(t, str) and t.strip()]
+    elif isinstance(value, str):
+        tags = [t.strip() for t in value.split(",") if t.strip()]
+    else:
+        return None
+
+    return ",".join(tags) if tags else None
+
+
 # -- Acknowledgement helpers -------------------------------------------------
 
 def _assign_acknowledgements(db, doc_id, user_ids):
@@ -851,6 +871,10 @@ def create_document():
     title = request.form.get("title", "").strip()
     department = request.form.get("department", "").strip()
     doc_type = request.form.get("type", "").strip()
+    tags_input = request.form.getlist("tags")
+    tags_raw = tags_input if len(tags_input) > 1 else (tags_input[0] if tags_input else None)
+    tags_val = _format_tags(tags_raw)
+
     errors = {}
     if not code:
         errors["code"] = "Code is required."
@@ -860,6 +884,8 @@ def create_document():
         errors["department"] = "Department is required."
     if not doc_type:
         errors["type"] = "Type is required."
+    if not tags_val:
+        errors["tags"] = "Invalid tags format."
     if errors:
         context = {
             "errors": errors,
@@ -876,6 +902,7 @@ def create_document():
         doc_key=secrets.token_hex(16),
         title=title,
         code=code,
+        tags=tags_val,
         department=department,
         process=doc_type,
         status="Draft",
@@ -900,9 +927,10 @@ def create_document_api():
             errors[field] = f"{field} is required."
     if errors:
         return jsonify({"errors": errors}), 400
-    tags_val = data.get("tags")
-    if isinstance(tags_val, list):
-        tags_val = ",".join(tags_val)
+
+    tags_val = _format_tags(data.get("tags"))
+    if not tags_val:
+        return jsonify({"errors": {"tags": "Invalid tags format."}}), 400
     doc = Document(
         doc_key=data.get("doc_key") or secrets.token_hex(16),
         title=data.get("title"),
