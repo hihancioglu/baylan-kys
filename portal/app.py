@@ -577,7 +577,7 @@ def new_document():
             with app.test_request_context("/api/documents", method="POST", json=form_data):
                 session["user"] = user
                 session["roles"] = roles
-                response = create_document()
+                response = create_document_api()
             if isinstance(response, tuple):
                 resp, status = response
             else:
@@ -845,57 +845,71 @@ def revise_document(id: int):
 
 
 @app.post("/documents")
-@app.post("/api/documents")
 @roles_required(RoleEnum.CONTRIBUTOR.value)
 def create_document():
-    if request.form:
-        code = request.form.get("code", "").strip()
-        title = request.form.get("title", "").strip()
-        department = request.form.get("department", "").strip()
-        doc_type = request.form.get("type", "").strip()
-        errors = {}
-        if not code:
-            errors["code"] = "Code is required."
-        if not title:
-            errors["title"] = "Title is required."
-        if not department:
-            errors["department"] = "Department is required."
-        if not doc_type:
-            errors["type"] = "Type is required."
-        if errors:
-            context = {
-                "errors": errors,
-                "form": request.form.to_dict(),
-                "breadcrumbs": [
-                    {"title": "Home", "url": url_for("index")},
-                    {"title": "Documents", "url": url_for("list_documents")},
-                    {"title": "New"},
-                ],
-            }
-            return render_template("documents/new.html", **context), 400
-        session_db = get_session()
-        doc = Document(
-            doc_key=secrets.token_hex(16),
-            title=title,
-            code=code,
-            department=department,
-            process=doc_type,
-            status="Draft",
-        )
-        session_db.add(doc)
-        session_db.commit()
-        user = session.get("user") or {}
-        log_action(user.get("id"), doc.id, "create_document")
-        session_db.close()
-        return redirect(url_for("list_documents", status="Draft"))
+    code = request.form.get("code", "").strip()
+    title = request.form.get("title", "").strip()
+    department = request.form.get("department", "").strip()
+    doc_type = request.form.get("type", "").strip()
+    errors = {}
+    if not code:
+        errors["code"] = "Code is required."
+    if not title:
+        errors["title"] = "Title is required."
+    if not department:
+        errors["department"] = "Department is required."
+    if not doc_type:
+        errors["type"] = "Type is required."
+    if errors:
+        context = {
+            "errors": errors,
+            "form": request.form.to_dict(),
+            "breadcrumbs": [
+                {"title": "Home", "url": url_for("index")},
+                {"title": "Documents", "url": url_for("list_documents")},
+                {"title": "New"},
+            ],
+        }
+        return render_template("documents/new.html", **context), 400
+    session_db = get_session()
+    doc = Document(
+        doc_key=secrets.token_hex(16),
+        title=title,
+        code=code,
+        department=department,
+        process=doc_type,
+        status="Draft",
+    )
+    session_db.add(doc)
+    session_db.commit()
+    user = session.get("user") or {}
+    log_action(user.get("id"), doc.id, "create_document")
+    session_db.close()
+    return redirect(url_for("list_documents", status="Draft"))
+
+
+@app.post("/api/documents")
+@roles_required(RoleEnum.CONTRIBUTOR.value)
+def create_document_api():
     data = request.get_json(silent=True) or {}
+    required_fields = ["code", "title", "type", "department", "tags", "file_path"]
+    errors = {}
+    for field in required_fields:
+        value = data.get(field)
+        if not value:
+            errors[field] = f"{field} is required."
+    if errors:
+        return jsonify({"errors": errors}), 400
+    tags_val = data.get("tags")
+    if isinstance(tags_val, list):
+        tags_val = ",".join(tags_val)
     doc = Document(
         doc_key=data.get("doc_key") or secrets.token_hex(16),
         title=data.get("title"),
         code=data.get("code"),
-        tags=",".join(data.get("tags", [])) if isinstance(data.get("tags"), list) else data.get("tags"),
+        tags=tags_val,
         department=data.get("department"),
-        process=data.get("process"),
+        process=data.get("type"),
         retention_period=data.get("retention_period"),
         status="Draft",
     )
@@ -903,9 +917,8 @@ def create_document():
     session_db.add(doc)
     session_db.commit()
     log_action(data.get("user_id"), doc.id, "create_document")
-    content = ""
-    if data.get("file_path"):
-        content = extract_text(data["file_path"])
+    file_path = data.get("file_path")
+    content = extract_text(file_path) if file_path else ""
     index_document(doc, content)
     user_ids = [u.id for u in session_db.query(User).all()]
     notify_mandatory_read(doc, user_ids)
