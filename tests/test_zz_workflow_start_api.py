@@ -110,3 +110,31 @@ def test_workflow_start_queue_visibility(client):
     assert resp.status_code == 200
     html = resp.get_data(as_text=True)
     assert f"Sample Docb" in html
+
+
+def test_workflow_start_notifies_all_assignees(client):
+    app, m, ids = _prepare_data("c")
+    doc_id, reviewer_id, approver_id, contrib_id = ids
+    calls = []
+
+    import app as app_module
+
+    def fake_notify_revision_time(doc, user_ids):
+        calls.append(list(user_ids))
+
+    app_module.notify_revision_time = fake_notify_revision_time
+
+    with client.session_transaction() as sess:
+        sess["user"] = {"id": contrib_id}
+        sess["roles"] = ["contributor"]
+    resp = client.post(
+        "/api/workflow/start",
+        json={
+            "doc_id": doc_id,
+            "reviewers": [reviewer_id],
+            "approvers": [approver_id],
+        },
+    )
+    assert resp.status_code == 200
+    assert len(calls) == 1
+    assert set(calls[0]) == {reviewer_id, approver_id}
