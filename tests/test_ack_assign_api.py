@@ -153,3 +153,107 @@ def test_assign_acknowledgements_unpublished_doc(client, app_models):
     assert session.query(m.Acknowledgement).count() == 0
     session.close()
     app._got_first_request = False
+
+
+def test_assign_acknowledgements_user_targets(client, app_models):
+    app, m = app_models
+    m.Base.metadata.drop_all(bind=m.engine)
+    m.Base.metadata.create_all(bind=m.engine)
+    session = m.SessionLocal()
+    publisher = m.User(username="ack_publisher")
+    user1 = m.User(username="ack_user1")
+    user2 = m.User(username="ack_user2")
+    doc = m.Document(doc_key="ack_doc.docx", title="Ack Doc", status="Published")
+    session.add_all([publisher, user1, user2, doc])
+    session.commit()
+    doc_id = doc.id
+    publisher_id = publisher.id
+    user1_id, user2_id = user1.id, user2.id
+    session.close()
+
+    with client.session_transaction() as sess:
+        sess["user"] = {"id": publisher_id}
+        sess["roles"] = ["publisher"]
+
+    with patch("app.broadcast_counts") as broadcast_mock, patch(
+        "app.notify_mandatory_read"
+    ) as notify_mock:
+        notify_mock.return_value = None
+        resp = client.post(
+            "/ack/assign", json={"doc_id": doc_id, "targets": [user1_id, user2_id]}
+        )
+        broadcast_mock.assert_called_once()
+        notify_mock.assert_called_once()
+
+    assert resp.status_code == 200
+    session = m.SessionLocal()
+    acks = session.query(m.Acknowledgement).filter_by(doc_id=doc_id).all()
+    ack_user_ids = {a.user_id for a in acks}
+    assert ack_user_ids == {user1_id, user2_id}
+    session.close()
+    app._got_first_request = False
+
+
+def test_assign_acknowledgements_missing_doc_id(client, app_models):
+    app, m = app_models
+    m.Base.metadata.drop_all(bind=m.engine)
+    m.Base.metadata.create_all(bind=m.engine)
+    session = m.SessionLocal()
+    publisher = m.User(username="ack_publisher")
+    user = m.User(username="ack_user")
+    session.add_all([publisher, user])
+    session.commit()
+    publisher_id = publisher.id
+    user_id = user.id
+    session.close()
+
+    with client.session_transaction() as sess:
+        sess["user"] = {"id": publisher_id}
+        sess["roles"] = ["publisher"]
+
+    with patch("app.broadcast_counts") as broadcast_mock, patch(
+        "app.notify_mandatory_read"
+    ) as notify_mock:
+        resp = client.post("/ack/assign", json={"targets": [user_id]})
+        broadcast_mock.assert_not_called()
+        notify_mock.assert_not_called()
+
+    assert resp.status_code == 400
+    assert resp.get_json()["error"] == "doc_id required"
+    session = m.SessionLocal()
+    assert session.query(m.Acknowledgement).count() == 0
+    session.close()
+    app._got_first_request = False
+
+
+def test_assign_acknowledgements_invalid_targets(client, app_models):
+    app, m = app_models
+    m.Base.metadata.drop_all(bind=m.engine)
+    m.Base.metadata.create_all(bind=m.engine)
+    session = m.SessionLocal()
+    publisher = m.User(username="ack_publisher")
+    doc = m.Document(doc_key="ack_doc.docx", title="Ack Doc", status="Published")
+    session.add_all([publisher, doc])
+    session.commit()
+    doc_id = doc.id
+    publisher_id = publisher.id
+    session.close()
+
+    with client.session_transaction() as sess:
+        sess["user"] = {"id": publisher_id}
+        sess["roles"] = ["publisher"]
+
+    with patch("app.broadcast_counts") as broadcast_mock, patch(
+        "app.notify_mandatory_read"
+    ) as notify_mock:
+        resp = client.post(
+            "/ack/assign", json={"doc_id": doc_id, "targets": ["bogus_role"]}
+        )
+        broadcast_mock.assert_called_once()
+        notify_mock.assert_not_called()
+
+    assert resp.status_code == 200
+    session = m.SessionLocal()
+    assert session.query(m.Acknowledgement).count() == 0
+    session.close()
+    app._got_first_request = False
