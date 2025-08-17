@@ -964,6 +964,44 @@ def create_document_api():
     return jsonify(result), 201
 
 
+@app.post("/api/documents/from-docxf")
+@roles_required(RoleEnum.CONTRIBUTOR.value)
+def create_document_from_docxf():
+    """Create a new document by rendering a DOCXF template."""
+    data = request.get_json(silent=True) or {}
+    form_id = data.get("form_id")
+    payload = data.get("payload", {})
+    if not form_id or not isinstance(payload, dict):
+        return jsonify(error="form_id and payload required"), 400
+
+    _, docx_key, pdf_key = render_form_and_store(form_id, payload)
+
+    session_db = get_session()
+    try:
+        doc = Document(
+            doc_key=pdf_key,
+            title=payload.get("title"),
+            code=payload.get("code"),
+            tags=_format_tags(payload.get("tags")),
+            department=payload.get("department"),
+            process=payload.get("process"),
+            retention_period=payload.get("retention_period"),
+            major_version=1,
+            minor_version=0,
+            status="Draft",
+        )
+        session_db.add(doc)
+        session_db.flush()
+        rev = DocumentRevision(doc_id=doc.id, major_version=1, minor_version=0)
+        session_db.add(rev)
+        session_db.commit()
+        doc_id = doc.id
+    finally:
+        session_db.close()
+
+    return jsonify({"id": doc_id, "docx_key": docx_key, "pdf_key": pdf_key}), 201
+
+
 @app.post("/documents/<int:doc_id>/sign")
 @roles_required(RoleEnum.APPROVER.value, RoleEnum.PUBLISHER.value)
 def sign_document(doc_id: int):
@@ -2253,7 +2291,7 @@ def submit_form(form_name):
     fields = payload.get("fields", {})
     if not user_id:
         return jsonify(error="user_id required"), 400
-    pdf = render_form_and_store(form_name, fields)
+    pdf, _, _ = render_form_and_store(form_name, fields)
     session = get_session()
     try:
         session.add(
