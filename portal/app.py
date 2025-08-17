@@ -908,9 +908,13 @@ def create_document():
         status="Draft",
     )
     session_db.add(doc)
+    user_id = (session.get("user") or {}).get("id") or (request.get_json(silent=True) or {}).get("user_id")
+    if not user_id:
+        session_db.rollback()
+        session_db.close()
+        return "user_id required", 400
     session_db.commit()
-    user = session.get("user") or {}
-    log_action(user.get("id"), doc.id, "create_document")
+    log_action(user_id, doc.id, "create_document")
     session_db.close()
     return redirect(url_for("document_detail", doc_id=doc.id))
 
@@ -943,8 +947,13 @@ def create_document_api():
     )
     session_db = get_session()
     session_db.add(doc)
+    user_id = (session.get("user") or {}).get("id") or data.get("user_id")
+    if not user_id:
+        session_db.rollback()
+        session_db.close()
+        return jsonify(error="user_id required"), 400
     session_db.commit()
-    log_action(data.get("user_id"), doc.id, "create_document")
+    log_action(user_id, doc.id, "create_document")
     file_path = data.get("file_path")
     content = extract_text(file_path) if file_path else ""
     index_document(doc, content)
