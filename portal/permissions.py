@@ -1,11 +1,12 @@
 from models import get_session, User, Document, DocumentPermission
 
 
-def permission_check(user, document) -> bool:
+def permission_check(user, document, download: bool = False) -> bool:
     """Return True if the given user has access to the document.
 
     The function checks both document-specific and folder-level permissions
-    based on the roles assigned to the user.
+    based on the roles assigned to the user. If ``download`` is set to ``True``
+    the permission must also explicitly allow downloading.
 
     Parameters
     ----------
@@ -13,6 +14,8 @@ def permission_check(user, document) -> bool:
         User object or user id.
     document: Document | int
         Document object or document id.
+    download: bool
+        Require download permission in addition to access.
     """
     session = get_session()
     try:
@@ -36,8 +39,12 @@ def permission_check(user, document) -> bool:
         )
         for perm in perms:
             if perm.doc_id and perm.doc_id == doc.id:
+                if download and not perm.can_download:
+                    continue
                 return True
             if perm.folder and doc.doc_key.startswith(perm.folder):
+                if download and not perm.can_download:
+                    continue
                 return True
         return False
     finally:

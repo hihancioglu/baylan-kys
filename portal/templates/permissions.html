@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block title %}Permissions{% endblock %}
+{% block content %}
+<h3>Permissions</h3>
+<form method="get" class="mb-3">
+  <input type="text" class="form-control" name="q" placeholder="Search document or folder" value="{{ search }}">
+</form>
+<table class="table">
+  <thead>
+    <tr>
+      <th>Role</th>
+      <th>Document</th>
+      <th>Folder</th>
+      <th>Download</th>
+    </tr>
+  </thead>
+  <tbody>
+  {% for perm in permissions %}
+    <tr>
+      <td>{{ perm.role.name }}</td>
+      <td>{{ perm.document.title if perm.document else '' }}</td>
+      <td>{{ perm.folder or '' }}</td>
+      <td>
+        <form method="post">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <input type="hidden" name="perm_id" value="{{ perm.id }}">
+          {% if search %}<input type="hidden" name="q" value="{{ search }}">{% endif %}
+          <input class="form-check-input" type="checkbox" name="can_download" value="1" {% if perm.can_download %}checked{% endif %} onchange="this.form.submit()">
+        </form>
+      </td>
+    </tr>
+  {% else %}
+    <tr><td colspan="4">No permissions found.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endblock %}
