@@ -3,6 +3,7 @@ import importlib
 from pathlib import Path
 import sys
 import pytest
+from unittest.mock import patch
 
 os.environ.setdefault("ONLYOFFICE_INTERNAL_URL", "http://oo")
 os.environ.setdefault("ONLYOFFICE_PUBLIC_URL", "http://oo-public")
@@ -59,13 +60,16 @@ def test_api_approve_step(client, setup_data):
     with client.session_transaction() as sess:
         sess["user"] = {"id": approver_id}
         sess["roles"] = ["approver"]
-    resp = client.post(
-        f"/api/approvals/{step_id}/approve",
-        json={"comment": "looks good"},
-    )
+    with patch("app.broadcast_counts") as broadcast_mock:
+        resp = client.post(
+            f"/api/approvals/{step_id}/approve",
+            json={"comment": "looks good"},
+        )
+        broadcast_mock.assert_called_once()
     assert resp.status_code == 200
     assert "Approved" in resp.headers.get("HX-Trigger", "")
     html = resp.get_data(as_text=True)
+    assert f'id="step-{step_id}"' in html
     assert "looks good" in html
     session = m.SessionLocal()
     step = session.get(m.WorkflowStep, step_id)
