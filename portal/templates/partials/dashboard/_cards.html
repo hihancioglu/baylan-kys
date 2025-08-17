@@ -1,16 +1,24 @@
 {% macro render_items(items, empty_text) %}
-  {% if items %}
-    <ul class="list-unstyled mb-0">
-    {% for item in items %}
-      {% if item[1] is defined %}
-        <li><a href="{{ item[1] }}">{{ item[0] }}</a></li>
-      {% else %}
-        <li>{{ item }}</li>
-      {% endif %}
-    {% endfor %}
-    </ul>
+  {% if items is defined and items is not none %}
+    {% if items %}
+      <ul class="list-unstyled mb-0">
+      {% for item in items %}
+        {% if item[1] is defined %}
+          <li><a href="{{ item[1] }}">{{ item[0] }}</a></li>
+        {% else %}
+          <li>{{ item }}</li>
+        {% endif %}
+      {% endfor %}
+      </ul>
+    {% else %}
+      <p class="text-muted mb-0">{{ empty_text }}</p>
+    {% endif %}
   {% else %}
-    <p class="text-muted mb-0">{{ empty_text }}</p>
+    <div class="placeholder-glow">
+      <span class="placeholder col-12 mb-2"></span>
+      <span class="placeholder col-12 mb-2"></span>
+      <span class="placeholder col-12 mb-2"></span>
+    </div>
   {% endif %}
 {% endmacro %}
 
