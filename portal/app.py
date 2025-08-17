@@ -1737,9 +1737,11 @@ def admin_users_page():
     db = get_session()
     try:
         users = db.query(User).all()
+        roles = db.query(Role).all()
         return render_template(
             "admin/users.html",
             users=users,
+            roles=roles,
             breadcrumbs=[
                 {"title": "Home", "url": url_for("index")},
                 {"title": "Admin"},
