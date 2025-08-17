@@ -202,14 +202,20 @@ sse_clients = []
 
 
 def _compute_counts(db, user_id, roles):
-    approval_count = (
-        db.query(WorkflowStep)
-        .filter(
-            WorkflowStep.status == "Pending",
-            WorkflowStep.user_id == user_id,
-        )
-        .count()
+    inspector = inspect(db.get_bind())
+    columns = {c["name"] for c in inspector.get_columns("workflow_steps")}
+
+    approval_query = (
+        db.query(func.count())
+        .select_from(WorkflowStep)
+        .filter(WorkflowStep.status == "Pending")
     )
+    if "user_id" in columns:
+        if user_id is not None:
+            approval_query = approval_query.filter(WorkflowStep.user_id == user_id)
+        else:
+            approval_query = approval_query.filter(WorkflowStep.user_id.is_(None))
+    approval_count = approval_query.scalar()
     ack_count = (
         db.query(Document)
         .filter(Document.status == "Published")
