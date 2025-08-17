@@ -885,7 +885,7 @@ def create_document():
     user = session.get("user") or {}
     log_action(user.get("id"), doc.id, "create_document")
     session_db.close()
-    return redirect(url_for("list_documents", status="Draft"))
+    return redirect(url_for("document_detail", doc_id=doc.id))
 
 
 @app.post("/api/documents")
