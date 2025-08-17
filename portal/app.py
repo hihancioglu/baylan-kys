@@ -1266,6 +1266,81 @@ def approval_detail(id: int):
         db.close()
 
 
+@app.post("/api/approvals/<int:step_id>/approve")
+@roles_required(RoleEnum.APPROVER.value, RoleEnum.REVIEWER.value)
+def api_approve_step(step_id: int):
+    db = get_session()
+    try:
+        step = db.get(WorkflowStep, step_id)
+        if not step:
+            return "Not found", 404
+        data = request.get_json(silent=True) or {}
+        doc_id = step.doc_id
+        step_order = step.step_order
+        document = step.document
+        step.status = "Approved"
+        step.approved_at = datetime.utcnow()
+        step.comment = data.get("comment")
+        db.commit()
+        user = session.get("user")
+        if user:
+            log_action(user["id"], doc_id, "approved")
+        next_step = (
+            db.query(WorkflowStep)
+            .filter(
+                WorkflowStep.doc_id == doc_id,
+                WorkflowStep.step_order > step_order,
+                WorkflowStep.status == "Pending",
+            )
+            .order_by(WorkflowStep.step_order)
+            .first()
+        )
+        if next_step and next_step.user_id:
+            notify_approval_queue(document, [next_step.user_id])
+        broadcast_counts()
+        step = db.get(WorkflowStep, step_id)
+        html = render_template("partials/approvals/_row.html", step=step)
+        resp = make_response(html)
+        resp.headers["HX-Trigger"] = json.dumps({"showToast": "Approved"})
+        return resp
+    finally:
+        db.close()
+
+
+@app.post("/api/approvals/<int:step_id>/reject")
+@roles_required(RoleEnum.APPROVER.value, RoleEnum.REVIEWER.value)
+def api_reject_step(step_id: int):
+    db = get_session()
+    try:
+        step = db.get(WorkflowStep, step_id)
+        if not step:
+            return "Not found", 404
+        data = request.get_json(silent=True) or {}
+        document = step.document
+        step.status = "Rejected"
+        step.approved_at = datetime.utcnow()
+        step.comment = data.get("comment")
+        db.commit()
+        user = session.get("user")
+        if user:
+            log_action(user["id"], step.doc_id, "rejected")
+        owner_id = getattr(document, "owner_id", None)
+        if owner_id:
+            notify_user(
+                owner_id,
+                f"Document {document.title} rejected",
+                step.comment or f"Document {document.title} was rejected.",
+            )
+        broadcast_counts()
+        step = db.get(WorkflowStep, step_id)
+        html = render_template("partials/approvals/_row.html", step=step)
+        resp = make_response(html)
+        resp.headers["HX-Trigger"] = json.dumps({"showToast": "Rejected"})
+        return resp
+    finally:
+        db.close()
+
+
 @app.post("/approvals/<int:step_id>/approve")
 @roles_required(RoleEnum.APPROVER.value, RoleEnum.REVIEWER.value)
 def approve_step(step_id: int):
