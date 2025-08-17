@@ -29,7 +29,7 @@ def _ensure_user(username: str, email: str | None = None):
             user = User(username=username, email=email)
             session_db.add(user)
             session_db.commit()
-        roles = [ur.role.name for ur in user.roles]
+        roles = [role.name for role in user.roles]
         return user.id, roles
     finally:
         session_db.close()

@@ -16,12 +16,14 @@ from sqlalchemy import (
     Float,
 )
 from sqlalchemy.orm import declarative_base, relationship, sessionmaker, scoped_session
+import sys
 
 DATABASE_URL = os.environ.get("DATABASE_URL", "sqlite:///portal.db")
 
 engine = create_engine(DATABASE_URL)
 SessionLocal = scoped_session(sessionmaker(bind=engine))
 Base = declarative_base()
+sys.modules.setdefault("portal.models", sys.modules[__name__])
 
 
 class RoleEnum(PyEnum):
@@ -71,14 +73,32 @@ class DocumentRevision(Base):
     document = relationship(Document, back_populates="revisions")
 
 
+class UserRole(Base):
+    __tablename__ = "user_roles"
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    role_id = Column(Integer, ForeignKey("roles.id"), nullable=False)
+
+    user = relationship("portal.models.User", back_populates="role_links")
+    role = relationship("portal.models.Role", back_populates="user_links")
+    __table_args__ = (UniqueConstraint("user_id", "role_id", name="uq_user_role"),)
+
+
 class Role(Base):
     __tablename__ = "roles"
     id = Column(Integer, primary_key=True)
     name = Column(String, unique=True, nullable=False)
     ldap_group = Column(String, unique=True)
 
-    users = relationship("UserRole", back_populates="role", cascade="all, delete-orphan")
-    permissions = relationship("DocumentPermission", back_populates="role", cascade="all, delete-orphan")
+    user_links = relationship(
+        "portal.models.UserRole", back_populates="role", cascade="all, delete-orphan"
+    )
+    users = relationship(
+        "User", secondary="user_roles", back_populates="roles"
+    )
+    permissions = relationship(
+        "DocumentPermission", back_populates="role", cascade="all, delete-orphan"
+    )
 
 
 class User(Base):
@@ -87,20 +107,12 @@ class User(Base):
     username = Column(String, unique=True, nullable=False)
     email = Column(String, unique=True)
 
-    roles = relationship("UserRole", back_populates="user", cascade="all, delete-orphan")
-
-
-class UserRole(Base):
-    __tablename__ = "user_roles"
-    id = Column(Integer, primary_key=True)
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    role_id = Column(Integer, ForeignKey("roles.id"), nullable=False)
-
-    user = relationship("User", back_populates="roles")
-    role = relationship("Role", back_populates="users")
-    __table_args__ = (UniqueConstraint("user_id", "role_id", name="uq_user_role"),)
-
-
+    role_links = relationship(
+        "portal.models.UserRole", back_populates="user", cascade="all, delete-orphan"
+    )
+    roles = relationship(
+        "Role", secondary="user_roles", back_populates="users"
+    )
 class DocumentPermission(Base):
     __tablename__ = "document_permissions"
     id = Column(Integer, primary_key=True)

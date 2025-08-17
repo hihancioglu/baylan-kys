@@ -26,7 +26,7 @@ def permission_check(user, document) -> bool:
             doc = session.get(Document, document.id)
         if not db_user or not doc:
             return False
-        role_ids = [ur.role_id for ur in db_user.roles]
+        role_ids = [role.id for role in db_user.roles]
         if not role_ids:
             return False
         perms = (
