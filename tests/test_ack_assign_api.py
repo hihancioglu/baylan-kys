@@ -71,7 +71,7 @@ def test_assign_acknowledgements_role_targets(client, app_models):
     ) as notify_mock:
         notify_mock.return_value = None
         resp = client.post(
-            "/ack/assign",
+            "/api/ack/assign",
             json={"doc_id": doc_id, "targets": ["ack_reader"]},
         )
         broadcast_mock.assert_called_once()
@@ -106,7 +106,7 @@ def test_assign_acknowledgements_nonexistent_doc(client, app_models):
         "app.notify_mandatory_read"
     ) as notify_mock:
         resp = client.post(
-            "/ack/assign", json={"doc_id": 999, "targets": [target_id]}
+            "/api/ack/assign", json={"doc_id": 999, "targets": [target_id]}
         )
         broadcast_mock.assert_not_called()
         notify_mock.assert_not_called()
@@ -142,7 +142,7 @@ def test_assign_acknowledgements_unpublished_doc(client, app_models):
         "app.notify_mandatory_read"
     ) as notify_mock:
         resp = client.post(
-            "/ack/assign", json={"doc_id": doc_id, "targets": [target_id]}
+            "/api/ack/assign", json={"doc_id": doc_id, "targets": [target_id]}
         )
         broadcast_mock.assert_not_called()
         notify_mock.assert_not_called()
@@ -180,7 +180,7 @@ def test_assign_acknowledgements_user_targets(client, app_models):
     ) as notify_mock:
         notify_mock.return_value = None
         resp = client.post(
-            "/ack/assign", json={"doc_id": doc_id, "targets": [user1_id, user2_id]}
+            "/api/ack/assign", json={"doc_id": doc_id, "targets": [user1_id, user2_id]}
         )
         broadcast_mock.assert_called_once()
         notify_mock.assert_called_once()
@@ -214,7 +214,7 @@ def test_assign_acknowledgements_missing_doc_id(client, app_models):
     with patch("app.broadcast_counts") as broadcast_mock, patch(
         "app.notify_mandatory_read"
     ) as notify_mock:
-        resp = client.post("/ack/assign", json={"targets": [user_id]})
+        resp = client.post("/api/ack/assign", json={"targets": [user_id]})
         broadcast_mock.assert_not_called()
         notify_mock.assert_not_called()
 
@@ -247,7 +247,7 @@ def test_assign_acknowledgements_invalid_targets(client, app_models):
         "app.notify_mandatory_read"
     ) as notify_mock:
         resp = client.post(
-            "/ack/assign", json={"doc_id": doc_id, "targets": ["bogus_role"]}
+            "/api/ack/assign", json={"doc_id": doc_id, "targets": ["bogus_role"]}
         )
         broadcast_mock.assert_called_once()
         notify_mock.assert_not_called()
