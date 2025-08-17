@@ -58,7 +58,7 @@
 
 <div class="modal fade" id="reviseModal" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog">
-      <form class="modal-content" method="post" action="{{ url_for('revise_document', id=doc.id) }}">
+      <form id="revise-form" class="modal-content" method="post" action="{{ url_for('revise_document_api', id=doc.id) }}">
       <div class="modal-header">
         <h5 class="modal-title">Revizyon Başlat</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -162,10 +162,31 @@
 
   <script type="module" src="{{ asset_url('document_detail.js') }}"></script>
   <script defer>
-    document.getElementById('confirm-revise-btn').addEventListener('click', function (e) {
+    document.getElementById('revise-form').addEventListener('submit', async function (e) {
       if (!confirm('Revizyonu başlatmak istediğinize emin misiniz?')) {
         e.preventDefault();
         e.stopPropagation();
+        return;
+      }
+      e.preventDefault();
+      const form = e.target;
+      const payload = {
+        version_type: form.querySelector('#version_type').value,
+        revision_notes: form.querySelector('#revision_notes').value
+      };
+      const csrf = form.querySelector('input[name="csrf_token"]').value;
+      const resp = await fetch(form.action, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': csrf
+        },
+        body: JSON.stringify(payload)
+      });
+      if (resp.ok) {
+        window.location.href = '{{ url_for("edit_document", doc_id=doc.id) }}';
+      } else {
+        alert('Revizyon başlatılamadı');
       }
     });
   </script>
