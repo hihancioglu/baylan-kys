@@ -791,7 +791,43 @@ def start_workflow():
         db.add_all(steps)
         db.commit()
         log_action(user["id"], doc_id, "start_workflow")
-        db.refresh(doc)
+        notify_revision_time(doc, reviewer_ids)
+        return jsonify(ok=True)
+    finally:
+        db.close()
+
+
+@app.post("/api/workflow/start")
+@roles_required(RoleEnum.CONTRIBUTOR.value)
+def api_start_workflow():
+    user = session.get("user")
+    if not user:
+        return jsonify(error="user not logged in"), 401
+    data = request.get_json(silent=True) or {}
+    try:
+        doc_id = int(data.get("doc_id"))
+    except (TypeError, ValueError):
+        return jsonify(error="invalid doc_id"), 400
+    reviewers = data.get("reviewers", [])
+    approvers = data.get("approvers", [])
+    if not isinstance(reviewers, list) or not isinstance(approvers, list):
+        return jsonify(error="invalid payload"), 400
+    reviewer_ids = [int(r) for r in reviewers]
+    approver_ids = [int(a) for a in approvers]
+    db = get_session()
+    try:
+        doc = db.get(Document, doc_id)
+        if not doc:
+            return jsonify(error="document not found"), 404
+        doc.status = "Review"
+        all_ids = reviewer_ids + approver_ids
+        steps = [
+            WorkflowStep(doc_id=doc_id, step_order=i, user_id=uid)
+            for i, uid in enumerate(all_ids, start=1)
+        ]
+        db.add_all(steps)
+        db.commit()
+        log_action(user["id"], doc_id, "start_workflow")
         notify_revision_time(doc, reviewer_ids)
         return jsonify(ok=True)
     finally:
