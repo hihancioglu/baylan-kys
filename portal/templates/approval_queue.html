@@ -23,6 +23,7 @@
       <th><input type="checkbox" id="select-all" class="form-check-input"></th>
       <th>Document</th>
       <th>Step</th>
+      <th>Type</th>
       <th>Status</th>
       <th>Actions</th>
     </tr>
@@ -33,6 +34,7 @@
       <td><input type="checkbox" class="form-check-input step-checkbox" value="{{ step.id }}"></td>
       <td>{{ step.document.title }}</td>
       <td>{{ step.step_order }}</td>
+      <td>{{ step.step_type.title() }}</td>
       <td class="status">{{ step.status }}</td>
       <td>
         {% if step.status == 'Pending' %}

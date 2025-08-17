@@ -41,7 +41,12 @@ def submit_for_approval(doc_id: int, user_ids: list[int]) -> Document:
         raise ValueError("Document not found")
     doc.status = "Review"
     steps = [
-        WorkflowStep(doc_id=doc_id, step_order=i, user_id=uid)
+        WorkflowStep(
+            doc_id=doc_id,
+            step_order=i,
+            user_id=uid,
+            step_type="approval",
+        )
         for i, uid in enumerate(user_ids, start=1)
     ]
     session.add_all(steps)

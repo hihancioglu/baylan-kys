@@ -51,8 +51,20 @@ unassigned_doc = Document(doc_key="unassigned.docx", title="Unassigned Approver 
 _session.add_all([assigned_doc, unassigned_doc])
 _session.commit()
 
-assigned_step = WorkflowStep(doc_id=assigned_doc.id, step_order=1, user_id=user1.id, status="Pending")
-unassigned_step = WorkflowStep(doc_id=unassigned_doc.id, step_order=1, user_id=None, status="Pending")
+assigned_step = WorkflowStep(
+    doc_id=assigned_doc.id,
+    step_order=1,
+    user_id=user1.id,
+    status="Pending",
+    step_type="approval",
+)
+unassigned_step = WorkflowStep(
+    doc_id=unassigned_doc.id,
+    step_order=1,
+    user_id=None,
+    status="Pending",
+    step_type="approval",
+)
 _session.add_all([assigned_step, unassigned_step])
 _session.commit()
 assigned_step_id = assigned_step.id

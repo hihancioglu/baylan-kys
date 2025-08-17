@@ -85,6 +85,7 @@ def test_workflow_start_creates_steps_and_approvals(client, workflow_data):
     )
     assert [s.user_id for s in steps] == [reviewer_id, approver_id]
     assert [s.step_order for s in steps] == [1, 2]
+    assert [s.step_type for s in steps] == ["review", "approval"]
     session.close()
 
     with client.session_transaction() as sess:
@@ -94,3 +95,13 @@ def test_workflow_start_creates_steps_and_approvals(client, workflow_data):
     assert resp.status_code == 200
     html = resp.get_data(as_text=True)
     assert "Sample Doc" in html
+    assert "Review" in html
+
+    with client.session_transaction() as sess:
+        sess["user"] = {"id": approver_id}
+        sess["roles"] = ["approver"]
+    resp = client.get("/approvals", headers={"HX-Request": "true"})
+    assert resp.status_code == 200
+    html = resp.get_data(as_text=True)
+    assert "Sample Doc" in html
+    assert "Approval" in html

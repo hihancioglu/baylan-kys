@@ -56,11 +56,6 @@ class Document(Base):
         nullable=False,
     )
 
-    workflow_steps = relationship(
-        "WorkflowStep", back_populates="document", cascade="all, delete-orphan"
-    )
-
-    revisions = relationship("DocumentRevision", back_populates="document", cascade="all, delete-orphan")
 
 class DocumentRevision(Base):
     __tablename__ = "document_revisions"
@@ -73,21 +68,7 @@ class DocumentRevision(Base):
     compare_result = Column(JSON)
     created_at = Column(DateTime, default=datetime.utcnow)
 
-    document = relationship("Document", back_populates="revisions")
-
-
-class WorkflowStep(Base):
-    __tablename__ = "workflow_steps"
-    id = Column(Integer, primary_key=True)
-    doc_id = Column(Integer, ForeignKey("documents.id"), nullable=False)
-    step_order = Column(Integer, nullable=False)
-    user_id = Column(Integer, ForeignKey("users.id"))
-    status = Column(String, default="Pending", nullable=False)
-    approved_at = Column(DateTime)
-    comment = Column(Text)
-
-    document = relationship("Document", back_populates="workflow_steps")
-    user = relationship("User")
+    document = relationship(Document, back_populates="revisions")
 
 
 class Role(Base):
@@ -129,6 +110,25 @@ class DocumentPermission(Base):
 
     role = relationship("Role", back_populates="permissions")
     document = relationship("Document")
+
+
+class WorkflowStep(Base):
+    __tablename__ = "workflow_steps"
+    id = Column(Integer, primary_key=True)
+    doc_id = Column(Integer, ForeignKey("documents.id"), nullable=False)
+    step_order = Column(Integer, nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id"))
+    step_type = Column(
+        Enum("review", "approval", name="workflow_step_type"),
+        default="review",
+        nullable=False,
+    )
+    status = Column(String, default="Pending", nullable=False)
+    approved_at = Column(DateTime)
+    comment = Column(Text)
+
+    document = relationship(Document, back_populates="workflow_steps")
+    user = relationship(User)
 
 
 class Acknowledgement(Base):
@@ -271,6 +271,14 @@ class DepartmentVisibility(Base):
     id = Column(Integer, primary_key=True)
     name = Column(String, unique=True, nullable=False)
     visible = Column(Boolean, default=True, nullable=False)
+
+# establish relationships defined after class declarations
+Document.workflow_steps = relationship(
+    WorkflowStep, back_populates="document", cascade="all, delete-orphan"
+)
+Document.revisions = relationship(
+    DocumentRevision, back_populates="document", cascade="all, delete-orphan"
+)
 
 # Database schema migrations are now managed via Alembic. Tables are created
 # through explicit migration scripts rather than automatic metadata creation.

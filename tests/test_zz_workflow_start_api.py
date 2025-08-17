@@ -73,6 +73,7 @@ def test_workflow_start_status_and_steps(client):
     )
     assert [s.user_id for s in steps] == [reviewer_id, approver_id]
     assert [s.step_order for s in steps] == [1, 2]
+    assert [s.step_type for s in steps] == ["review", "approval"]
     session.close()
 
 
