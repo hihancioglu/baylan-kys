@@ -2,7 +2,7 @@
 {% block content %}
 <h1>Users</h1>
 <table class="table">
-  <thead><tr><th>ID</th><th>Username</th><th>Email</th><th>Roles</th></tr></thead>
+  <thead><tr><th>ID</th><th>Username</th><th>Email</th><th>Roles</th><th>Actions</th></tr></thead>
   <tbody>
   {% for u in users %}
   <tr>
@@ -10,8 +10,75 @@
     <td>{{ u.username }}</td>
     <td>{{ u.email }}</td>
     <td>{% for r in u.roles %}{{ r.role.name }}{% if not loop.last %}, {% endif %}{% endfor %}</td>
+    <td>
+      <button type="button" class="btn btn-sm btn-secondary" data-bs-toggle="modal" data-bs-target="#editRolesModal" data-user-id="{{ u.id }}" data-username="{{ u.username }}" data-roles="{% for r in u.roles %}{{ r.role.name }}{% if not loop.last %},{% endif %}{% endfor %}">Edit</button>
+    </td>
   </tr>
   {% endfor %}
   </tbody>
 </table>
+
+<div class="modal fade" id="editRolesModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Edit Roles for <span id="modalUsername"></span></h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <form id="rolesForm">
+          {% for role in roles %}
+          <div class="form-check">
+            <input class="form-check-input role-checkbox" type="checkbox" id="role-{{ role.name }}" value="{{ role.name }}">
+            <label class="form-check-label" for="role-{{ role.name }}">{{ role.name }}</label>
+          </div>
+          {% endfor %}
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-primary" id="saveRoles">Save</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const editModal = document.getElementById('editRolesModal');
+let currentUserId = null;
+let initialRoles = [];
+editModal.addEventListener('show.bs.modal', event => {
+  const button = event.relatedTarget;
+  currentUserId = button.getAttribute('data-user-id');
+  document.getElementById('modalUsername').textContent = button.getAttribute('data-username');
+  const rolesStr = button.getAttribute('data-roles');
+  initialRoles = rolesStr ? rolesStr.split(',').map(r => r.trim()) : [];
+  document.querySelectorAll('#rolesForm .role-checkbox').forEach(cb => {
+    cb.checked = initialRoles.includes(cb.value);
+  });
+});
+
+document.getElementById('saveRoles').addEventListener('click', async () => {
+  const selected = Array.from(document.querySelectorAll('#rolesForm .role-checkbox'))
+    .filter(cb => cb.checked)
+    .map(cb => cb.value);
+  const toAdd = selected.filter(r => !initialRoles.includes(r));
+  const toRemove = initialRoles.filter(r => !selected.includes(r));
+  for (const role of toAdd) {
+    await fetch('/roles/assign', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({user_id: currentUserId, role})
+    });
+  }
+  for (const role of toRemove) {
+    await fetch('/roles/assign', {
+      method: 'DELETE',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({user_id: currentUserId, role})
+    });
+  }
+  location.reload();
+});
+</script>
 {% endblock %}
