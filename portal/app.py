@@ -502,6 +502,13 @@ def _get_documents():
     if tag:
         query = query.filter(Document.tags.contains(tag))
         filters["tag"] = tag
+    q = request.args.get("q")
+    if q:
+        like = f"%{q}%"
+        query = query.filter(
+            or_(Document.title.ilike(like), Document.code.ilike(like))
+        )
+        filters["q"] = q
 
     page = int(request.args.get("page", 1))
     page_size = int(request.args.get("page_size", 20))
