@@ -33,8 +33,10 @@ function initVersionSelection() {
   const checkboxes = document.querySelectorAll('#tab-versions .version-checkbox');
   const summary = document.getElementById('selected-versions');
   const compareBtn = document.getElementById('compare-button');
-  if (!checkboxes.length || !summary || !compareBtn) return;
+  const compareToBtn = document.getElementById('compare-to-button');
+  if (!checkboxes.length) return;
   const update = () => {
+    if (!summary || !compareBtn) return;
     summary.innerHTML = '';
     const selected = Array.from(checkboxes).filter((cb) => cb.checked);
     selected.forEach((cb) => {
@@ -55,6 +57,24 @@ function initVersionSelection() {
   };
   checkboxes.forEach((cb) => cb.addEventListener('change', update));
   update();
+
+  if (compareToBtn) {
+    const currentRevId = compareToBtn.dataset.revId;
+    const compareUrl = compareToBtn.dataset.url;
+    compareToBtn.addEventListener('click', () => {
+      const other = Array.from(checkboxes).filter(
+        (cb) => cb.checked && cb.value !== currentRevId
+      );
+      if (other.length !== 1) {
+        alert('Select another version to compare.');
+        return;
+      }
+      const url = new URL(compareUrl, window.location.origin);
+      url.searchParams.append('rev_id', currentRevId);
+      url.searchParams.append('rev_id', other[0].value);
+      window.location.href = url.toString();
+    });
+  }
 }
 
 document.addEventListener('DOMContentLoaded', () => {
