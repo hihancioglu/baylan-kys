@@ -10,9 +10,8 @@
            hx-get="/api/dashboard/cards/pending"
            hx-trigger="load, every 10s"
            hx-swap="innerHTML">
-        {% with card='pending' %}
-          {% include 'partials/dashboard/_cards.html' %}
-        {% endwith %}
+        {% set card = 'pending' %}
+        {% include 'partials/dashboard/_cards.html' %}
       </div>
     </div>
   </div>
@@ -24,9 +23,8 @@
            hx-get="/api/dashboard/cards/mandatory"
            hx-trigger="load, every 10s"
            hx-swap="innerHTML">
-        {% with card='mandatory' %}
-          {% include 'partials/dashboard/_cards.html' %}
-        {% endwith %}
+        {% set card = 'mandatory' %}
+        {% include 'partials/dashboard/_cards.html' %}
       </div>
     </div>
   </div>
@@ -38,9 +36,8 @@
            hx-get="/api/dashboard/cards/recent"
            hx-trigger="load, every 10s"
            hx-swap="innerHTML">
-        {% with card='recent' %}
-          {% include 'partials/dashboard/_cards.html' %}
-        {% endwith %}
+        {% set card = 'recent' %}
+        {% include 'partials/dashboard/_cards.html' %}
       </div>
     </div>
   </div>
@@ -52,9 +49,8 @@
            hx-get="/api/dashboard/cards/shortcuts"
            hx-trigger="load, every 10s"
            hx-swap="innerHTML">
-        {% with card='shortcuts' %}
-          {% include 'partials/dashboard/_cards.html' %}
-        {% endwith %}
+        {% set card = 'shortcuts' %}
+        {% include 'partials/dashboard/_cards.html' %}
       </div>
     </div>
   </div>
