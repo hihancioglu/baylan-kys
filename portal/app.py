@@ -828,7 +828,7 @@ def api_start_workflow():
         db.add_all(steps)
         db.commit()
         log_action(user["id"], doc_id, "start_workflow")
-        notify_revision_time(doc, reviewer_ids)
+        notify_revision_time(doc, list(set(all_ids)))
         return jsonify(ok=True)
     finally:
         db.close()
