@@ -284,15 +284,21 @@ def notifications_stream():
 
 
 def _get_pending_approvals(db, user_id: int | None, limit: int = 5):
+    """Return titles and approval URLs for pending workflow steps.
+
+    Older deployments may not yet have the ``user_id`` column.  If the column is
+    missing, we avoid referencing it entirely to prevent ``UndefinedColumn``
+    errors when querying.  Rather than loading whole ``WorkflowStep`` objects –
+    which would implicitly include the missing column in the ``SELECT`` clause –
+    we only select the specific columns we need.
+    """
+
     query = (
-        db.query(WorkflowStep)
+        db.query(Document.title, WorkflowStep.id)
         .join(Document)
         .filter(WorkflowStep.status == "Pending")
     )
 
-    # Older deployments may not yet have the ``user_id`` column.
-    # Avoid referencing the column in queries unless it actually exists
-    # in the connected database to prevent ``UndefinedColumn`` errors.
     inspector = inspect(db.get_bind())
     columns = {c["name"] for c in inspector.get_columns("workflow_steps")}
     if "user_id" in columns:
@@ -307,7 +313,7 @@ def _get_pending_approvals(db, user_id: int | None, limit: int = 5):
         .all()
     )
     return [
-        (s.document.title, url_for("approval_detail", id=s.id)) for s in steps
+        (title, url_for("approval_detail", id=step_id)) for title, step_id in steps
     ]
 
 
