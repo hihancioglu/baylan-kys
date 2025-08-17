@@ -6,14 +6,10 @@
   <div class="col">
     <div class="card h-100">
       <div class="card-header">Pending Approvals</div>
-      <div class="card-body"
-           hx-get="{{ url_for('dashboard_cards_pending') }}"
-           hx-trigger="load, every 10s">
-        <div class="placeholder-glow">
-          <span class="placeholder col-12 mb-2"></span>
-          <span class="placeholder col-12 mb-2"></span>
-          <span class="placeholder col-12 mb-2"></span>
-        </div>
+      <div class="card-body">
+        {% with card='pending' %}
+          {% include 'partials/dashboard/_cards.html' %}
+        {% endwith %}
       </div>
     </div>
   </div>
@@ -21,14 +17,10 @@
   <div class="col">
     <div class="card h-100">
       <div class="card-header">Mandatory Reading</div>
-      <div class="card-body"
-           hx-get="{{ url_for('dashboard_cards_mandatory') }}"
-           hx-trigger="load, every 10s">
-        <div class="placeholder-glow">
-          <span class="placeholder col-12 mb-2"></span>
-          <span class="placeholder col-12 mb-2"></span>
-          <span class="placeholder col-12 mb-2"></span>
-        </div>
+      <div class="card-body">
+        {% with card='mandatory' %}
+          {% include 'partials/dashboard/_cards.html' %}
+        {% endwith %}
       </div>
     </div>
   </div>
@@ -36,14 +28,10 @@
   <div class="col">
     <div class="card h-100">
       <div class="card-header">Recent Changes</div>
-      <div class="card-body"
-           hx-get="{{ url_for('dashboard_cards_recent') }}"
-           hx-trigger="load, every 10s">
-        <div class="placeholder-glow">
-          <span class="placeholder col-12 mb-2"></span>
-          <span class="placeholder col-12 mb-2"></span>
-          <span class="placeholder col-12 mb-2"></span>
-        </div>
+      <div class="card-body">
+        {% with card='recent' %}
+          {% include 'partials/dashboard/_cards.html' %}
+        {% endwith %}
       </div>
     </div>
   </div>
@@ -51,14 +39,10 @@
   <div class="col">
     <div class="card h-100">
       <div class="card-header">Search Shortcuts</div>
-      <div class="card-body"
-           hx-get="{{ url_for('dashboard_cards_shortcuts') }}"
-           hx-trigger="load, every 10s">
-        <div class="placeholder-glow">
-          <span class="placeholder col-12 mb-2"></span>
-          <span class="placeholder col-12 mb-2"></span>
-          <span class="placeholder col-12 mb-2"></span>
-        </div>
+      <div class="card-body">
+        {% with card='shortcuts' %}
+          {% include 'partials/dashboard/_cards.html' %}
+        {% endwith %}
       </div>
     </div>
   </div>
