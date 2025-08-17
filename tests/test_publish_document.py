@@ -46,10 +46,8 @@ def test_publish_assigns_acknowledgements(client, app_models):
     role = m.Role(name="reader")
     session.add_all([publisher, user1, user2, user3, role])
     session.commit()
-    session.add_all([
-        m.UserRole(user_id=user2.id, role_id=role.id),
-        m.UserRole(user_id=user3.id, role_id=role.id),
-    ])
+    user2.roles.append(role)
+    user3.roles.append(role)
     doc = m.Document(doc_key="doc.docx", title="Doc", status="Approved")
     session.add(doc)
     session.commit()

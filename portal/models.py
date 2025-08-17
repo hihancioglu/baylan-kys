@@ -14,6 +14,7 @@ from sqlalchemy import (
     UniqueConstraint,
     Boolean,
     Float,
+    Table,
 )
 from sqlalchemy.orm import declarative_base, relationship, sessionmaker, scoped_session
 import sys
@@ -23,7 +24,7 @@ DATABASE_URL = os.environ.get("DATABASE_URL", "sqlite:///portal.db")
 engine = create_engine(DATABASE_URL)
 SessionLocal = scoped_session(sessionmaker(bind=engine))
 Base = declarative_base()
-sys.modules.setdefault("portal.models", sys.modules[__name__])
+sys.modules["portal.models"] = sys.modules[__name__]
 
 
 class RoleEnum(PyEnum):
@@ -73,46 +74,6 @@ class DocumentRevision(Base):
     document = relationship(Document, back_populates="revisions")
 
 
-class UserRole(Base):
-    __tablename__ = "user_roles"
-    id = Column(Integer, primary_key=True)
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    role_id = Column(Integer, ForeignKey("roles.id"), nullable=False)
-
-    user = relationship("portal.models.User", back_populates="role_links")
-    role = relationship("portal.models.Role", back_populates="user_links")
-    __table_args__ = (UniqueConstraint("user_id", "role_id", name="uq_user_role"),)
-
-
-class Role(Base):
-    __tablename__ = "roles"
-    id = Column(Integer, primary_key=True)
-    name = Column(String, unique=True, nullable=False)
-    ldap_group = Column(String, unique=True)
-
-    user_links = relationship(
-        "portal.models.UserRole", back_populates="role", cascade="all, delete-orphan"
-    )
-    users = relationship(
-        "User", secondary="user_roles", back_populates="roles"
-    )
-    permissions = relationship(
-        "DocumentPermission", back_populates="role", cascade="all, delete-orphan"
-    )
-
-
-class User(Base):
-    __tablename__ = "users"
-    id = Column(Integer, primary_key=True)
-    username = Column(String, unique=True, nullable=False)
-    email = Column(String, unique=True)
-
-    role_links = relationship(
-        "portal.models.UserRole", back_populates="user", cascade="all, delete-orphan"
-    )
-    roles = relationship(
-        "Role", secondary="user_roles", back_populates="users"
-    )
 class DocumentPermission(Base):
     __tablename__ = "document_permissions"
     id = Column(Integer, primary_key=True)
@@ -122,6 +83,39 @@ class DocumentPermission(Base):
 
     role = relationship("Role", back_populates="permissions")
     document = relationship("Document")
+
+
+user_roles = Table(
+    "user_roles",
+    Base.metadata,
+    Column("id", Integer, primary_key=True),
+    Column("user_id", ForeignKey("users.id"), nullable=False),
+    Column("role_id", ForeignKey("roles.id"), nullable=False),
+    UniqueConstraint("user_id", "role_id", name="uq_user_role"),
+)
+
+
+class Role(Base):
+    __tablename__ = "roles"
+    id = Column(Integer, primary_key=True)
+    name = Column(String, unique=True, nullable=False)
+    ldap_group = Column(String, unique=True)
+    users = relationship(
+        "User", secondary=user_roles, back_populates="roles"
+    )
+    permissions = relationship(
+        DocumentPermission, back_populates="role", cascade="all, delete-orphan"
+    )
+
+
+class User(Base):
+    __tablename__ = "users"
+    id = Column(Integer, primary_key=True)
+    username = Column(String, unique=True, nullable=False)
+    email = Column(String, unique=True)
+    roles = relationship(
+        Role, secondary=user_roles, back_populates="users"
+    )
 
 
 class WorkflowStep(Base):
@@ -315,9 +309,8 @@ def seed_roles_and_users():
                 session.add(user)
                 session.commit()
             role_obj = session.query(Role).filter_by(name=role.value).first()
-            link = session.query(UserRole).filter_by(user_id=user.id, role_id=role_obj.id).first()
-            if not link:
-                session.add(UserRole(user_id=user.id, role_id=role_obj.id))
+            if role_obj not in user.roles:
+                user.roles.append(role_obj)
         session.commit()
     finally:
         session.close()
