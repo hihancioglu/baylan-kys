@@ -539,6 +539,11 @@ def list_documents():
     template = "documents/list.html"
     if request.args.get("status", "").lower() == "archived":
         template = "documents/archived.html"
+
+    session = get_session()
+    departments = [d[0] for d in session.query(Document.department).distinct().all()]
+    session.close()
+
     context = {
         "documents": docs,
         "page": page,
@@ -549,6 +554,7 @@ def list_documents():
             {"title": "Home", "url": url_for("index")},
             {"title": "Documents"},
         ],
+        "departments": departments,
     }
     return render_template(template, **context)
 

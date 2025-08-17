@@ -14,19 +14,27 @@
   <h1 class="fw-bold" style="font-size: var(--font-size-lg); margin-bottom: var(--spacing-md);">Documents</h1>
   <form hx-get="{{ url_for('documents_table') }}" hx-target="#document-table" hx-push-url="true" class="row d-none" data-component="filters" style="gap: var(--spacing-sm); margin-bottom: var(--spacing-md);">
   <div class="col-md-3"><input class="form-control" name="q" placeholder="Search" value="{{ filters.q or '' }}" data-filter="text"></div>
-  <div class="col-md-3">
-    <select class="form-select" name="status" data-filter="select">
-      <option value="">Any status</option>
-      <option value="Draft" {% if filters.status=='Draft' %}selected{% endif %}>Draft</option>
-      <option value="Approved" {% if filters.status=='Approved' %}selected{% endif %}>Approved</option>
-      <option value="Published" {% if filters.status=='Published' %}selected{% endif %}>Published</option>
-    </select>
-  </div>
-  <div class="col-md-3">
-    <select class="form-select" multiple name="tags" data-filter="multi-tag">
-      {% for t in filters.tags or [] %}
-      <option value="{{ t }}" selected>{{ t }}</option>
-      {% endfor %}
+    <div class="col-md-3">
+      <select class="form-select" name="status" data-filter="select">
+        <option value="">Any status</option>
+        <option value="Draft" {% if filters.status=='Draft' %}selected{% endif %}>Draft</option>
+        <option value="Approved" {% if filters.status=='Approved' %}selected{% endif %}>Approved</option>
+        <option value="Published" {% if filters.status=='Published' %}selected{% endif %}>Published</option>
+      </select>
+    </div>
+    <div class="col-md-3">
+      <select class="form-select" name="department" data-filter="select">
+        <option value="">Any department</option>
+        {% for d in departments %}
+        <option value="{{ d }}" {% if filters.department == d %}selected{% endif %}>{{ d }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-md-3">
+      <select class="form-select" multiple name="tags" data-filter="multi-tag">
+        {% for t in filters.tags or [] %}
+        <option value="{{ t }}" selected>{{ t }}</option>
+        {% endfor %}
     </select>
   </div>
   <div class="col-md-3">
