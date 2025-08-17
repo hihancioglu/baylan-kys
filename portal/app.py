@@ -574,10 +574,18 @@ def new_document():
             form_data = session.pop("new_doc", {})
             user = session.get("user")
             roles = session.get("roles", [])
-            with app.test_request_context("/documents", method="POST", data=form_data):
+            with app.test_request_context("/api/documents", method="POST", json=form_data):
                 session["user"] = user
                 session["roles"] = roles
-                return create_document()
+                response = create_document()
+            if isinstance(response, tuple):
+                resp, status = response
+            else:
+                resp, status = response, response.status_code
+            if status == 201:
+                doc_id = resp.get_json().get("id")
+                return redirect(url_for("document_detail", doc_id=doc_id))
+            return resp, status
 
     template = f"documents/new_step{step}.html"
     context = {
@@ -837,6 +845,7 @@ def revise_document(id: int):
 
 
 @app.post("/documents")
+@app.post("/api/documents")
 @roles_required(RoleEnum.CONTRIBUTOR.value)
 def create_document():
     if request.form:

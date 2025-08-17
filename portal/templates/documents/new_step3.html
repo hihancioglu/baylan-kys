@@ -9,5 +9,33 @@
   <p><strong>Department:</strong> {{ form.department }}</p>
   <p><strong>Type:</strong> {{ form.type }}</p>
   <button type="submit" class="btn btn-primary">Create</button>
+  <button type="button" id="save-draft" class="btn btn-secondary ms-2">Taslak olarak kaydet</button>
 </form>
+<script>
+document.getElementById('save-draft').addEventListener('click', async () => {
+  const data = {
+    code: "{{ form.code }}",
+    title: "{{ form.title }}",
+    department: "{{ form.department }}",
+    process: "{{ form.type }}",
+    tags: "{{ form.tags }}".split(',').map(t => t.trim()).filter(Boolean),
+    template: "{{ form.template }}",
+    uploaded_file_name: "{{ form.uploaded_file_name }}",
+    uploaded_file_data: "{{ form.uploaded_file_data }}",
+    generate_docxf: {{ 'true' if form.generate_docxf else 'false' }}
+  };
+  const response = await fetch('/api/documents', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRFToken': '{{ csrf_token() }}'
+    },
+    body: JSON.stringify(data)
+  });
+  const result = await response.json();
+  if (result.id) {
+    window.location = `/documents/${result.id}`;
+  }
+});
+</script>
 {% endblock %}
