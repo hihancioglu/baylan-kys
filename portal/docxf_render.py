@@ -55,10 +55,14 @@ def render_form(form_name: str, data: dict | None = None, outputtype: str = "pdf
     return response.content
 
 
-def render_form_and_store(form_name: str, data: dict | None = None) -> bytes:
+def render_form_and_store(form_name: str, data: dict | None = None) -> tuple[bytes, str, str]:
     """Render a DOCXF form to DOCX and PDF and store both in S3.
 
-    Returns the PDF bytes.
+    Returns
+    -------
+    tuple
+        A tuple containing the generated PDF bytes, the DOCX object key and
+        the PDF object key.
     """
     timestamp = datetime.utcnow().strftime("%Y%m%d%H%M%S")
     base_key = f"forms/{form_name}/{timestamp}/form"
@@ -66,7 +70,10 @@ def render_form_and_store(form_name: str, data: dict | None = None) -> bytes:
     docx_bytes = render_form(form_name, data, "docx")
     pdf_bytes = render_form(form_name, data, "pdf")
 
-    _s3.put_object(Bucket=S3_BUCKET, Key=f"{base_key}.docx", Body=docx_bytes)
-    _s3.put_object(Bucket=S3_BUCKET, Key=f"{base_key}.pdf", Body=pdf_bytes)
+    docx_key = f"{base_key}.docx"
+    pdf_key = f"{base_key}.pdf"
 
-    return pdf_bytes
+    _s3.put_object(Bucket=S3_BUCKET, Key=docx_key, Body=docx_bytes)
+    _s3.put_object(Bucket=S3_BUCKET, Key=pdf_key, Body=pdf_bytes)
+
+    return pdf_bytes, docx_key, pdf_key
