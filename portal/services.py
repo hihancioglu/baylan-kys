@@ -3,8 +3,6 @@ from models import (
     Document,
     DocumentRevision,
     WorkflowStep,
-    Role,
-    UserRole,
 )
 
 
@@ -34,7 +32,7 @@ def restore_version(doc_id: int, version: str) -> Document:
     return doc
 
 
-def submit_for_approval(doc_id: int) -> Document:
+def submit_for_approval(doc_id: int, user_ids: list[int]) -> Document:
     """Move a document to review state and create workflow steps."""
     session = get_session()
     doc = session.get(Document, doc_id)
@@ -43,20 +41,14 @@ def submit_for_approval(doc_id: int) -> Document:
         raise ValueError("Document not found")
     doc.status = "Review"
     steps = [
-        WorkflowStep(doc_id=doc_id, step_order=i, approver=approver)
-        for i, approver in enumerate(["manager", "quality"], start=1)
+        WorkflowStep(doc_id=doc_id, step_order=i, user_id=uid)
+        for i, uid in enumerate(user_ids, start=1)
     ]
     session.add_all(steps)
     session.commit()
     session.refresh(doc)
-    approver_ids = []
-    for step in steps:
-        role = session.query(Role).filter_by(name=step.approver).first()
-        if role:
-            ids = [ur.user_id for ur in session.query(UserRole).filter_by(role_id=role.id).all()]
-            approver_ids.extend(ids)
     session.close()
     from notifications import notify_approval_queue
 
-    notify_approval_queue(doc, approver_ids)
+    notify_approval_queue(doc, user_ids)
     return doc

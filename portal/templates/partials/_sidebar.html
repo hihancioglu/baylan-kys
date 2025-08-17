@@ -10,7 +10,7 @@
     {% if has_role('reader') %}
     <li class="nav-item"><a class="nav-link {% if p.startswith('/mandatory-reading') %}active{% endif %}" href="/mandatory-reading">Mandatory Reading</a></li>
     {% endif %}
-    {% if has_role('approver') %}
+    {% if has_role('approver') or has_role('reviewer') %}
     <li class="nav-item"><a class="nav-link {% if p.startswith('/approvals') %}active{% endif %}" href="/approvals">Approvals</a></li>
     {% endif %}
     {% if has_role('reader') %}

@@ -83,10 +83,10 @@ def notify_user(user_id: int, subject: str, body: str) -> None:
         if user_email:
             send_email(user_email, subject, body)
 
-def notify_approval_queue(doc, approver_ids):
+def notify_approval_queue(doc, user_ids):
     subject = f"Document {doc.title} awaiting approval"
     body = f"Document {doc.title} is waiting for your approval."
-    for uid in approver_ids:
+    for uid in user_ids:
         notify_user(uid, subject, body)
 
 def notify_revision_time(doc, user_ids):

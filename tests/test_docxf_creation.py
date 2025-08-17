@@ -24,12 +24,19 @@ sys.path.insert(0, str(repo_root / "portal"))
 import boto3
 from botocore.stub import Stubber, ANY
 import pytest
-
-from portal.app import app
-from portal.models import Base, engine, SessionLocal, Document
-from portal import storage, docxf_render
-import portal.app as portal_app
+import importlib
+import app as portal_app
+import models as m
 import docxf_render as docxf_render_module
+from portal import storage, docxf_render
+importlib.reload(m)
+importlib.reload(portal_app)
+importlib.reload(docxf_render_module)
+Base = m.Base
+engine = m.engine
+SessionLocal = m.SessionLocal
+Document = m.Document
+app = portal_app.app
 
 
 # Create database schema
