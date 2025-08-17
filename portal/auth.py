@@ -129,7 +129,7 @@ def api_login():
     if wants_json:
         resp = jsonify(status='ok')
     else:
-        resp = redirect(url_for('index'))
+        resp = redirect(url_for('dashboard'))
     resp.set_cookie('access_token', access_token, httponly=True, samesite='Strict')
     resp.set_cookie('refresh_token', refresh_token, httponly=True, samesite='Strict')
     return resp
