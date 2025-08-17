@@ -222,11 +222,11 @@ def sse_events():
     db.close()
 
     def stream():
-        yield f"data: {json.dumps(counts)}\n\n"
+        yield f"event: counts\ndata: {json.dumps(counts)}\n\n"
         try:
             while True:
                 data = q.get()
-                yield f"data: {data}\n\n"
+                yield f"event: counts\ndata: {data}\n\n"
         finally:
             sse_clients.remove(client)
 

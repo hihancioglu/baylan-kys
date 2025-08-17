@@ -50,17 +50,19 @@ console.log('app loaded');
 
 function connectEvents() {
   const evt = new EventSource('/events');
-  evt.onmessage = (e) => {
+  evt.addEventListener('counts', (e) => {
     try {
       const data = JSON.parse(e.data);
       const approvalEl = document.getElementById('approval-count');
       if (approvalEl) approvalEl.textContent = data.approvals;
       const ackEl = document.getElementById('ack-count');
       if (ackEl) ackEl.textContent = data.acknowledgements;
+      const notifEl = document.getElementById('notif-count');
+      if (notifEl) notifEl.textContent = (data.approvals || 0) + (data.acknowledgements || 0);
     } catch (err) {
       console.error('Failed to parse event', err);
     }
-  };
+  });
   evt.onerror = () => {
     evt.close();
     setTimeout(connectEvents, 1000);
