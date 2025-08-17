@@ -80,6 +80,7 @@ class DocumentPermission(Base):
     role_id = Column(Integer, ForeignKey("roles.id"), nullable=False)
     doc_id = Column(Integer, ForeignKey("documents.id"))
     folder = Column(String)
+    can_download = Column(Boolean, default=True)
 
     role = relationship("Role", back_populates="permissions")
     document = relationship("Document")

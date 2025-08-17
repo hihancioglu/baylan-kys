@@ -20,6 +20,7 @@
     <li class="nav-item"><a class="nav-link {% if p.startswith('/reports') %}active{% endif %}" href="/reports">Reports</a></li>
     {% endif %}
     {% if has_role('quality_admin') %}
+    <li class="nav-item"><a class="nav-link {% if p.startswith('/permissions') %}active{% endif %}" href="/permissions">Permissions</a></li>
     <li class="nav-item"><a class="nav-link {% if p.startswith('/settings') %}active{% endif %}" href="/settings">Settings</a></li>
     {% endif %}
   </ul>

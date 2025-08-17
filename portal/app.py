@@ -15,6 +15,7 @@ from auth import auth_bp, init_app as auth_init, login_required, roles_required
 from models import (
     Document,
     DocumentRevision,
+    DocumentPermission,
     User,
     Role,
     Acknowledgement,
@@ -792,7 +793,7 @@ def download_document(doc_id: int):
         if not doc:
             return "Document not found", 404
         user = session.get("user")
-        if not user or not permission_check(user["id"], doc):
+        if not user or not permission_check(user["id"], doc, download=True):
             return "Forbidden", 403
         url = generate_presigned_url(doc.doc_key)
         if not url:
@@ -2464,6 +2465,41 @@ def delete_token(token_id):
         session.commit()
     session.close()
     return redirect(url_for("user_settings", user_id=user_id))
+
+
+@app.route("/permissions", methods=["GET", "POST"])
+@roles_required(RoleEnum.QUALITY_ADMIN.value)
+def manage_permissions():
+    db = get_session()
+    q = request.values.get("q", "")
+    try:
+        query = (
+            db.query(DocumentPermission)
+            .outerjoin(Document)
+            .join(Role)
+        )
+        if q:
+            like = f"%{q}%"
+            query = query.filter(or_(Document.title.ilike(like), DocumentPermission.folder.ilike(like)))
+        perms = query.all()
+        if request.method == "POST":
+            perm_id = int(request.form.get("perm_id"))
+            perm = db.get(DocumentPermission, perm_id)
+            if perm:
+                perm.can_download = bool(request.form.get("can_download"))
+                db.commit()
+            return redirect(url_for("manage_permissions", q=q))
+        return render_template(
+            "permissions.html",
+            permissions=perms,
+            search=q,
+            breadcrumbs=[
+                {"title": "Home", "url": url_for("index")},
+                {"title": "Permissions"},
+            ],
+        )
+    finally:
+        db.close()
 
 
 @app.get("/training/<int:id>")
