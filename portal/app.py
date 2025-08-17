@@ -785,7 +785,9 @@ def start_workflow():
             return jsonify(error="document not found"), 404
         doc.status = "Review"
         steps = [
-            WorkflowStep(doc_id=doc_id, step_order=i, user_id=rid)
+            WorkflowStep(
+                doc_id=doc_id, step_order=i, user_id=rid, step_type="review"
+            )
             for i, rid in enumerate(reviewer_ids, start=1)
         ]
         db.add_all(steps)
@@ -821,10 +823,28 @@ def api_start_workflow():
             return jsonify(error="document not found"), 404
         doc.status = "Review"
         all_ids = reviewer_ids + approver_ids
-        steps = [
-            WorkflowStep(doc_id=doc_id, step_order=i, user_id=uid)
-            for i, uid in enumerate(all_ids, start=1)
-        ]
+        steps = []
+        order = 1
+        for uid in reviewer_ids:
+            steps.append(
+                WorkflowStep(
+                    doc_id=doc_id,
+                    step_order=order,
+                    user_id=uid,
+                    step_type="review",
+                )
+            )
+            order += 1
+        for uid in approver_ids:
+            steps.append(
+                WorkflowStep(
+                    doc_id=doc_id,
+                    step_order=order,
+                    user_id=uid,
+                    step_type="approval",
+                )
+            )
+            order += 1
         db.add_all(steps)
         db.commit()
         log_action(user["id"], doc_id, "start_workflow")

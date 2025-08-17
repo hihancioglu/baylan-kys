@@ -62,9 +62,9 @@ def models():
     session.add_all([assigned_doc1, assigned_doc2, unassigned_doc, mandatory_doc1, mandatory_doc2])
     session.commit()
 
-    step1 = WorkflowStep(doc_id=assigned_doc1.id, step_order=1, user_id=user.id, status="Pending")
-    step2 = WorkflowStep(doc_id=assigned_doc2.id, step_order=1, user_id=user.id, status="Pending")
-    step3 = WorkflowStep(doc_id=unassigned_doc.id, step_order=1, user_id=None, status="Pending")
+    step1 = WorkflowStep(doc_id=assigned_doc1.id, step_order=1, user_id=user.id, status="Pending", step_type="approval")
+    step2 = WorkflowStep(doc_id=assigned_doc2.id, step_order=1, user_id=user.id, status="Pending", step_type="approval")
+    step3 = WorkflowStep(doc_id=unassigned_doc.id, step_order=1, user_id=None, status="Pending", step_type="approval")
     session.add_all([step1, step2, step3])
     session.commit()
 

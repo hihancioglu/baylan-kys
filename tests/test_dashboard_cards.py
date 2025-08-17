@@ -55,7 +55,13 @@ recent_doc = Document(doc_key="recent.docx", title="Recent Doc", status="Publish
 session.add_all([pending_doc, mandatory_doc, recent_doc])
 session.commit()
 
-step = WorkflowStep(doc_id=pending_doc.id, step_order=1, user_id=user.id, status="Pending")
+step = WorkflowStep(
+    doc_id=pending_doc.id,
+    step_order=1,
+    user_id=user.id,
+    status="Pending",
+    step_type="approval",
+)
 revision = DocumentRevision(doc_id=recent_doc.id, major_version=1, minor_version=0)
 
 session.add_all([step, revision])
@@ -98,7 +104,13 @@ def test_dashboard_card_endpoints(client):
     recent_doc = Document(doc_key="recent.docx", title="Recent Doc", status="Published")
     session.add_all([pending_doc, mandatory_doc, recent_doc])
     session.commit()
-    step = WorkflowStep(doc_id=pending_doc.id, step_order=1, user_id=user.id, status="Pending")
+    step = WorkflowStep(
+        doc_id=pending_doc.id,
+        step_order=1,
+        user_id=user.id,
+        status="Pending",
+        step_type="approval",
+    )
     revision = DocumentRevision(doc_id=recent_doc.id, major_version=1, minor_version=0)
     session.add_all([step, revision])
     session.commit()
