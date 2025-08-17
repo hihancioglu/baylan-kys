@@ -1,134 +1,103 @@
-import os
-from pathlib import Path
-import sys
-
-# Ensure environment variables before importing application
-os.environ.setdefault("ONLYOFFICE_INTERNAL_URL", "http://oo")
-os.environ.setdefault("ONLYOFFICE_PUBLIC_URL", "http://oo-public")
-os.environ.setdefault("ONLYOFFICE_JWT_SECRET", "secret")
-os.environ.setdefault("S3_ENDPOINT", "http://s3")
-
-db_path = Path("test.db")
-if db_path.exists():
-    db_path.unlink()
-os.environ["DATABASE_URL"] = f"sqlite:///{db_path}"
-
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "portal"))
-
-from flask import url_for
-import pytest
-
 import importlib
-import models as m
-import app as a
-importlib.reload(m)
-importlib.reload(a)
-SessionLocal = m.SessionLocal
-Document = m.Document
-WorkflowStep = m.WorkflowStep
-DocumentRevision = m.DocumentRevision
-User = m.User
-Base = m.Base
-engine = m.engine
-app = a.app
+import os
+import sys
+from pathlib import Path
+
+import pytest
+from flask import url_for
 
 
-# Create database schema
-Base.metadata.create_all(bind=engine)
+@pytest.fixture
+def app_models(tmp_path):
+    os.environ.setdefault("ONLYOFFICE_INTERNAL_URL", "http://oo")
+    os.environ.setdefault("ONLYOFFICE_PUBLIC_URL", "http://oo-public")
+    os.environ.setdefault("ONLYOFFICE_JWT_SECRET", "secret")
+    os.environ.setdefault("S3_ENDPOINT", "http://s3")
 
-# Populate sample data
-session = SessionLocal()
+    db_path = tmp_path / "test.db"
+    os.environ["DATABASE_URL"] = f"sqlite:///{db_path}"
 
-# Create a user to assign approval steps
-user = User(username="approver")
-session.add(user)
-session.commit()
+    repo_root = Path(__file__).resolve().parent.parent
+    portal_path = repo_root / "portal"
+    sys.path.insert(0, str(portal_path))
 
-# Document needing approval
-pending_doc = Document(doc_key="pending.docx", title="Pending Doc", status="Review")
-# Document for mandatory reading
-mandatory_doc = Document(doc_key="mandatory.docx", title="Mandatory Doc", status="Published")
-# Document with recent revision
-recent_doc = Document(doc_key="recent.docx", title="Recent Doc", status="Published")
+    import models as m
+    import app as a
+    m = importlib.reload(m)
+    a = importlib.reload(a)
 
-session.add_all([pending_doc, mandatory_doc, recent_doc])
-session.commit()
+    m.Base.metadata.create_all(bind=m.engine)
+    session = m.SessionLocal()
 
-step = WorkflowStep(
-    doc_id=pending_doc.id,
-    step_order=1,
-    user_id=user.id,
-    status="Pending",
-    step_type="approval",
-)
-revision = DocumentRevision(doc_id=recent_doc.id, major_version=1, minor_version=0)
-
-session.add_all([step, revision])
-session.commit()
-step_id = step.id
-revision_id = revision.id
-pending_doc_id = pending_doc.id
-mandatory_doc_id = mandatory_doc.id
-recent_doc_id = recent_doc.id
-session.close()
-
-
-@pytest.fixture()
-def client():
-    return app.test_client()
-
-
-def test_dashboard_card_endpoints(client):
-    import importlib, models as m, app as a
-    importlib.reload(m)
-    importlib.reload(a)
-    global SessionLocal, Document, WorkflowStep, DocumentRevision, User, Base, engine, app, step_id, revision_id, mandatory_doc_id, recent_doc_id, pending_doc_id
-    SessionLocal = m.SessionLocal
-    Document = m.Document
-    WorkflowStep = m.WorkflowStep
-    DocumentRevision = m.DocumentRevision
-    User = m.User
-    Base = m.Base
-    engine = m.engine
-    app = a.app
-
-    Base.metadata.drop_all(bind=engine)
-    Base.metadata.create_all(bind=engine)
-    session = SessionLocal()
-    user = User(username="approver")
+    user = m.User(username="approver")
     session.add(user)
     session.commit()
-    pending_doc = Document(doc_key="pending.docx", title="Pending Doc", status="Review")
-    mandatory_doc = Document(doc_key="mandatory.docx", title="Mandatory Doc", status="Published")
-    recent_doc = Document(doc_key="recent.docx", title="Recent Doc", status="Published")
+
+    pending_doc = m.Document(
+        doc_key="pending.docx", title="Pending Doc", status="Review"
+    )
+    mandatory_doc = m.Document(
+        doc_key="mandatory.docx", title="Mandatory Doc", status="Published"
+    )
+    recent_doc = m.Document(
+        doc_key="recent.docx", title="Recent Doc", status="Published"
+    )
     session.add_all([pending_doc, mandatory_doc, recent_doc])
     session.commit()
-    step = WorkflowStep(
+
+    step = m.WorkflowStep(
         doc_id=pending_doc.id,
         step_order=1,
         user_id=user.id,
         status="Pending",
         step_type="approval",
     )
-    revision = DocumentRevision(doc_id=recent_doc.id, major_version=1, minor_version=0)
+    revision = m.DocumentRevision(
+        doc_id=recent_doc.id, major_version=1, minor_version=0
+    )
     session.add_all([step, revision])
     session.commit()
-    step_id = step.id
-    revision_id = revision.id
-    pending_doc_id = pending_doc.id
-    mandatory_doc_id = mandatory_doc.id
-    recent_doc_id = recent_doc.id
+
+    data = {
+        "app": a.app,
+        "models": m,
+        "step_id": step.id,
+        "revision_id": revision.id,
+        "pending_doc_id": pending_doc.id,
+        "mandatory_doc_id": mandatory_doc.id,
+        "recent_doc_id": recent_doc.id,
+    }
     session.close()
+
+    try:
+        yield data
+    finally:
+        m.Base.metadata.drop_all(bind=m.engine)
+        if db_path.exists():
+            db_path.unlink()
+        if str(portal_path) in sys.path:
+            sys.path.remove(str(portal_path))
+
+
+@pytest.fixture
+def client(app_models):
+    return app_models["app"].test_client()
+
+
+def test_dashboard_card_endpoints(app_models, client):
+    app = app_models["app"]
+    step_id = app_models["step_id"]
+    revision_id = app_models["revision_id"]
+    pending_doc_id = app_models["pending_doc_id"]
+    mandatory_doc_id = app_models["mandatory_doc_id"]
+    recent_doc_id = app_models["recent_doc_id"]
 
     with client.session_transaction() as sess:
         sess["user"] = {"id": 1, "name": "Tester"}
         sess["roles"] = ["approver", "reader"]
 
     # Pending approvals
-    resp = client.get(
-        "/api/dashboard/cards/pending", headers={"HX-Request": "true"}
-    )
+    resp = client.get("/api/dashboard/cards/pending", headers={"HX-Request": "true"})
     assert resp.status_code == 200
     html = resp.get_data(as_text=True)
     with app.test_request_context():
@@ -147,9 +116,7 @@ def test_dashboard_card_endpoints(client):
     assert mandatory_url in html
 
     # Recent revisions
-    resp = client.get(
-        "/api/dashboard/cards/recent", headers={"HX-Request": "true"}
-    )
+    resp = client.get("/api/dashboard/cards/recent", headers={"HX-Request": "true"})
     assert resp.status_code == 200
     html = resp.get_data(as_text=True)
     with app.test_request_context():
@@ -162,3 +129,4 @@ def test_dashboard_card_endpoints(client):
     # Dashboard main page loads successfully
     resp = client.get("/")
     assert resp.status_code == 200
+
