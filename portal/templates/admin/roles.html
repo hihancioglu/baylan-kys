@@ -1,6 +1,8 @@
 {% extends "base.html" %}
 {% block content %}
-<h1>Assign Role</h1>
+<h1>Roles</h1>
+
+<h2>Assign Role</h2>
 <form id="roleForm">
   <div class="mb-3">
     <label>User
@@ -22,6 +24,38 @@
   </div>
   <button class="btn btn-primary" type="submit">Assign</button>
 </form>
+
+<h2 class="mt-4">Add Role</h2>
+<form id="newRoleForm" class="d-flex mb-4">
+  <input class="form-control me-2" name="role" placeholder="Role name">
+  <button class="btn btn-success" type="submit">Add</button>
+</form>
+
+<h2>Existing Roles</h2>
+<table class="table">
+  <thead><tr><th>Name</th><th>Users</th><th>Actions</th></tr></thead>
+  <tbody>
+  {% for r in roles %}
+    <tr>
+      <td>{{ r.name }}</td>
+      <td>
+        <button type="button" class="btn btn-sm btn-secondary" data-bs-toggle="collapse" data-bs-target="#role-users-{{ r.id }}" aria-expanded="false">View Users</button>
+        <div class="collapse mt-2" id="role-users-{{ r.id }}">
+          <ul class="mb-0">
+            {% for u in r.users %}
+            <li>{{ u.username }}</li>
+            {% else %}
+            <li><em>No users</em></li>
+            {% endfor %}
+          </ul>
+        </div>
+      </td>
+      <td><button type="button" class="btn btn-sm btn-danger delete-role" data-role="{{ r.name }}">Delete</button></td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+
 <script>
 const form = document.getElementById('roleForm');
 form.addEventListener('submit', async (e) => {
@@ -33,6 +67,32 @@ form.addEventListener('submit', async (e) => {
     body: JSON.stringify(data)
   });
   location.reload();
+});
+
+const newRoleForm = document.getElementById('newRoleForm');
+newRoleForm.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const role = newRoleForm.role.value.trim();
+  if (!role) return;
+  await fetch('/roles', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({role})
+  });
+  location.reload();
+});
+
+document.querySelectorAll('.delete-role').forEach(btn => {
+  btn.addEventListener('click', async () => {
+    const role = btn.getAttribute('data-role');
+    if (!confirm(`Delete role ${role}?`)) return;
+    await fetch('/roles', {
+      method: 'DELETE',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({role})
+    });
+    location.reload();
+  });
 });
 </script>
 {% endblock %}

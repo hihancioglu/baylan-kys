@@ -1731,6 +1731,50 @@ def remove_role():
         session.close()
 
 
+@app.post("/roles")
+@roles_required(RoleEnum.QUALITY_ADMIN.value)
+def create_role():
+    """Create a new role."""
+    data = request.get_json(silent=True) or {}
+    role_name = data.get("role")
+    if not role_name:
+        return jsonify(error="role required"), 400
+    session = get_session()
+    try:
+        existing = session.query(Role).filter_by(name=role_name).first()
+        if existing:
+            return jsonify(error="role exists"), 400
+        role = Role(name=role_name)
+        session.add(role)
+        session.commit()
+        log_action(None, None, f"create_role:{role_name}")
+        return jsonify(ok=True)
+    finally:
+        session.close()
+
+
+@app.delete("/roles")
+@roles_required(RoleEnum.QUALITY_ADMIN.value)
+def delete_role():
+    """Delete a role entirely."""
+    data = request.get_json(silent=True) or {}
+    role_name = data.get("role")
+    if not role_name:
+        return jsonify(error="role required"), 400
+    session = get_session()
+    try:
+        role = session.query(Role).filter_by(name=role_name).first()
+        if not role:
+            return jsonify(error="role not found"), 404
+        role.users.clear()
+        session.delete(role)
+        session.commit()
+        log_action(None, None, f"delete_role:{role_name}")
+        return jsonify(ok=True)
+    finally:
+        session.close()
+
+
 @app.get("/admin/users")
 @roles_required(RoleEnum.QUALITY_ADMIN.value)
 def admin_users_page():
