@@ -363,60 +363,27 @@ def profile_view():
     )
 
 
-@app.get("/api/dashboard/cards/pending")
+@app.get("/api/dashboard/cards/<card>")
 @login_required
-def dashboard_cards_pending():
-    db = get_session()
-    try:
-        pending = _get_pending_approvals(db)
-        return render_template(
-            "partials/dashboard/_cards.html",
-            card="pending",
-            pending_approvals=pending,
-        )
-    finally:
-        db.close()
-
-
-@app.get("/api/dashboard/cards/mandatory")
-@login_required
-def dashboard_cards_mandatory():
+def dashboard_cards(card):
     db = get_session()
     try:
         user = session.get("user") or {}
-        mandatory = _get_mandatory_reading(db, user.get("id"))
-        return render_template(
-            "partials/dashboard/_cards.html",
-            card="mandatory",
-            mandatory_reading=mandatory,
-        )
+        user_id = user.get("id")
+        context = {"card": card}
+        if card == "pending":
+            context["pending_approvals"] = _get_pending_approvals(db)
+        elif card == "mandatory":
+            context["mandatory_reading"] = _get_mandatory_reading(db, user_id)
+        elif card == "recent":
+            context["recent_revisions"] = _get_recent_revisions(db)
+        elif card == "shortcuts":
+            context["search_shortcuts"] = _get_search_shortcuts()
+        else:
+            return ("", 404)
+        return render_template("partials/dashboard/_cards.html", **context)
     finally:
         db.close()
-
-
-@app.get("/api/dashboard/cards/recent")
-@login_required
-def dashboard_cards_recent():
-    db = get_session()
-    try:
-        recent = _get_recent_revisions(db)
-        return render_template(
-            "partials/dashboard/_cards.html",
-            card="recent",
-            recent_revisions=recent,
-        )
-    finally:
-        db.close()
-
-
-@app.get("/api/dashboard/cards/shortcuts")
-@login_required
-def dashboard_cards_shortcuts():
-    return render_template(
-        "partials/dashboard/_cards.html",
-        card="shortcuts",
-        search_shortcuts=_get_search_shortcuts(),
-    )
 
 
 @app.get("/api/dashboard/pending-approvals")
