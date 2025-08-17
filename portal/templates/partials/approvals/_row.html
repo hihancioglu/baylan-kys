@@ -6,8 +6,8 @@
   <td>{{ step.comment or '' }}</td>
   <td>
     {% if step.status == 'Pending' %}
-    <button class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#approveModal-{{ step.id }}">Approve</button>
-    <button class="btn btn-danger btn-sm" data-bs-toggle="modal" data-bs-target="#rejectModal-{{ step.id }}">Reject</button>
+    <button class="btn btn-success btn-sm" hx-post="/api/approvals/{{ step.id }}/approve" hx-target="#step-{{ step.id }}" hx-swap="outerHTML">Approve</button>
+    <button class="btn btn-danger btn-sm" hx-post="/api/approvals/{{ step.id }}/reject" hx-target="#step-{{ step.id }}" hx-swap="outerHTML">Reject</button>
     {% else %}
     {{ step.status }}
     {% endif %}
