@@ -255,6 +255,7 @@ class AuditLog(Base):
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     doc_id = Column(Integer, ForeignKey("documents.id"))
     action = Column(String, nullable=False)
+    endpoint = Column(String)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
 
     user = relationship("User")

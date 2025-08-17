@@ -132,11 +132,11 @@ def sign_payload(payload: dict) -> str:
     return b'.'.join(segs).decode()
 
 
-def log_action(user_id, doc_id, action):
+def log_action(user_id, doc_id, action, endpoint=None):
     """Persist an audit log entry."""
     session = get_session()
     try:
-        session.add(AuditLog(user_id=user_id, doc_id=doc_id, action=action))
+        session.add(AuditLog(user_id=user_id, doc_id=doc_id, action=action, endpoint=endpoint))
         session.commit()
     finally:
         session.close()
@@ -1686,25 +1686,27 @@ def assign_role():
     role_name = data.get("role")
     if not user_id or not role_name:
         return jsonify(error="user_id and role required"), 400
-    session = get_session()
+    admin_id = session.get("user", {}).get("id")
+    db = get_session()
     try:
-        user = session.get(User, user_id)
+        user = db.get(User, user_id)
         if not user:
             user = User(id=user_id, username=data.get("username", str(user_id)), email=data.get("email"))
-            session.add(user)
-            session.commit()
-        role = session.query(Role).filter_by(name=role_name).first()
+            db.add(user)
+            db.commit()
+        role = db.query(Role).filter_by(name=role_name).first()
         if not role:
             role = Role(name=role_name)
-            session.add(role)
-            session.commit()
+            db.add(role)
+            db.commit()
+        log_action(admin_id, None, f"assign_role_before:{user_id}:{role_name}", endpoint="/roles/assign")
         if role not in user.roles:
             user.roles.append(role)
-        session.commit()
-        log_action(user_id, None, f"assign_role:{role_name}")
+        db.commit()
+        log_action(admin_id, None, f"assign_role_after:{user_id}:{role_name}", endpoint="/roles/assign")
         return jsonify(ok=True)
     finally:
-        session.close()
+        db.close()
 
 
 @app.delete("/roles/assign")
@@ -1716,19 +1718,21 @@ def remove_role():
     role_name = data.get("role")
     if not user_id or not role_name:
         return jsonify(error="user_id and role required"), 400
-    session = get_session()
+    admin_id = session.get("user", {}).get("id")
+    db = get_session()
     try:
-        user = session.get(User, user_id)
-        role = session.query(Role).filter_by(name=role_name).first()
+        user = db.get(User, user_id)
+        role = db.query(Role).filter_by(name=role_name).first()
         if not user or not role:
             return jsonify(error="role not found"), 404
+        log_action(admin_id, None, f"remove_role_before:{user_id}:{role_name}", endpoint="/roles/assign")
         if role in user.roles:
             user.roles.remove(role)
-            session.commit()
-            log_action(user_id, None, f"remove_role:{role_name}")
+            db.commit()
+        log_action(admin_id, None, f"remove_role_after:{user_id}:{role_name}", endpoint="/roles/assign")
         return jsonify(ok=True)
     finally:
-        session.close()
+        db.close()
 
 
 @app.post("/roles")
@@ -1833,6 +1837,26 @@ def admin_departments_page():
                 {"title": "Home", "url": url_for("index")},
                 {"title": "Admin"},
                 {"title": "Departments"},
+            ],
+        )
+    finally:
+        db.close()
+
+
+@app.get("/admin/audit")
+@roles_required(RoleEnum.QUALITY_ADMIN.value)
+def admin_audit_page():
+    """Render audit log list page."""
+    db = get_session()
+    try:
+        logs = db.query(AuditLog).order_by(AuditLog.created_at.desc()).limit(100).all()
+        return render_template(
+            "admin/audit.html",
+            logs=logs,
+            breadcrumbs=[
+                {"title": "Home", "url": url_for("index")},
+                {"title": "Admin"},
+                {"title": "Audit Logs"},
             ],
         )
     finally:
