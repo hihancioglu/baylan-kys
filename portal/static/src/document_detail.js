@@ -63,8 +63,10 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 document.addEventListener('htmx:afterSwap', (evt) => {
-  if (evt.target.id === 'tab-versions') {
+  if (evt.target.id === 'tab-versions' || evt.target.id === 'revision-panel') {
     initVersionSelection();
-    window.scrollTo(0, 0);
+    if (evt.target.id === 'tab-versions') {
+      window.scrollTo(0, 0);
+    }
   }
 });
