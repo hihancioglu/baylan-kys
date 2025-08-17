@@ -22,7 +22,9 @@
         <div id="revision-note">
           <h5>Version {{ revision.major_version }}.{{ revision.minor_version }}</h5>
           <p>{{ revision.revision_notes or 'No revision notes.' }}</p>
-          <a class="btn btn-outline-primary mt-2" href="{{ url_for('compare_document_versions', doc_id=doc.id) }}?rev_id={{ revision.id }}&rev_id={{ (revisions|first).id }}">Compare</a>
+          <button type="button" id="compare-to-button" class="btn btn-outline-primary mt-2"
+            data-url="{{ url_for('compare_document_versions', doc_id=doc.id) }}"
+            data-rev-id="{{ revision.id }}">Compare to…</button>
           <a class="btn btn-outline-secondary mt-2" href="{{ url_for('download_document', doc_id=doc.id) }}">Download</a>
         </div>
         {% else %}
