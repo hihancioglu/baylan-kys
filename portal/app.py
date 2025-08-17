@@ -999,15 +999,19 @@ def create_document_from_docxf():
         session_db.add(rev)
         session_db.commit()
         doc_id = doc.id
+        version = f"{doc.major_version}.{doc.minor_version}"
     finally:
         session_db.close()
 
-    return jsonify({
-        "id": doc_id,
-        "docx_key": docx_key,
-        "pdf_key": pdf_key,
-        "preview_url": preview_url,
-    }), 201
+    return jsonify(
+        {
+            "id": doc_id,
+            "docx_key": docx_key,
+            "pdf_key": pdf_key,
+            "preview_url": preview_url,
+            "version": version,
+        }
+    ), 201
 
 
 @app.post("/documents/<int:doc_id>/sign")
