@@ -52,6 +52,7 @@ from reports import (
     pending_approvals_report,
 )
 from signing import create_signed_pdf
+from storage import generate_presigned_url
 from datetime import datetime
 from queue import Queue
 
@@ -975,6 +976,8 @@ def create_document_from_docxf():
         return jsonify(error="form_id and payload required"), 400
 
     _, docx_key, pdf_key = render_form_and_store(form_id, payload)
+    preview_key = pdf_key or docx_key
+    preview_url = generate_presigned_url(preview_key) if preview_key else None
 
     session_db = get_session()
     try:
@@ -999,7 +1002,12 @@ def create_document_from_docxf():
     finally:
         session_db.close()
 
-    return jsonify({"id": doc_id, "docx_key": docx_key, "pdf_key": pdf_key}), 201
+    return jsonify({
+        "id": doc_id,
+        "docx_key": docx_key,
+        "pdf_key": pdf_key,
+        "preview_url": preview_url,
+    }), 201
 
 
 @app.post("/documents/<int:doc_id>/sign")
