@@ -1848,7 +1848,8 @@ def save_revision(doc_id):
     return jsonify(ok=True, version=f"{doc.major_version}.{doc.minor_version}")
 
 
-@app.post("/documents/<int:id>/publish")
+@app.post("/api/documents/<int:id>/publish")
+@app.post("/documents/<int:id>/publish")  # Backward compatibility
 @roles_required(RoleEnum.PUBLISHER.value)
 def publish_document(id: int):
     db = get_session()
@@ -1950,7 +1951,8 @@ def acknowledge_document(doc_id):
         session.close()
 
 
-@app.post("/ack/assign")
+@app.post("/api/ack/assign")
+@app.post("/ack/assign")  # Backward compatibility
 @roles_required(RoleEnum.PUBLISHER.value)
 def assign_acknowledgements_endpoint():
     """Assign acknowledgements for the given document.

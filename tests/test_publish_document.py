@@ -67,7 +67,7 @@ def test_publish_assigns_acknowledgements(client, app_models):
     ) as notify_mock:
         notify_mock.return_value = None
         resp = client.post(
-            f"/documents/{doc_id}/publish",
+            f"/api/documents/{doc_id}/publish",
             data={"users": [str(user1_id)], "roles": ["reader"]},
         )
         broadcast_mock.assert_called_once()
@@ -99,7 +99,7 @@ def test_publish_rejects_unapproved_document(client, app_models):
         sess["user"] = {"id": publisher_id}
         sess["roles"] = ["publisher"]
 
-    resp = client.post(f"/documents/{doc_id}/publish", data={})
+    resp = client.post(f"/api/documents/{doc_id}/publish", data={})
     assert resp.status_code == 400
     session = m.SessionLocal()
     doc = session.get(m.Document, doc_id)
