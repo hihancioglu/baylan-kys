@@ -14,27 +14,13 @@
   {% endif %}
 {% endmacro %}
 
-{% if request.headers.get('HX-Request') %}
-  {% if card == 'pending' %}
-    {{ render_items(pending_approvals, 'No pending approvals.') }}
-  {% elif card == 'mandatory' %}
-    {{ render_items(mandatory_reading, 'No mandatory documents.') }}
-  {% elif card == 'recent' %}
-    {{ render_items(recent_revisions, 'No recent changes.') }}
-  {% elif card == 'shortcuts' %}
-    {{ render_items(search_shortcuts, 'No search shortcuts available.') }}
-  {% endif %}
-{% else %}
-  <div
-    hx-get="/api/dashboard/cards/{{ card }}"
-    hx-trigger="load, every 10s"
-    hx-swap="innerHTML"
-  >
-    <div class="placeholder-glow">
-      <span class="placeholder col-12 mb-2"></span>
-      <span class="placeholder col-12 mb-2"></span>
-      <span class="placeholder col-12 mb-2"></span>
-    </div>
-  </div>
+{% if card == 'pending' %}
+  {{ render_items(pending_approvals, 'No pending approvals.') }}
+{% elif card == 'mandatory' %}
+  {{ render_items(mandatory_reading, 'No mandatory documents.') }}
+{% elif card == 'recent' %}
+  {{ render_items(recent_revisions, 'No recent changes.') }}
+{% elif card == 'shortcuts' %}
+  {{ render_items(search_shortcuts, 'No search shortcuts available.') }}
 {% endif %}
 

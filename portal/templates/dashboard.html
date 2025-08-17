@@ -6,7 +6,10 @@
   <div class="col">
     <div class="card h-100">
       <div class="card-header">Pending Approvals</div>
-      <div class="card-body">
+      <div class="card-body"
+           hx-get="/api/dashboard/cards/pending"
+           hx-trigger="load, every 10s"
+           hx-swap="innerHTML">
         {% with card='pending' %}
           {% include 'partials/dashboard/_cards.html' %}
         {% endwith %}
@@ -17,7 +20,10 @@
   <div class="col">
     <div class="card h-100">
       <div class="card-header">Mandatory Reading</div>
-      <div class="card-body">
+      <div class="card-body"
+           hx-get="/api/dashboard/cards/mandatory"
+           hx-trigger="load, every 10s"
+           hx-swap="innerHTML">
         {% with card='mandatory' %}
           {% include 'partials/dashboard/_cards.html' %}
         {% endwith %}
@@ -28,7 +34,10 @@
   <div class="col">
     <div class="card h-100">
       <div class="card-header">Recent Changes</div>
-      <div class="card-body">
+      <div class="card-body"
+           hx-get="/api/dashboard/cards/recent"
+           hx-trigger="load, every 10s"
+           hx-swap="innerHTML">
         {% with card='recent' %}
           {% include 'partials/dashboard/_cards.html' %}
         {% endwith %}
@@ -39,7 +48,10 @@
   <div class="col">
     <div class="card h-100">
       <div class="card-header">Search Shortcuts</div>
-      <div class="card-body">
+      <div class="card-body"
+           hx-get="/api/dashboard/cards/shortcuts"
+           hx-trigger="load, every 10s"
+           hx-swap="innerHTML">
         {% with card='shortcuts' %}
           {% include 'partials/dashboard/_cards.html' %}
         {% endwith %}
