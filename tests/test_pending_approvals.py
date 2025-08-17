@@ -21,8 +21,18 @@ sys.path.insert(0, str(repo_root / "portal"))
 
 from flask import url_for
 import pytest
-from portal.models import SessionLocal, Document, WorkflowStep, Base, engine
-from portal.app import app
+import importlib
+import models as m
+import app as a
+importlib.reload(m)
+importlib.reload(a)
+SessionLocal = m.SessionLocal
+Document = m.Document
+WorkflowStep = m.WorkflowStep
+User = m.User
+Base = m.Base
+engine = m.engine
+app = a.app
 
 # Create database schema
 Base.metadata.create_all(bind=engine)
@@ -30,13 +40,19 @@ Base.metadata.create_all(bind=engine)
 # Populate sample data
 _session = SessionLocal()
 
+# Create users
+user1 = User(username="approver1")
+user2 = User(username="approver2")
+_session.add_all([user1, user2])
+_session.commit()
+
 assigned_doc = Document(doc_key="assigned.docx", title="Assigned Approver Doc", status="Review")
 unassigned_doc = Document(doc_key="unassigned.docx", title="Unassigned Approver Doc", status="Review")
 _session.add_all([assigned_doc, unassigned_doc])
 _session.commit()
 
-assigned_step = WorkflowStep(doc_id=assigned_doc.id, step_order=1, approver="approver", status="Pending")
-unassigned_step = WorkflowStep(doc_id=unassigned_doc.id, step_order=1, approver=None, status="Pending")
+assigned_step = WorkflowStep(doc_id=assigned_doc.id, step_order=1, user_id=user1.id, status="Pending")
+unassigned_step = WorkflowStep(doc_id=unassigned_doc.id, step_order=1, user_id=None, status="Pending")
 _session.add_all([assigned_step, unassigned_step])
 _session.commit()
 assigned_step_id = assigned_step.id
@@ -49,10 +65,10 @@ def client():
     return app.test_client()
 
 
-def test_pending_approvals_with_roles(client):
+def test_pending_approvals_for_assigned_user(client):
     with client.session_transaction() as sess:
         sess["user"] = {"id": 1, "name": "Tester"}
-        sess["roles"] = ["approver"]
+        sess["roles"] = []
     resp = client.get(
         "/api/dashboard/cards/pending", headers={"HX-Request": "true"}
     )
@@ -67,9 +83,9 @@ def test_pending_approvals_with_roles(client):
     assert unassigned_url not in html
 
 
-def test_pending_approvals_no_roles(client):
+def test_pending_approvals_other_user(client):
     with client.session_transaction() as sess:
-        sess["user"] = {"id": 1, "name": "Tester"}
+        sess["user"] = {"id": 2, "name": "Tester2"}
         sess["roles"] = []
     resp = client.get(
         "/api/dashboard/cards/pending", headers={"HX-Request": "true"}
@@ -79,7 +95,7 @@ def test_pending_approvals_no_roles(client):
     with app.test_request_context():
         assigned_url = url_for("approval_detail", id=assigned_step_id)
         unassigned_url = url_for("approval_detail", id=unassigned_step_id)
-    assert "Unassigned Approver Doc" in html
-    assert unassigned_url in html
     assert "Assigned Approver Doc" not in html
     assert assigned_url not in html
+    assert "Unassigned Approver Doc" not in html
+    assert unassigned_url not in html

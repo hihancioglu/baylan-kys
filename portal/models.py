@@ -81,12 +81,13 @@ class WorkflowStep(Base):
     id = Column(Integer, primary_key=True)
     doc_id = Column(Integer, ForeignKey("documents.id"), nullable=False)
     step_order = Column(Integer, nullable=False)
-    approver = Column(String)
+    user_id = Column(Integer, ForeignKey("users.id"))
     status = Column(String, default="Pending", nullable=False)
     approved_at = Column(DateTime)
     comment = Column(Text)
 
     document = relationship("Document", back_populates="workflow_steps")
+    user = relationship("User")
 
 
 class Role(Base):

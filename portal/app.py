@@ -194,7 +194,7 @@ def _compute_counts(db, user_id, roles):
         db.query(WorkflowStep)
         .filter(
             WorkflowStep.status == "Pending",
-            WorkflowStep.approver.in_(roles),
+            WorkflowStep.user_id == user_id,
         )
         .count()
     )
@@ -283,18 +283,16 @@ def notifications_stream():
     return Response(stream(), mimetype="text/event-stream")
 
 
-def _get_pending_approvals(db, limit: int = 5):
-    roles = session.get("roles", [])
+def _get_pending_approvals(db, user_id: int | None, limit: int = 5):
     query = (
         db.query(WorkflowStep)
         .join(Document)
         .filter(WorkflowStep.status == "Pending")
     )
-    if roles:
-        query = query.filter(WorkflowStep.approver.in_(roles))
+    if user_id is not None:
+        query = query.filter(WorkflowStep.user_id == user_id)
     else:
-        # If user has no roles, only fetch steps with no specific approver
-        query = query.filter(WorkflowStep.approver.is_(None))
+        query = query.filter(WorkflowStep.user_id.is_(None))
 
     steps = (
         query.order_by(WorkflowStep.id.desc())
@@ -366,7 +364,7 @@ def dashboard():
         user_id = user.get("id")
         context = {
             "breadcrumbs": [{"title": "Dashboard"}],
-            "pending_approvals": _get_pending_approvals(db),
+            "pending_approvals": _get_pending_approvals(db, user_id),
             "mandatory_reading": _get_mandatory_reading(db, user_id),
             "recent_revisions": _get_recent_revisions(db),
             "search_shortcuts": _get_search_shortcuts(),
@@ -394,7 +392,7 @@ def dashboard_cards(card):
         user_id = user.get("id")
         context = {"card": card}
         if card == "pending":
-            context["pending_approvals"] = _get_pending_approvals(db)
+            context["pending_approvals"] = _get_pending_approvals(db, user_id)
         elif card == "mandatory":
             context["mandatory_reading"] = _get_mandatory_reading(db, user_id)
         elif card == "recent":
@@ -414,7 +412,9 @@ def api_dashboard_pending_approvals():
     limit = request.args.get("limit", type=int) or 5
     db = get_session()
     try:
-        items = _get_pending_approvals(db, limit)
+        user = session.get("user") or {}
+        user_id = user.get("id")
+        items = _get_pending_approvals(db, user_id, limit)
         return jsonify({"items": items, "error": None})
     except Exception as e:
         return jsonify({"items": [], "error": str(e)}), 500
@@ -785,7 +785,7 @@ def start_workflow():
             return jsonify(error="document not found"), 404
         doc.status = "Review"
         steps = [
-            WorkflowStep(doc_id=doc_id, step_order=i, approver=str(rid))
+            WorkflowStep(doc_id=doc_id, step_order=i, user_id=rid)
             for i, rid in enumerate(reviewer_ids, start=1)
         ]
         db.add_all(steps)
@@ -1124,13 +1124,14 @@ def sign_document(doc_id: int):
 def approval_queue():
     db = get_session()
     try:
-        user_roles = session.get("roles", [])
+        user = session.get("user") or {}
+        user_id = user.get("id")
         steps = (
             db.query(WorkflowStep)
             .join(Document)
             .filter(
                 WorkflowStep.status == "Pending",
-                WorkflowStep.approver.in_(user_roles),
+                WorkflowStep.user_id == user_id,
             )
             .all()
         )
@@ -1221,11 +1222,8 @@ def approve_step(step_id: int):
             .order_by(WorkflowStep.step_order)
             .first()
         )
-        if next_step:
-            role = db.query(Role).filter_by(name=next_step.approver).first()
-            if role:
-                ids = [ur.user_id for ur in db.query(UserRole).filter_by(role_id=role.id).all()]
-                notify_approval_queue(step.document, ids)
+        if next_step and next_step.user_id:
+            notify_approval_queue(step.document, [next_step.user_id])
         broadcast_counts()
         db.refresh(step)
         html = render_template("partials/approvals/_row.html", step=step)

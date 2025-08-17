@@ -20,20 +20,31 @@ sys.path.insert(0, str(repo_root / "portal"))
 
 import pytest
 from sqlalchemy import or_
-from portal.models import SessionLocal, Document, Base, engine
-from portal.app import app, _get_documents
+import importlib
+import models as m
+import app as a
+importlib.reload(m)
+importlib.reload(a)
+SessionLocal = m.SessionLocal
+Document = m.Document
+Base = m.Base
+engine = m.engine
+app = a.app
+_get_documents = a._get_documents
 
-# Create database schema and populate sample data
+# Create database schema
 Base.metadata.create_all(bind=engine)
-session = SessionLocal()
 
-session.add_all([
-    Document(doc_key="doc1.docx", title="Safety Procedure", code="DOC-001", status="Published"),
-    Document(doc_key="doc2.docx", title="Quality Manual", code="MAN-002", status="Published"),
-    Document(doc_key="doc3.docx", title="Operations Guide", code="OPS-100", status="Published"),
-])
-session.commit()
-session.close()
+def _populate_docs():
+    session = SessionLocal()
+    session.query(Document).delete()
+    session.add_all([
+        Document(doc_key="doc1.docx", title="Safety Procedure", code="DOC-001", status="Published"),
+        Document(doc_key="doc2.docx", title="Quality Manual", code="MAN-002", status="Published"),
+        Document(doc_key="doc3.docx", title="Operations Guide", code="OPS-100", status="Published"),
+    ])
+    session.commit()
+    session.close()
 
 
 @pytest.fixture(autouse=True)
@@ -61,12 +72,13 @@ def patch_search(monkeypatch):
         facets = {"status": {filters.get("status", "Published"): total}}
         return [{"id": d.id} for d in docs], facets, total
 
-    monkeypatch.setattr("portal.app.search_documents", fake_search)
+    import app as a
+    monkeypatch.setattr(a, "search_documents", fake_search)
 
 
 def test_get_documents_search_filters_by_q():
     """Documents can be filtered by title or code using the q parameter."""
-
+    _populate_docs()
     with app.test_request_context("/documents", query_string={"q": "manual"}):
         docs, _, _, filters, params, facets = _get_documents()
     titles = {d.title for d in docs}
@@ -83,7 +95,7 @@ def test_get_documents_search_filters_by_q():
 
 def test_get_documents_search_pagination():
     """Search results are paginated according to page and page_size."""
-
+    _populate_docs()
     with app.test_request_context(
         "/documents", query_string={"status": "Published", "page": 2, "page_size": 1}
     ):

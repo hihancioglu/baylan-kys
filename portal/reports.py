@@ -122,10 +122,11 @@ def pending_approvals_report(
             session.query(
                 Document.title,
                 WorkflowStep.step_order,
-                WorkflowStep.approver,
+                User.username,
                 Document.created_at,
             )
             .join(Document)
+            .outerjoin(User, WorkflowStep.user_id == User.id)
             .filter(WorkflowStep.status == "Pending")
             .order_by(None)
         )
@@ -138,10 +139,10 @@ def pending_approvals_report(
             {
                 "document": title,
                 "step_order": step_order,
-                "approver": approver,
+                "approver": username,
                 "created_at": created.isoformat(),
             }
-            for title, step_order, approver, created in results
+            for title, step_order, username, created in results
         ]
     finally:
         session.close()

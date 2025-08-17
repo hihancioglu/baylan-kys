@@ -62,9 +62,9 @@ def models():
     session.add_all([assigned_doc1, assigned_doc2, unassigned_doc, mandatory_doc1, mandatory_doc2])
     session.commit()
 
-    step1 = WorkflowStep(doc_id=assigned_doc1.id, step_order=1, approver="approver", status="Pending")
-    step2 = WorkflowStep(doc_id=assigned_doc2.id, step_order=1, approver="approver", status="Pending")
-    step3 = WorkflowStep(doc_id=unassigned_doc.id, step_order=1, approver=None, status="Pending")
+    step1 = WorkflowStep(doc_id=assigned_doc1.id, step_order=1, user_id=user.id, status="Pending")
+    step2 = WorkflowStep(doc_id=assigned_doc2.id, step_order=1, user_id=user.id, status="Pending")
+    step3 = WorkflowStep(doc_id=unassigned_doc.id, step_order=1, user_id=None, status="Pending")
     session.add_all([step1, step2, step3])
     session.commit()
 
@@ -98,7 +98,7 @@ def test_api_pending_approvals(client, models):
 
     with client.session_transaction() as sess:
         sess["user"] = {"id": 1, "name": "Tester"}
-        sess["roles"] = ["approver"]
+        sess["roles"] = []
     resp = client.get("/api/dashboard/pending-approvals")
     assert resp.status_code == 200
     data = resp.get_json()
@@ -111,13 +111,12 @@ def test_api_pending_approvals(client, models):
     assert len(resp.get_json()["items"]) == 1
 
     with client.session_transaction() as sess:
-        sess["user"] = {"id": 1, "name": "Tester"}
+        sess["user"] = {"id": 2, "name": "Other"}
         sess["roles"] = []
     resp = client.get("/api/dashboard/pending-approvals")
     assert resp.status_code == 200
     data = resp.get_json()
-    assert len(data["items"]) == 1
-    assert data["items"][0][0] == "Unassigned Doc"
+    assert len(data["items"]) == 0
 
     db = SessionLocal()
     db.query(WorkflowStep).delete()
