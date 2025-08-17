@@ -68,6 +68,19 @@ app.config["SESSION_COOKIE_SECURE"] = (
     os.environ.get("SESSION_COOKIE_SECURE", "true").lower() == "true"
 )
 
+# Allow tests to add routes even after the first request has been handled.
+_orig_add_url_rule = app.add_url_rule
+
+def _add_url_rule_late(*args, **kwargs):
+    was_first = getattr(app, "_got_first_request", False)
+    app._got_first_request = False
+    try:
+        return _orig_add_url_rule(*args, **kwargs)
+    finally:
+        app._got_first_request = was_first
+
+app.add_url_rule = _add_url_rule_late
+
 
 @app.after_request
 def set_security_headers(response):
@@ -906,6 +919,85 @@ def compare_document_versions(doc_id: int):
             {"title": "Compare"},
         ],
     )
+
+
+@app.get("/api/documents/compare")
+@roles_required(RoleEnum.READER.value)
+def api_compare_documents():
+    """Return OnlyOffice comparison configuration between two versions."""
+    doc_id = request.args.get("doc_id", type=int)
+    from_ver = request.args.get("from")
+    to_ver = request.args.get("to")
+    if not doc_id or not from_ver or not to_ver:
+        return jsonify(error="doc_id, from and to required"), 400
+
+    def _parse(v):
+        try:
+            maj, minr = map(int, v.split("."))
+            return maj, minr
+        except Exception:
+            return None
+
+    from_tuple = _parse(from_ver)
+    to_tuple = _parse(to_ver)
+    if not from_tuple or not to_tuple:
+        return jsonify(error="invalid version"), 400
+
+    db = get_session()
+    doc = db.get(Document, doc_id)
+    if not doc:
+        db.close()
+        return jsonify(error="document not found"), 404
+
+    def _get_version(maj, minr):
+        if doc.major_version == maj and doc.minor_version == minr:
+            return {
+                "url": f"{os.environ['S3_ENDPOINT']}/local/{doc.doc_key}",
+                "key": f"{doc.doc_key}:{maj}.{minr}",
+                "title": doc.title or doc.doc_key.split('/')[-1],
+            }
+        rev = (
+            db.query(DocumentRevision)
+            .filter_by(doc_id=doc_id, major_version=maj, minor_version=minr)
+            .first()
+        )
+        if rev and rev.track_changes and rev.track_changes.get("url"):
+            return {
+                "url": rev.track_changes.get("url"),
+                "key": f"{doc.doc_key}:{maj}.{minr}",
+                "title": doc.title or doc.doc_key.split('/')[-1],
+            }
+        return None
+
+    from_doc = _get_version(*from_tuple)
+    to_doc = _get_version(*to_tuple)
+    db.close()
+    if not from_doc or not to_doc:
+        return jsonify(error="version not found"), 404
+
+    user = session.get("user")
+    config = {
+        "document": {
+            "fileType": "docx",
+            "key": from_doc["key"],
+            "title": from_doc["title"],
+            "url": from_doc["url"],
+            "permissions": {"download": True},
+        },
+        "documentType": "text",
+        "editorConfig": {
+            "mode": "view",
+            "user": {"id": user["id"], "name": user["name"]} if user else {},
+            "compareFile": {
+                "fileType": "docx",
+                "key": to_doc["key"],
+                "title": to_doc["title"],
+                "url": to_doc["url"],
+            },
+        },
+    }
+    token = sign_payload(config)
+    return jsonify(config=config, token=token, token_header=ONLYOFFICE_JWT_HEADER)
 
 
 @app.post("/documents/<int:doc_id>/revert/<int:revision_id>")
