@@ -329,6 +329,40 @@ def seed_roles_and_users():
     finally:
         session.close()
 
+def seed_documents():
+    """Seed sample documents demonstrating standard usage."""
+    session = get_session()
+    try:
+        if session.query(Document).count() == 0:
+            doc1 = Document(
+                doc_key="seed_doc1.docx",
+                title="Seeded Document 1",
+                code="SD1",
+                standard_code="ISO9001",
+                standards=[DocumentStandard(standard_code="ISO9001")],
+            )
+            doc2 = Document(
+                doc_key="seed_doc2.docx",
+                title="Seeded Document 2",
+                code="SD2",
+                standard_code="ISO9001",
+                standards=[
+                    DocumentStandard(standard_code="ISO9001"),
+                    DocumentStandard(standard_code="ISO14001"),
+                ],
+            )
+            doc3 = Document(
+                doc_key="seed_doc3.docx",
+                title="Seeded Document 3",
+                code="SD3",
+                standard_code="ISO14001",
+                standards=[DocumentStandard(standard_code="ISO14001")],
+            )
+            session.add_all([doc1, doc2, doc3])
+            session.commit()
+    finally:
+        session.close()
+
 # Initial data seeding should be invoked manually after applying migrations.
 
 __all__ = [
@@ -336,6 +370,7 @@ __all__ = [
     "SessionLocal",
     "get_session",
     "seed_roles_and_users",
+    "seed_documents",
     "RoleEnum",
     "Document",
     "DocumentRevision",
