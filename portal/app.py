@@ -93,11 +93,17 @@ auth_init(app)
 app.register_blueprint(auth_bp)
 
 manifest_path = os.path.join(app.static_folder, "manifest.json")
-if os.path.exists(manifest_path):
+try:
     with open(manifest_path) as f:
         _asset_manifest = json.load(f)
-else:
-    _asset_manifest = {}
+except FileNotFoundError:
+    raise RuntimeError(
+        "Asset manifest not found. Run portal/static/build.py to generate assets."
+    )
+if "base.js" not in _asset_manifest:
+    raise RuntimeError(
+        "base.js missing from asset manifest. Run portal/static/build.py to generate assets."
+    )
 
 
 def asset_url(name: str) -> str:
