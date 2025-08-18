@@ -895,6 +895,10 @@ def compare_document_versions(doc_id: int):
         return "Select at least two versions", 400
     session = get_session()
     doc = session.get(Document, doc_id)
+    if not doc:
+        session.close()
+        return "Document not found", 404
+
     revisions = (
         session.query(DocumentRevision)
         .filter(DocumentRevision.doc_id == doc_id, DocumentRevision.id.in_(rev_ids))
