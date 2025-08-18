@@ -1018,7 +1018,7 @@ def api_compare_documents():
     def _get_version(maj, minr):
         if doc.major_version == maj and doc.minor_version == minr:
             return {
-                "url": f"{storage_client.endpoint}/{storage_client.bucket_main or 'local'}/{doc.doc_key}",
+                "url": storage_client.generate_presigned_url(doc.doc_key),
                 "key": f"{doc.doc_key}:{maj}.{minr}",
                 "title": doc.title or doc.doc_key.split('/')[-1],
             }
@@ -1492,7 +1492,7 @@ def approval_detail(id: int):
                 "fileType": "docx",
                 "key": f"{doc.doc_key}",
                 "title": doc.title or doc.doc_key.split("/")[-1],
-                "url": f"{storage_client.endpoint}/{storage_client.bucket_main or 'local'}/{doc.doc_key}",
+                "url": storage_client.generate_presigned_url(doc.doc_key),
                 "permissions": {"download": True},
             },
             "documentType": "text",
@@ -2110,7 +2110,7 @@ def edit_document(doc_id):
             "fileType": "docx",
             "key": f"{doc.doc_key}",
             "title": doc.title or doc.doc_key.split('/')[-1],
-            "url": f"{storage_client.endpoint}/{storage_client.bucket_main or 'local'}/{doc.doc_key}",
+            "url": storage_client.generate_presigned_url(doc.doc_key),
             "permissions": {
                 "edit": True,
                 "download": True,

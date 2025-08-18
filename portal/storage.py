@@ -60,13 +60,16 @@ class StorageClient:
     def generate_presigned_url(
         self, key: str, expires_in: int | None = None, bucket: str | None = None
     ) -> str | None:
+        bucket_name = bucket or self.bucket_main or "local"
         try:
             return self.client.generate_presigned_url(
                 "get_object",
-                Params={"Bucket": bucket or self.bucket_main, "Key": key},
+                Params={"Bucket": bucket_name, "Key": key},
                 ExpiresIn=expires_in or self.signed_url_expire_seconds,
             )
         except NoCredentialsError:
+            if self.endpoint:
+                return f"{self.endpoint}/{bucket_name}/{key}"
             return None
 
     # -- higher level helpers ------------------------------------------
