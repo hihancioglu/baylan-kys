@@ -20,6 +20,7 @@ def app_models():
     app_module = importlib.reload(importlib.import_module("app"))
     models_module = importlib.reload(importlib.import_module("models"))
     app_module.app.config["WTF_CSRF_ENABLED"] = False
+    models_module.Base.metadata.create_all(bind=models_module.engine)
     return app_module.app, models_module
 
 

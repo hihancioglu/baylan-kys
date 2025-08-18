@@ -575,13 +575,14 @@ def _get_documents():
     status = request.args.get("status")
     normalized_status = status.capitalize() if status else None
     department = request.args.get("department")
+    standard = request.args.get("standard")
     tags = request.args.getlist("tags")
     q = request.args.get("q")
 
     page = int(request.args.get("page", 1))
     page_size = int(request.args.get("page_size", 20))
 
-    use_search = bool(q or status or department)
+    use_search = bool(q or status or department or standard)
 
     if use_search:
         search_filters = {}
@@ -591,6 +592,9 @@ def _get_documents():
         if department:
             search_filters["department"] = department
             filters["department"] = department
+        if standard:
+            search_filters["standard"] = standard
+            filters["standard"] = standard
         if q:
             filters["q"] = q
         try:
@@ -613,6 +617,9 @@ def _get_documents():
             if department:
                 query = query.filter(Document.department == department)
                 filters["department"] = department
+            if standard:
+                query = query.filter(Document.standard_code == standard)
+                filters["standard"] = standard
             if tags:
                 query = query.filter(and_(*[Document.tags.contains(t) for t in tags]))
                 filters["tags"] = tags
@@ -638,6 +645,9 @@ def _get_documents():
         if department:
             query = query.filter(Document.department == department)
             filters["department"] = department
+        if standard:
+            query = query.filter(Document.standard_code == standard)
+            filters["standard"] = standard
         if tags:
             query = query.filter(and_(*[Document.tags.contains(t) for t in tags]))
             filters["tags"] = tags
@@ -664,6 +674,8 @@ def _get_documents():
     params["page_size"] = page_size
     if normalized_status:
         params["status"] = normalized_status
+    if standard:
+        params["standard"] = standard
 
     return docs, page, pages, filters, params, facets
 
