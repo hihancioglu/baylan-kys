@@ -229,6 +229,9 @@ def _format_tags(value):
     return ",".join(tags) if tags else None
 
 
+ALLOWED_STANDARDS = {"ISO9001", "ISO27001", "ISO14001"}
+
+
 # -- Acknowledgement helpers -------------------------------------------------
 
 def _assign_acknowledgements(db, doc_id, user_ids):
@@ -1328,6 +1331,9 @@ def create_document_api():
         value = data.get(field)
         if not value:
             errors[field] = f"{field} is required."
+    standard = data.get("standard")
+    if standard and standard not in ALLOWED_STANDARDS:
+        errors["standard"] = "Invalid standard."
     if errors:
         return jsonify({"errors": errors}), 400
 
@@ -1348,6 +1354,7 @@ def create_document_api():
         doc_key=doc_key,
         title=data.get("title"),
         code=data.get("code"),
+        standard_code=standard,
         tags=tags_val,
         department=data.get("department"),
         process=data.get("type"),
@@ -1367,9 +1374,52 @@ def create_document_api():
     index_document(doc, content)
     user_ids = [u.id for u in session_db.query(User).all()]
     notify_mandatory_read(doc, user_ids)
-    result = {"id": doc.id, "doc_key": doc_key}
+    result = {"id": doc.id, "doc_key": doc_key, "standard": doc.standard_code}
     session_db.close()
     return jsonify(result), 201
+
+
+@app.put("/api/documents/<int:id>")
+@roles_required(RoleEnum.CONTRIBUTOR.value)
+def update_document_api(id: int):
+    data = request.get_json(silent=True) or {}
+    session_db = get_session()
+    doc = session_db.get(Document, id)
+    if not doc:
+        session_db.close()
+        return jsonify(error="Document not found"), 404
+
+    if "standard" in data:
+        standard = data.get("standard")
+        if standard and standard not in ALLOWED_STANDARDS:
+            session_db.close()
+            return jsonify({"errors": {"standard": "Invalid standard."}}), 400
+        doc.standard_code = standard
+
+    if "title" in data:
+        doc.title = data.get("title")
+    if "code" in data:
+        doc.code = data.get("code")
+    if "department" in data:
+        doc.department = data.get("department")
+    if "type" in data:
+        doc.process = data.get("type")
+    if "retention_period" in data:
+        doc.retention_period = data.get("retention_period")
+    if "tags" in data:
+        tags_val = _format_tags(data.get("tags"))
+        if not tags_val:
+            session_db.close()
+            return jsonify({"errors": {"tags": "Invalid tags format."}}), 400
+        doc.tags = tags_val
+
+    session_db.commit()
+    user_id = (session.get("user") or {}).get("id") or data.get("user_id")
+    if user_id:
+        log_action(user_id, doc.id, "update_document")
+    result = {"id": doc.id, "doc_key": doc.doc_key, "standard": doc.standard_code}
+    session_db.close()
+    return jsonify(result)
 
 
 @app.post("/api/documents/from-docxf")
