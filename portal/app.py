@@ -33,9 +33,11 @@ from models import (
     WorkflowStep,
     get_session,
     RoleEnum,
+    engine,
 )
 from search import index_document, search_documents
 from sqlalchemy import func, or_, and_, inspect
+from sqlalchemy.orm import sessionmaker
 from ocr import extract_text
 from docxf_render import render_form_and_store
 from notifications import (
@@ -176,7 +178,8 @@ def sign_payload(payload: dict) -> str:
 
 def log_action(user_id, doc_id, action, endpoint=None):
     """Persist an audit log entry."""
-    session = get_session()
+    Session = sessionmaker(bind=engine)
+    session = Session()
     try:
         session.add(AuditLog(user_id=user_id, doc_id=doc_id, action=action, endpoint=endpoint))
         session.commit()
