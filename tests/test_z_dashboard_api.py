@@ -2,8 +2,6 @@ import os
 from pathlib import Path
 import sys
 from datetime import datetime
-import importlib
-
 # Ensure environment variables before importing application
 os.environ.setdefault("ONLYOFFICE_INTERNAL_URL", "http://oo")
 os.environ.setdefault("ONLYOFFICE_PUBLIC_URL", "http://oo-public")
@@ -20,25 +18,17 @@ import pytest
 
 def get_models():
     import models as m
-    importlib.reload(m)
     return m
 
 
 def get_app_module():
     import app as a
-    importlib.reload(a)
     return a
 
 
 @pytest.fixture(autouse=True)
-def models():
-    _db_path = Path("test_dashboard_api.db")
-    if _db_path.exists():
-        _db_path.unlink()
-    os.environ["DATABASE_URL"] = f"sqlite:///{_db_path}"
+def models(reset_database):
     m = get_models()
-    Base = m.Base
-    engine = m.engine
     SessionLocal = m.SessionLocal
     Document = m.Document
     WorkflowStep = m.WorkflowStep
@@ -46,8 +36,6 @@ def models():
     Acknowledgement = m.Acknowledgement
     User = m.User
 
-    Base.metadata.drop_all(bind=engine)
-    Base.metadata.create_all(bind=engine)
     session = SessionLocal()
 
     user = User(username="tester", email="tester@example.com")

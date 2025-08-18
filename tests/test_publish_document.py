@@ -10,11 +10,6 @@ os.environ.setdefault("ONLYOFFICE_PUBLIC_URL", "http://oo-public")
 os.environ.setdefault("ONLYOFFICE_JWT_SECRET", "secret")
 os.environ.setdefault("S3_ENDPOINT", "http://s3")
 
-_db_path = Path("test_publish_document.db")
-if _db_path.exists():
-    _db_path.unlink()
-os.environ["DATABASE_URL"] = f"sqlite:///{_db_path}"
-
 repo_root = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(repo_root))
 sys.path.insert(0, str(repo_root / "portal"))
@@ -36,8 +31,6 @@ def client(app_models):
 
 def test_publish_assigns_acknowledgements(client, app_models):
     app, m = app_models
-    m.Base.metadata.drop_all(bind=m.engine)
-    m.Base.metadata.create_all(bind=m.engine)
     session = m.SessionLocal()
     publisher = m.User(username="publisher")
     user1 = m.User(username="user1")
@@ -82,8 +75,6 @@ def test_publish_assigns_acknowledgements(client, app_models):
 
 def test_publish_rejects_unapproved_document(client, app_models):
     app, m = app_models
-    m.Base.metadata.drop_all(bind=m.engine)
-    m.Base.metadata.create_all(bind=m.engine)
     session = m.SessionLocal()
     publisher = m.User(username="publisher")
     doc = m.Document(doc_key="doc.docx", title="Doc", status="Draft")

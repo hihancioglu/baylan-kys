@@ -34,7 +34,6 @@ def client(app_models):
 @pytest.fixture()
 def workflow_data(app_models):
     app, m = app_models
-    m.Base.metadata.create_all(bind=m.engine)
     session = m.SessionLocal()
     uid = uuid.uuid4().hex
     contributor = m.User(username=f"contrib_{uid}")

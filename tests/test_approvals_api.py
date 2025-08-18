@@ -10,11 +10,6 @@ os.environ.setdefault("ONLYOFFICE_PUBLIC_URL", "http://oo-public")
 os.environ.setdefault("ONLYOFFICE_JWT_SECRET", "secret")
 os.environ.setdefault("S3_ENDPOINT", "http://s3")
 
-_db_path = Path("test_approvals_api.db")
-if _db_path.exists():
-    _db_path.unlink()
-os.environ["DATABASE_URL"] = f"sqlite:///{_db_path}"
-
 repo_root = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(repo_root))
 sys.path.insert(0, str(repo_root / "portal"))
@@ -37,8 +32,6 @@ def client(app_models):
 @pytest.fixture()
 def setup_data(app_models):
     app, m = app_models
-    m.Base.metadata.drop_all(bind=m.engine)
-    m.Base.metadata.create_all(bind=m.engine)
     session = m.SessionLocal()
     approver = m.User(username="approver")
     doc1 = m.Document(doc_key="doc1.docx", title="Doc1", status="Review")

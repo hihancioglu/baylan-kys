@@ -2,6 +2,8 @@ import os
 import importlib
 from pathlib import Path
 import sys
+import uuid
+
 import pytest
 
 # Ensure environment variables before importing application
@@ -9,11 +11,6 @@ os.environ.setdefault("ONLYOFFICE_INTERNAL_URL", "http://oo")
 os.environ.setdefault("ONLYOFFICE_PUBLIC_URL", "http://oo-public")
 os.environ.setdefault("ONLYOFFICE_JWT_SECRET", "secret")
 os.environ.setdefault("S3_ENDPOINT", "http://s3")
-
-_db_path = Path("test_versioning.db")
-if _db_path.exists():
-    _db_path.unlink()
-os.environ["DATABASE_URL"] = f"sqlite:///{_db_path}"
 
 # Make application modules importable
 repo_root = Path(__file__).resolve().parent.parent
@@ -37,10 +34,9 @@ def client(app_models):
 
 def test_start_revision_increments_version_and_logs(app_models):
     app, m = app_models
-    m.Base.metadata.drop_all(bind=m.engine)
-    m.Base.metadata.create_all(bind=m.engine)
     session = m.SessionLocal()
-    doc = m.Document(doc_key="doc.docx", title="Doc", status="Published", revision_notes="orig")
+    uid = uuid.uuid4().hex
+    doc = m.Document(doc_key=f"doc_{uid}.docx", title="Doc", status="Published", revision_notes="orig")
     session.add(doc)
     session.commit()
     from app import _start_revision
@@ -69,10 +65,10 @@ def test_start_revision_increments_version_and_logs(app_models):
 
 def test_compare_config_returns_expected_fields(client, app_models):
     app, m = app_models
-    m.Base.metadata.drop_all(bind=m.engine)
-    m.Base.metadata.create_all(bind=m.engine)
     session = m.SessionLocal()
-    doc = m.Document(doc_key="doc.docx", title="Doc", status="Published", major_version=2, minor_version=0)
+    uid = uuid.uuid4().hex
+    doc_key = f"doc_{uid}.docx"
+    doc = m.Document(doc_key=doc_key, title="Doc", status="Published", major_version=2, minor_version=0)
     session.add(doc)
     session.commit()
     rev = m.DocumentRevision(
@@ -94,20 +90,19 @@ def test_compare_config_returns_expected_fields(client, app_models):
     assert resp.status_code == 200
     data = resp.get_json()
     config = data["config"]
-    assert config["document"]["key"] == "doc.docx:1.0"
+    assert config["document"]["key"] == f"{doc_key}:1.0"
     assert config["document"]["url"] == "http://s3/old.docx"
-    assert config["editorConfig"]["compareFile"]["key"] == "doc.docx:2.0"
-    assert config["editorConfig"]["compareFile"]["url"] == "http://s3/local/doc.docx"
+    assert config["editorConfig"]["compareFile"]["key"] == f"{doc_key}:2.0"
+    assert config["editorConfig"]["compareFile"]["url"] == f"http://s3/local/{doc_key}"
     assert data["token"]
     assert data["token_header"] == "AuthorizationJwt"
 
 
 def test_revert_document_preserves_history(client, app_models):
     app, m = app_models
-    m.Base.metadata.drop_all(bind=m.engine)
-    m.Base.metadata.create_all(bind=m.engine)
     session = m.SessionLocal()
-    doc = m.Document(doc_key="doc.docx", title="Doc", status="Published", revision_notes="orig")
+    uid = uuid.uuid4().hex
+    doc = m.Document(doc_key=f"doc_{uid}.docx", title="Doc", status="Published", revision_notes="orig")
     session.add(doc)
     session.commit()
     from app import _start_revision

@@ -6,12 +6,6 @@ import pytest
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 
-# Ensure a dedicated database for this test
-_db_path = Path("test_user_role_mapping.db")
-if _db_path.exists():
-    _db_path.unlink()
-os.environ["DATABASE_URL"] = f"sqlite:///{_db_path}"
-
 # Make application modules importable
 repo_root = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(repo_root))
@@ -21,8 +15,6 @@ sys.path.insert(0, str(repo_root / "portal"))
 @pytest.fixture()
 def models():
     m = importlib.reload(importlib.import_module("models"))
-    m.Base.metadata.drop_all(bind=m.engine)
-    m.Base.metadata.create_all(bind=m.engine)
     yield m
     # ensure session registry is cleaned
     m.SessionLocal.remove()
