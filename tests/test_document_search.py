@@ -34,9 +34,26 @@ def _populate_docs():
     session = SessionLocal()
     session.query(Document).delete()
     session.add_all([
-        Document(doc_key="doc1.docx", title="Safety Procedure", code="DOC-001", status="Published"),
-        Document(doc_key="doc2.docx", title="Quality Manual", code="MAN-002", status="Published"),
-        Document(doc_key="doc3.docx", title="Operations Guide", code="OPS-100", status="Published"),
+        Document(
+            doc_key="doc1.docx",
+            title="Safety Procedure",
+            code="DOC-001",
+            standard_code="ISO9001",
+            status="Published",
+        ),
+        Document(
+            doc_key="doc2.docx",
+            title="Quality Manual",
+            code="MAN-002",
+            standard_code="ISO14001",
+            status="Published",
+        ),
+        Document(
+            doc_key="doc3.docx",
+            title="Operations Guide",
+            code="OPS-100",
+            status="Published",
+        ),
     ])
     session.commit()
     session.close()
@@ -56,6 +73,8 @@ def patch_search(monkeypatch):
             )
         if filters.get("status"):
             query = query.filter(Document.status == filters["status"])
+        if filters.get("standard"):
+            query = query.filter(Document.standard_code == filters["standard"])
         total = query.count()
         docs = (
             query.order_by(Document.id)
@@ -100,4 +119,16 @@ def test_get_documents_search_pagination():
     assert page == 2
     assert pages == facets["status"]["Published"]
     assert facets["status"]["Published"] >= 3
+
+
+def test_get_documents_filter_by_standard():
+    """Documents can be filtered by standard code."""
+    _populate_docs()
+    with app.test_request_context("/documents", query_string={"standard": "ISO9001"}):
+        docs, _, _, filters, params, _ = _get_documents()
+
+    titles = {d.title for d in docs}
+    assert titles == {"Safety Procedure"}
+    assert filters["standard"] == "ISO9001"
+    assert params["standard"] == "ISO9001"
 

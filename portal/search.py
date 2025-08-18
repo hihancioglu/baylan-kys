@@ -45,6 +45,7 @@ def create_index() -> None:
                 "department": {"type": "keyword"},
                 "status": {"type": "keyword"},
                 "type": {"type": "keyword"},
+                "standard": {"type": "keyword"},
                 "content": {"type": "text"},
             }
         }
@@ -69,6 +70,7 @@ def index_document(doc, content: str = "") -> None:
         "department": doc.department,
         "status": getattr(doc, "status", ""),
         "type": getattr(doc, "type", ""),
+        "standard": getattr(doc, "standard_code", ""),
         "content": content,
     }
     try:
@@ -105,7 +107,7 @@ def search_documents(keyword: str, filters: dict, page: int = 1, per_page: int =
     must = []
     if keyword:
         must.append({"multi_match": {"query": keyword, "fields": ["title^2", "content"]}})
-    for field in ["department", "status", "type"]:
+    for field in ["department", "status", "type", "standard"]:
         value = filters.get(field)
         if value:
             must.append({"term": {field: value}})
@@ -118,6 +120,7 @@ def search_documents(keyword: str, filters: dict, page: int = 1, per_page: int =
             "department": {"terms": {"field": "department"}},
             "status": {"terms": {"field": "status"}},
             "type": {"terms": {"field": "type"}},
+            "standard": {"terms": {"field": "standard"}},
         },
     }
 
@@ -128,7 +131,7 @@ def search_documents(keyword: str, filters: dict, page: int = 1, per_page: int =
 
     results = [hit["_source"] | {"id": hit["_id"]} for hit in resp["hits"]["hits"]]
     aggs = {}
-    for facet in ["department", "status", "type"]:
+    for facet in ["department", "status", "type", "standard"]:
         buckets = resp.get("aggregations", {}).get(facet, {}).get("buckets", [])
         aggs[facet] = {b["key"]: b["doc_count"] for b in buckets}
 
