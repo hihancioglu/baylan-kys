@@ -43,7 +43,7 @@ class Document(Base):
     doc_key = Column(String, nullable=False, unique=True)
     title = Column(String, index=True)
     code = Column(String, index=True)
-    standard_code = Column(String, index=True)
+    standard_code = Column(String, index=True, nullable=True)
     tags = Column(String, index=True)
     department = Column(String, index=True)
     process = Column(String, index=True)
@@ -330,3 +330,26 @@ def seed_roles_and_users():
         session.close()
 
 # Initial data seeding should be invoked manually after applying migrations.
+
+__all__ = [
+    "Base",
+    "SessionLocal",
+    "get_session",
+    "seed_roles_and_users",
+    "RoleEnum",
+    "Document",
+    "DocumentRevision",
+    "DocumentPermission",
+    "DocumentStandard",
+    "Role",
+    "User",
+    "WorkflowStep",
+    "Acknowledgement",
+    "Notification",
+    "TrainingResult",
+    "FormSubmission",
+    "SignatureLog",
+    "AuditLog",
+    "PersonalAccessToken",
+    "DepartmentVisibility",
+]
