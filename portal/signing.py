@@ -1,7 +1,7 @@
 import os
 import subprocess
+import tempfile
 from datetime import datetime
-from typing import Optional
 
 import requests
 
@@ -10,9 +10,12 @@ from models import SignatureLog, get_session
 HSM_API_URL = os.environ.get("HSM_API_URL", "http://hsm.example.com/sign")
 
 
-def convert_to_pdf(source_path: str, output_dir: Optional[str] = None) -> str:
-    """Convert a document to PDF using LibreOffice/OnlyOffice."""
-    out_dir = output_dir or os.path.dirname(source_path) or "."
+def convert_to_pdf(source_path: str, output_dir: str) -> str:
+    """Convert a document to PDF using LibreOffice/OnlyOffice.
+
+    The caller is responsible for providing a temporary ``output_dir`` and
+    cleaning up any files created within it.
+    """
     subprocess.run(
         [
             "libreoffice",
@@ -21,12 +24,12 @@ def convert_to_pdf(source_path: str, output_dir: Optional[str] = None) -> str:
             "pdf",
             source_path,
             "--outdir",
-            out_dir,
+            output_dir,
         ],
         check=True,
     )
     base = os.path.splitext(os.path.basename(source_path))[0]
-    return os.path.join(out_dir, f"{base}.pdf")
+    return os.path.join(output_dir, f"{base}.pdf")
 
 
 def sign_pdf_with_hsm(pdf_path: str, user_id: int, doc_id: int) -> bytes:
@@ -47,8 +50,11 @@ def create_signed_pdf(
     doc_id: int,
     user_id: int,
     source_path: str,
-    output_dir: Optional[str] = None,
 ) -> bytes:
-    """Convert a document to PDF and obtain a digital signature from the HSM service."""
-    pdf_path = convert_to_pdf(source_path, output_dir)
-    return sign_pdf_with_hsm(pdf_path, user_id, doc_id)
+    """Convert a document to PDF and obtain a digital signature from the HSM service.
+
+    Temporary files created during the conversion are cleaned up automatically.
+    """
+    with tempfile.TemporaryDirectory() as tmpdir:
+        pdf_path = convert_to_pdf(source_path, tmpdir)
+        return sign_pdf_with_hsm(pdf_path, user_id, doc_id)

@@ -1431,14 +1431,24 @@ def create_document_from_docxf():
 def sign_document(doc_id: int):
     data = request.get_json(silent=True) or {}
     user_id = data.get("user_id")
-    file_path = data.get("file_path")
-    if not user_id or not file_path:
-        return jsonify(error="user_id and file_path required"), 400
+    object_key = data.get("object_key")
+    if not user_id or not object_key:
+        return jsonify(error="user_id and object_key required"), 400
+
+    temp_path = None
     try:
-        signed_pdf = create_signed_pdf(doc_id, user_id, file_path)
+        obj = storage._s3.get_object(Bucket=storage.S3_BUCKET, Key=object_key)
+        _, ext = os.path.splitext(object_key)
+        with tempfile.NamedTemporaryFile(suffix=ext, delete=False) as tmp:
+            tmp.write(obj["Body"].read())
+            temp_path = tmp.name
+        signed_pdf = create_signed_pdf(doc_id, user_id, temp_path)
         log_action(user_id, doc_id, "sign_document")
     except Exception as exc:
         return jsonify(error=str(exc)), 500
+    finally:
+        if temp_path and os.path.exists(temp_path):
+            os.unlink(temp_path)
     return Response(signed_pdf, mimetype="application/pdf")
 
 
