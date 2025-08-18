@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}Workflow{% endblock %}
+{% block content %}
+<h1>{{ doc.title }} - Workflow</h1>
+{% if steps %}
+<table class="table table-striped">
+  <thead>
+    <tr>
+      <th>Order</th>
+      <th>User</th>
+      <th>Type</th>
+      <th>Status</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for step in steps %}
+    <tr>
+      <td>{{ step.step_order }}</td>
+      <td>{{ step.user.username if step.user else '' }}</td>
+      <td>{{ step.step_type }}</td>
+      <td>{{ step.status }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<p>No workflow steps found.</p>
+{% endif %}
+{% endblock %}

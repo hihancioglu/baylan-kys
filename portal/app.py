@@ -844,6 +844,41 @@ def document_detail(doc_id: int):
     )
 
 
+@app.get("/documents/<int:doc_id>/workflow")
+@roles_required(RoleEnum.READER.value)
+def document_workflow(doc_id: int):
+    db = get_session()
+    doc = db.get(Document, doc_id)
+    if not doc:
+        db.close()
+        return "Document not found", 404
+    if doc.status not in {"Review", "Approved"}:
+        db.close()
+        return redirect(url_for("document_detail", doc_id=doc_id))
+    steps = (
+        db.query(WorkflowStep)
+        .filter_by(doc_id=doc_id)
+        .order_by(WorkflowStep.step_order)
+        .all()
+    )
+    html = render_template(
+        "document_workflow.html",
+        doc=doc,
+        steps=steps,
+        breadcrumbs=[
+            {"title": "Home", "url": url_for("dashboard")},
+            {"title": "Documents", "url": url_for("list_documents")},
+            {
+                "title": doc.title,
+                "url": url_for("document_detail", doc_id=doc_id),
+            },
+            {"title": "Workflow"},
+        ],
+    )
+    db.close()
+    return html
+
+
 @app.get("/documents/<int:doc_id>/download")
 @roles_required(RoleEnum.READER.value)
 def download_document(doc_id: int):

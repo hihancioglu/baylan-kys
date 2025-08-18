@@ -28,7 +28,7 @@
         <td class="actions">
           <a href="{{ url_for('document_detail', doc_id=doc.id) }}" class="btn btn-sm btn-outline-secondary">View</a>
           <a href="{{ url_for('edit_document', doc_id=doc.id) }}" class="btn btn-sm btn-outline-primary">Edit</a>
-          <a href="/documents/{{ doc.id }}/workflow" class="btn btn-sm btn-outline-secondary">Workflow</a>
+          <a href="{{ url_for('document_workflow', doc_id=doc.id) }}" class="btn btn-sm btn-outline-secondary">Workflow</a>
         </td>
       </tr>
       {% else %}
