@@ -7,7 +7,7 @@ os.environ.setdefault("ONLYOFFICE_INTERNAL_URL", "http://oo")
 os.environ.setdefault("ONLYOFFICE_PUBLIC_URL", "http://oo-public")
 os.environ.setdefault("ONLYOFFICE_JWT_SECRET", "secret")
 os.environ.setdefault("S3_ENDPOINT", "http://s3")
-os.environ["S3_BUCKET"] = "test-bucket"
+os.environ["S3_BUCKET_MAIN"] = "test-bucket"
 os.environ.setdefault("S3_ACCESS_KEY", "test")
 os.environ.setdefault("S3_SECRET_KEY", "test")
 
@@ -16,8 +16,7 @@ repo_root = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(repo_root))
 sys.path.insert(0, str(repo_root / "portal"))
 
-import boto3
-from botocore.stub import Stubber, ANY
+from unittest.mock import MagicMock, ANY, call
 import pytest
 import importlib
 
@@ -40,7 +39,7 @@ def load_app_modules():
     m = importlib.reload(importlib.import_module("models"))
     portal_app = importlib.reload(importlib.import_module("app"))
     docxf_render_module = importlib.reload(importlib.import_module("docxf_render"))
-    storage = importlib.import_module("portal.storage")
+    storage = importlib.import_module("storage")
     docxf_render = importlib.import_module("portal.docxf_render")
     Base = m.Base
     engine = m.engine
@@ -62,30 +61,9 @@ def test_docxf_document_creation(client):
         sess["user"] = {"id": 1}
         sess["roles"] = ["contributor"]
 
-    s3 = boto3.client(
-        "s3",
-        region_name="us-east-1",
-        aws_access_key_id="test",
-        aws_secret_access_key="test",
-    )
-    storage.storage_client.client = s3
-    docxf_render.storage_client.client = s3
-    docxf_render_module.storage_client.client = s3
+    mock_put = MagicMock(return_value={})
+    storage.storage_client.put_object = mock_put
     storage.storage_client.bucket_main = "test-bucket"
-    docxf_render.storage_client.bucket_main = "test-bucket"
-    docxf_render_module.storage_client.bucket_main = "test-bucket"
-    stubber = Stubber(s3)
-    stubber.add_response(
-        "put_object",
-        {},
-        {"Bucket": storage.storage_client.bucket_main, "Key": ANY, "Body": ANY},
-    )
-    stubber.add_response(
-        "put_object",
-        {},
-        {"Bucket": storage.storage_client.bucket_main, "Key": ANY, "Body": ANY},
-    )
-    stubber.activate()
     storage.generate_presigned_url = (
         lambda key, expires_in=None: f"https://example.com/{key}"
     )
@@ -111,7 +89,13 @@ def test_docxf_document_creation(client):
     assert data.get("preview_url")
 
     # Ensure S3 interactions occurred
-    stubber.assert_no_pending_responses()
+    assert storage.storage_client.put_object.call_count == 2
+    storage.storage_client.put_object.assert_has_calls(
+        [
+            call(Bucket=storage.storage_client.bucket_main, Key=ANY, Body=ANY),
+            call(Bucket=storage.storage_client.bucket_main, Key=ANY, Body=ANY),
+        ]
+    )
 
     # Verify version in database
     session_db = SessionLocal()

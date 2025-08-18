@@ -2,12 +2,13 @@ import os
 from pathlib import Path
 import sys
 import importlib
+from unittest.mock import MagicMock
 
 os.environ.setdefault("ONLYOFFICE_INTERNAL_URL", "http://oo")
 os.environ.setdefault("ONLYOFFICE_PUBLIC_URL", "http://oo-public")
 os.environ.setdefault("ONLYOFFICE_JWT_SECRET", "secret")
 os.environ.setdefault("S3_ENDPOINT", "http://s3")
-os.environ.setdefault("S3_BUCKET", "test-bucket")
+os.environ.setdefault("S3_BUCKET_MAIN", "test-bucket")
 os.environ.setdefault("S3_ACCESS_KEY", "test")
 os.environ.setdefault("S3_SECRET_KEY", "test")
 os.environ.setdefault("DATABASE_URL", "sqlite://")
@@ -31,16 +32,7 @@ def test_api_appends_extension_to_key():
         sess["user"] = {"id": 1}
         sess["roles"] = ["contributor"]
 
-    class DummyS3:
-        def __init__(self):
-            self.called_with = None
-
-        def head_object(self, **kwargs):
-            self.called_with = kwargs
-            return {}
-
-    dummy_s3 = DummyS3()
-    storage.storage_client.client = dummy_s3
+    storage.storage_client.head_object = MagicMock(return_value={})
 
     portal_app.extract_text = lambda key: "dummy"
     portal_app.notify_mandatory_read = lambda doc, users: None
@@ -65,7 +57,4 @@ def test_api_appends_extension_to_key():
     assert doc.doc_key == "abc123.txt"
     session_db.close()
 
-    assert dummy_s3.called_with == {
-        "Bucket": storage.storage_client.bucket_main,
-        "Key": "abc123.txt",
-    }
+    storage.storage_client.head_object.assert_called_once_with(Key="abc123.txt")
