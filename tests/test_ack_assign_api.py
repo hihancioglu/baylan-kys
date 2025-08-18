@@ -2,6 +2,8 @@ import os
 import importlib
 from pathlib import Path
 import sys
+import uuid
+
 import pytest
 from unittest.mock import patch
 
@@ -41,18 +43,17 @@ def client(app_models):
 
 def test_assign_acknowledgements_role_targets(client, app_models):
     app, m = app_models
-    m.Base.metadata.drop_all(bind=m.engine)
-    m.Base.metadata.create_all(bind=m.engine)
     session = m.SessionLocal()
-    publisher = m.User(username="ack_publisher")
-    user1 = m.User(username="ack_user1")
-    user2 = m.User(username="ack_user2")
-    role = m.Role(name="ack_reader")
+    uid = uuid.uuid4().hex
+    publisher = m.User(username=f"ack_publisher_{uid}")
+    user1 = m.User(username=f"ack_user1_{uid}")
+    user2 = m.User(username=f"ack_user2_{uid}")
+    role = m.Role(name=f"ack_reader_{uid}")
     session.add_all([publisher, user1, user2, role])
     session.commit()
     user1.roles.append(role)
     user2.roles.append(role)
-    doc = m.Document(doc_key="ack_doc.docx", title="Ack Doc", status="Published")
+    doc = m.Document(doc_key=f"ack_doc_{uid}.docx", title="Ack Doc", status="Published")
     session.add(doc)
     session.commit()
     doc_id = doc.id
@@ -70,7 +71,7 @@ def test_assign_acknowledgements_role_targets(client, app_models):
         notify_mock.return_value = None
         resp = client.post(
             "/api/ack/assign",
-            json={"doc_id": doc_id, "targets": ["ack_reader"]},
+            json={"doc_id": doc_id, "targets": [f"ack_reader_{uid}"]},
         )
         broadcast_mock.assert_called_once()
 
@@ -85,15 +86,15 @@ def test_assign_acknowledgements_role_targets(client, app_models):
 
 def test_assign_acknowledgements_nonexistent_doc(client, app_models):
     app, m = app_models
-    m.Base.metadata.drop_all(bind=m.engine)
-    m.Base.metadata.create_all(bind=m.engine)
     session = m.SessionLocal()
-    publisher = m.User(username="ack_publisher")
-    target = m.User(username="ack_user")
+    uid = uuid.uuid4().hex
+    publisher = m.User(username=f"ack_publisher_{uid}")
+    target = m.User(username=f"ack_user_{uid}")
     session.add_all([publisher, target])
     session.commit()
     publisher_id = publisher.id
     target_id = target.id
+    initial_count = session.query(m.Acknowledgement).count()
     session.close()
 
     with client.session_transaction() as sess:
@@ -112,24 +113,24 @@ def test_assign_acknowledgements_nonexistent_doc(client, app_models):
     assert resp.status_code == 404
     assert resp.get_json()["error"] == "document not found"
     session = m.SessionLocal()
-    assert session.query(m.Acknowledgement).count() == 0
+    assert session.query(m.Acknowledgement).count() == initial_count
     session.close()
     app._got_first_request = False
 
 
 def test_assign_acknowledgements_unpublished_doc(client, app_models):
     app, m = app_models
-    m.Base.metadata.drop_all(bind=m.engine)
-    m.Base.metadata.create_all(bind=m.engine)
     session = m.SessionLocal()
-    publisher = m.User(username="ack_publisher")
-    target = m.User(username="ack_user")
-    doc = m.Document(doc_key="unpub.docx", title="Unpub Doc", status="Draft")
+    uid = uuid.uuid4().hex
+    publisher = m.User(username=f"ack_publisher_{uid}")
+    target = m.User(username=f"ack_user_{uid}")
+    doc = m.Document(doc_key=f"unpub_{uid}.docx", title="Unpub Doc", status="Draft")
     session.add_all([publisher, target, doc])
     session.commit()
     doc_id = doc.id
     publisher_id = publisher.id
     target_id = target.id
+    initial_count = session.query(m.Acknowledgement).count()
     session.close()
 
     with client.session_transaction() as sess:
@@ -148,20 +149,19 @@ def test_assign_acknowledgements_unpublished_doc(client, app_models):
     assert resp.status_code == 400
     assert resp.get_json()["error"] == "document not published"
     session = m.SessionLocal()
-    assert session.query(m.Acknowledgement).count() == 0
+    assert session.query(m.Acknowledgement).count() == initial_count
     session.close()
     app._got_first_request = False
 
 
 def test_assign_acknowledgements_user_targets(client, app_models):
     app, m = app_models
-    m.Base.metadata.drop_all(bind=m.engine)
-    m.Base.metadata.create_all(bind=m.engine)
     session = m.SessionLocal()
-    publisher = m.User(username="ack_publisher")
-    user1 = m.User(username="ack_user1")
-    user2 = m.User(username="ack_user2")
-    doc = m.Document(doc_key="ack_doc.docx", title="Ack Doc", status="Published")
+    uid = uuid.uuid4().hex
+    publisher = m.User(username=f"ack_publisher_{uid}")
+    user1 = m.User(username=f"ack_user1_{uid}")
+    user2 = m.User(username=f"ack_user2_{uid}")
+    doc = m.Document(doc_key=f"ack_doc_{uid}.docx", title="Ack Doc", status="Published")
     session.add_all([publisher, user1, user2, doc])
     session.commit()
     doc_id = doc.id
@@ -194,15 +194,15 @@ def test_assign_acknowledgements_user_targets(client, app_models):
 
 def test_assign_acknowledgements_missing_doc_id(client, app_models):
     app, m = app_models
-    m.Base.metadata.drop_all(bind=m.engine)
-    m.Base.metadata.create_all(bind=m.engine)
     session = m.SessionLocal()
-    publisher = m.User(username="ack_publisher")
-    user = m.User(username="ack_user")
+    uid = uuid.uuid4().hex
+    publisher = m.User(username=f"ack_publisher_{uid}")
+    user = m.User(username=f"ack_user_{uid}")
     session.add_all([publisher, user])
     session.commit()
     publisher_id = publisher.id
     user_id = user.id
+    initial_count = session.query(m.Acknowledgement).count()
     session.close()
 
     with client.session_transaction() as sess:
@@ -219,22 +219,22 @@ def test_assign_acknowledgements_missing_doc_id(client, app_models):
     assert resp.status_code == 400
     assert resp.get_json()["error"] == "doc_id required"
     session = m.SessionLocal()
-    assert session.query(m.Acknowledgement).count() == 0
+    assert session.query(m.Acknowledgement).count() == initial_count
     session.close()
     app._got_first_request = False
 
 
 def test_assign_acknowledgements_invalid_targets(client, app_models):
     app, m = app_models
-    m.Base.metadata.drop_all(bind=m.engine)
-    m.Base.metadata.create_all(bind=m.engine)
     session = m.SessionLocal()
-    publisher = m.User(username="ack_publisher")
-    doc = m.Document(doc_key="ack_doc.docx", title="Ack Doc", status="Published")
+    uid = uuid.uuid4().hex
+    publisher = m.User(username=f"ack_publisher_{uid}")
+    doc = m.Document(doc_key=f"ack_doc_{uid}.docx", title="Ack Doc", status="Published")
     session.add_all([publisher, doc])
     session.commit()
     doc_id = doc.id
     publisher_id = publisher.id
+    initial_count = session.query(m.Acknowledgement).count()
     session.close()
 
     with client.session_transaction() as sess:
@@ -252,6 +252,6 @@ def test_assign_acknowledgements_invalid_targets(client, app_models):
 
     assert resp.status_code == 200
     session = m.SessionLocal()
-    assert session.query(m.Acknowledgement).count() == 0
+    assert session.query(m.Acknowledgement).count() == initial_count
     session.close()
     app._got_first_request = False

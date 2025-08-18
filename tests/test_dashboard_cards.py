@@ -1,32 +1,22 @@
 import importlib
 import os
-import sys
-from pathlib import Path
 
 import pytest
 from flask import url_for
 
 
 @pytest.fixture
-def app_models(tmp_path):
+def app_models():
     os.environ.setdefault("ONLYOFFICE_INTERNAL_URL", "http://oo")
     os.environ.setdefault("ONLYOFFICE_PUBLIC_URL", "http://oo-public")
     os.environ.setdefault("ONLYOFFICE_JWT_SECRET", "secret")
     os.environ.setdefault("S3_ENDPOINT", "http://s3")
 
-    db_path = tmp_path / "test.db"
-    os.environ["DATABASE_URL"] = f"sqlite:///{db_path}"
-
-    repo_root = Path(__file__).resolve().parent.parent
-    portal_path = repo_root / "portal"
-    sys.path.insert(0, str(portal_path))
-
     import models as m
     import app as a
-    m = importlib.reload(m)
-    a = importlib.reload(a)
+    m = importlib.import_module("models")
+    a = importlib.import_module("app")
 
-    m.Base.metadata.create_all(bind=m.engine)
     session = m.SessionLocal()
 
     user = m.User(username="approver")
@@ -69,14 +59,7 @@ def app_models(tmp_path):
     }
     session.close()
 
-    try:
-        yield data
-    finally:
-        m.Base.metadata.drop_all(bind=m.engine)
-        if db_path.exists():
-            db_path.unlink()
-        if str(portal_path) in sys.path:
-            sys.path.remove(str(portal_path))
+    yield data
 
 
 @pytest.fixture

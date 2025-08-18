@@ -8,32 +8,27 @@ os.environ.setdefault("ONLYOFFICE_PUBLIC_URL", "http://oo-public")
 os.environ.setdefault("ONLYOFFICE_JWT_SECRET", "secret")
 os.environ.setdefault("S3_ENDPOINT", "http://s3")
 
-_db_path = Path("test_search.db")
-if _db_path.exists():
-    _db_path.unlink()
-os.environ["DATABASE_URL"] = f"sqlite:///{_db_path}"
-
-# Make application modules importable
-repo_root = Path(__file__).resolve().parent.parent
-sys.path.insert(0, str(repo_root))
-sys.path.insert(0, str(repo_root / "portal"))
-
 import pytest
 from sqlalchemy import or_
 import importlib
-import models as m
-import app as a
-importlib.reload(m)
-importlib.reload(a)
-SessionLocal = m.SessionLocal
-Document = m.Document
-Base = m.Base
-engine = m.engine
-app = a.app
-_get_documents = a._get_documents
 
-# Create database schema
-Base.metadata.create_all(bind=engine)
+SessionLocal = None
+Document = None
+app = None
+_get_documents = None
+
+
+@pytest.fixture(autouse=True)
+def app_models():
+    global SessionLocal, Document, app, _get_documents
+    m = importlib.reload(importlib.import_module("models"))
+    a = importlib.reload(importlib.import_module("app"))
+    m.Base.metadata.create_all(bind=m.engine)
+    SessionLocal = m.SessionLocal
+    Document = m.Document
+    app = a.app
+    _get_documents = a._get_documents
+    return m
 
 def _populate_docs():
     session = SessionLocal()

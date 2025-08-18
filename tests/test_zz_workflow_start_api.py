@@ -24,7 +24,6 @@ def _get_app_models():
 def _prepare_data(suffix: str = ""):
     a, m = _get_app_models()
     app = a.app
-    m.Base.metadata.create_all(bind=m.engine)
     session = m.SessionLocal()
     uid = uuid.uuid4().hex
     contributor = m.User(username=f"contrib_{suffix}_{uid}")

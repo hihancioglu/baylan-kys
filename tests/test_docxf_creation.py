@@ -11,11 +11,6 @@ os.environ.setdefault("S3_BUCKET", "test-bucket")
 os.environ.setdefault("S3_ACCESS_KEY", "test")
 os.environ.setdefault("S3_SECRET_KEY", "test")
 
-db_path = Path("test_docxf.db")
-if db_path.exists():
-    db_path.unlink()
-os.environ["DATABASE_URL"] = f"sqlite:///{db_path}"
-
 # Ensure modules can be imported
 repo_root = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(repo_root))
@@ -25,23 +20,35 @@ import boto3
 from botocore.stub import Stubber, ANY
 import pytest
 import importlib
-import app as portal_app
-import models as m
-import docxf_render as docxf_render_module
-from portal import storage, docxf_render
-importlib.reload(m)
-importlib.reload(portal_app)
-importlib.reload(docxf_render_module)
-Base = m.Base
-engine = m.engine
-SessionLocal = m.SessionLocal
-Document = m.Document
-app = portal_app.app
+
+portal_app = None
+m = None
+docxf_render_module = None
+storage = None
+docxf_render = None
+Base = None
+engine = None
+SessionLocal = None
+Document = None
+app = None
 
 
-# Create database schema
-Base.metadata.create_all(bind=engine)
-app.config["WTF_CSRF_ENABLED"] = False
+@pytest.fixture(autouse=True)
+def load_app_modules():
+    global portal_app, m, docxf_render_module, storage, docxf_render
+    global Base, engine, SessionLocal, Document, app
+    m = importlib.reload(importlib.import_module("models"))
+    portal_app = importlib.reload(importlib.import_module("app"))
+    docxf_render_module = importlib.reload(importlib.import_module("docxf_render"))
+    storage = importlib.import_module("portal.storage")
+    docxf_render = importlib.import_module("portal.docxf_render")
+    Base = m.Base
+    engine = m.engine
+    SessionLocal = m.SessionLocal
+    Document = m.Document
+    app = portal_app.app
+    Base.metadata.create_all(bind=engine)
+    app.config["WTF_CSRF_ENABLED"] = False
 
 
 @pytest.fixture()

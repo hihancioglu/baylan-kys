@@ -14,16 +14,13 @@ os.environ.setdefault("S3_ENDPOINT", "http://s3")
 
 
 @pytest.fixture()
-def setup_data(tmp_path):
-    db_path = tmp_path / "test_pending.db"
-    os.environ["DATABASE_URL"] = f"sqlite:///{db_path}"
+def setup_data():
     repo_root = Path(__file__).resolve().parent.parent
     sys.path.insert(0, str(repo_root))
     sys.path.insert(0, str(repo_root / "portal"))
-    models = importlib.reload(importlib.import_module("models"))
-    app_module = importlib.reload(importlib.import_module("app"))
+    models = importlib.import_module("models")
+    app_module = importlib.import_module("app")
     app_module.app.config["WTF_CSRF_ENABLED"] = False
-    models.Base.metadata.create_all(bind=models.engine)
     session = models.SessionLocal()
     user1 = models.User(username="approver1")
     user2 = models.User(username="approver2")
@@ -61,9 +58,6 @@ def setup_data(tmp_path):
     }
     session.close()
     yield app_module.app, ids
-    models.Base.metadata.drop_all(bind=models.engine)
-    if db_path.exists():
-        db_path.unlink()
 
 
 @pytest.fixture()
