@@ -74,7 +74,7 @@ def _run_migrations() -> None:
 
 _run_migrations()
 
-app = Flask(__name__, static_folder="static/dist")
+app = Flask(__name__, static_folder="static/dist", static_url_path="/dist")
 app.secret_key = os.environ.get("SECRET_KEY", "dev")
 app.config.update(
     SESSION_COOKIE_HTTPONLY=True,
