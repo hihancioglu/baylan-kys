@@ -14,8 +14,9 @@ config = context.config
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
-# add the project root to the Python path so "portal" can be imported
-sys.path.append(os.path.dirname(os.path.dirname(__file__)))
+# add the project root to the beginning of the Python path so "portal" can
+# be imported even if another installed package shares the same name.
+sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
 # add your model's MetaData object here
 # for 'autogenerate' support
