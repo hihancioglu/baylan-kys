@@ -1,6 +1,7 @@
 import os
 import smtplib
 import json
+import logging
 from email.message import EmailMessage
 from queue import Queue
 import requests
@@ -15,6 +16,8 @@ WEBHOOK_URL_DEFAULT = os.environ.get("WEBHOOK_URL_DEFAULT")
 
 # --- In-memory channel management for SSE clients ---
 _channels = {}
+
+logger = logging.getLogger(__name__)
 
 
 def subscribe(user_id: int) -> Queue:
@@ -35,8 +38,11 @@ def send_email(to: str, subject: str, body: str) -> None:
     msg["From"] = SMTP_SENDER
     msg["To"] = to
     msg.set_content(body)
-    with smtplib.SMTP(SMTP_SERVER, SMTP_PORT) as smtp:
-        smtp.send_message(msg)
+    try:
+        with smtplib.SMTP(SMTP_SERVER, SMTP_PORT) as smtp:
+            smtp.send_message(msg)
+    except Exception as exc:  # pragma: no cover - logging path isn't critical
+        logger.warning("Failed to send email to %s: %s", to, exc)
 
 def send_webhook(url: str, message: str) -> None:
     requests.post(url, json={"text": message})
