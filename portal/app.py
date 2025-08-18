@@ -1334,11 +1334,15 @@ def create_document_api():
     if not tags_val:
         return jsonify({"errors": {"tags": "Invalid tags format."}}), 400
     uploaded_file_key = data.get("uploaded_file_key")
+    uploaded_file_name = data.get("uploaded_file_name", "")
+    _, ext = os.path.splitext(uploaded_file_name)
+    doc_key = uploaded_file_key
+    if ext and not doc_key.endswith(ext):
+        doc_key = f"{doc_key}{ext}"
     try:
-        storage._s3.head_object(Bucket=storage.S3_BUCKET, Key=uploaded_file_key)
+        storage._s3.head_object(Bucket=storage.S3_BUCKET, Key=doc_key)
     except Exception as e:
         return jsonify({"errors": {"uploaded_file_key": str(e)}}), 400
-    doc_key = uploaded_file_key
     doc = Document(
         doc_key=doc_key,
         title=data.get("title"),
@@ -1358,7 +1362,7 @@ def create_document_api():
         return jsonify(error="user_id required"), 400
     session_db.commit()
     log_action(user_id, doc.id, "create_document")
-    content = extract_text(uploaded_file_key)
+    content = extract_text(doc_key)
     index_document(doc, content)
     user_ids = [u.id for u in session_db.query(User).all()]
     notify_mandatory_read(doc, user_ids)
