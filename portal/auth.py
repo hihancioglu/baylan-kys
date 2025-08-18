@@ -134,7 +134,7 @@ def api_login():
     access_token = jwt.encode(access_payload, secret, algorithm='HS256')
     refresh_token = jwt.encode(refresh_payload, secret, algorithm='HS256')
     user_id, roles = _ensure_user(username)
-    session['user'] = {'id': user_id, 'username': username}
+    session['user'] = {'id': user_id, 'username': username, 'name': username}
     session['roles'] = roles
     if wants_json:
         resp = jsonify(status='ok')
