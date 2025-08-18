@@ -3,7 +3,7 @@ import json
 from datetime import datetime
 import requests
 
-from storage import _s3, S3_BUCKET
+from storage import storage_client
 
 # Default OnlyOffice Document Server endpoint
 DOCUMENT_SERVER_URL = os.environ.get(
@@ -73,7 +73,7 @@ def render_form_and_store(form_name: str, data: dict | None = None) -> tuple[byt
     docx_key = f"{base_key}.docx"
     pdf_key = f"{base_key}.pdf"
 
-    _s3.put_object(Bucket=S3_BUCKET, Key=docx_key, Body=docx_bytes)
-    _s3.put_object(Bucket=S3_BUCKET, Key=pdf_key, Body=pdf_bytes)
+    storage_client.put_object(Key=docx_key, Body=docx_bytes)
+    storage_client.put_object(Key=pdf_key, Body=pdf_bytes)
 
     return pdf_bytes, docx_key, pdf_key

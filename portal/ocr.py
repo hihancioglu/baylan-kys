@@ -2,7 +2,7 @@ import io
 import os
 from pdfminer.high_level import extract_text as pdf_extract_text
 from docx import Document
-from storage import _s3, S3_BUCKET
+from storage import storage_client
 
 
 def _detect_ext(data: bytes) -> str:
@@ -35,7 +35,7 @@ def extract_text(key_or_bytes: str | bytes) -> str:
                     doc = Document(key_or_bytes)
                     return "\n".join(p.text for p in doc.paragraphs)
                 return ""
-            obj = _s3.get_object(Bucket=S3_BUCKET, Key=key_or_bytes)
+            obj = storage_client.get_object(Key=key_or_bytes)
             data = obj["Body"].read()
             ext = os.path.splitext(key_or_bytes)[1].lower()
 

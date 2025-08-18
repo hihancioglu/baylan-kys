@@ -53,8 +53,7 @@ from reports import (
     pending_approvals_report,
 )
 from signing import create_signed_pdf
-from storage import generate_presigned_url
-import storage
+from storage import generate_presigned_url, storage_client
 from permissions import permission_check
 from datetime import datetime
 from queue import Queue
@@ -734,8 +733,7 @@ def new_document():
                 _, ext = os.path.splitext(uploaded.filename)
                 doc_key = f"{secrets.token_hex(16)}{ext}"
                 try:
-                    storage._s3.put_object(
-                        Bucket=storage.S3_BUCKET,
+                    storage_client.put_object(
                         Key=doc_key,
                         Body=uploaded.read(),
                     )
@@ -1340,7 +1338,7 @@ def create_document_api():
     if ext and not doc_key.endswith(ext):
         doc_key = f"{doc_key}{ext}"
     try:
-        storage._s3.head_object(Bucket=storage.S3_BUCKET, Key=doc_key)
+        storage_client.head_object(Key=doc_key)
     except Exception as e:
         return jsonify({"errors": {"uploaded_file_key": str(e)}}), 400
     doc = Document(
@@ -1431,7 +1429,7 @@ def sign_document(doc_id: int):
 
     temp_path = None
     try:
-        obj = storage._s3.get_object(Bucket=storage.S3_BUCKET, Key=object_key)
+        obj = storage_client.get_object(Key=object_key)
         _, ext = os.path.splitext(object_key)
         with tempfile.NamedTemporaryFile(suffix=ext, delete=False) as tmp:
             tmp.write(obj["Body"].read())
