@@ -1095,6 +1095,9 @@ def api_compare_documents():
         return jsonify(error="version not found"), 404
 
     user = session.get("user")
+    user_name = ""
+    if user:
+        user_name = user.get("name") or user.get("username") or user.get("email", "")
     config = {
         "document": {
             "fileType": "docx",
@@ -1106,7 +1109,7 @@ def api_compare_documents():
         "documentType": "text",
         "editorConfig": {
             "mode": "view",
-            "user": {"id": user["id"], "name": user["name"]} if user else {},
+            "user": {"id": user["id"], "name": user_name} if user else {},
             "compareFile": {
                 "fileType": "docx",
                 "key": to_doc["key"],
@@ -1587,6 +1590,9 @@ def approval_detail(id: int):
             return "Not found", 404
         doc = step.document
         user = session.get("user")
+        user_name = ""
+        if user:
+            user_name = user.get("name") or user.get("username") or user.get("email", "")
         config = {
             "document": {
                 "fileType": "docx",
@@ -1597,7 +1603,7 @@ def approval_detail(id: int):
             },
             "documentType": "text",
             "editorConfig": {
-                "user": {"id": user["id"], "name": user["name"]} if user else {},
+                "user": {"id": user["id"], "name": user_name} if user else {},
                 "mode": "view",
             },
         }
@@ -2205,6 +2211,7 @@ def edit_document(doc_id):
         db.close()
         return "Document not found", 404
     user = session.get("user") or {"id": "u1", "name": "Ibrahim H.", "email": "ih@baylan.local"}
+    user_name = user.get("name") or user.get("username") or user.get("email", "")
     public_base_url = os.environ.get(
         "PORTAL_PUBLIC_BASE_URL", request.host_url.rstrip("/")
     )
@@ -2225,7 +2232,7 @@ def edit_document(doc_id):
         "documentType": "text",
         "editorConfig": {
             "callbackUrl": f"{public_base_url}/onlyoffice/callback/{doc.doc_key}",
-            "user": {"id": user["id"], "name": user["name"]},
+            "user": {"id": user["id"], "name": user_name},
             "mode": "edit",
         },
     }
