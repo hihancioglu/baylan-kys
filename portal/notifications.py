@@ -5,7 +5,8 @@ import logging
 from email.message import EmailMessage
 from queue import Queue
 import requests
-from models import get_session, User, UserSetting, Notification
+from sqlalchemy.orm import sessionmaker
+from models import engine, User, UserSetting, Notification
 
 SMTP_SERVER = os.environ.get("SMTP_SERVER", "localhost")
 SMTP_PORT = int(os.environ.get("SMTP_PORT", "25"))
@@ -54,7 +55,8 @@ def notify_user(user_id: int, subject: str, body: str) -> None:
     webhook URL, this function falls back to ``WEBHOOK_URL_DEFAULT`` if it is
     defined.
     """
-    session = get_session()
+    Session = sessionmaker(bind=engine)
+    session = Session()
     try:
         user = session.get(User, user_id)
         settings = session.query(UserSetting).filter_by(user_id=user_id).first()
