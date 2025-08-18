@@ -11,6 +11,7 @@ os.environ.setdefault("ONLYOFFICE_INTERNAL_URL", "http://oo")
 os.environ.setdefault("ONLYOFFICE_PUBLIC_URL", "http://oo-public")
 os.environ.setdefault("ONLYOFFICE_JWT_SECRET", "secret")
 os.environ.setdefault("S3_ENDPOINT", "http://s3")
+os.environ["S3_BUCKET"] = "local"
 
 # Make application modules importable
 repo_root = Path(__file__).resolve().parent.parent
@@ -20,6 +21,9 @@ sys.path.insert(0, str(repo_root / "portal"))
 
 @pytest.fixture()
 def app_models():
+    os.environ["S3_BUCKET"] = "local"
+    importlib.reload(importlib.import_module("storage"))
+    importlib.reload(importlib.import_module("portal.storage"))
     app_module = importlib.reload(importlib.import_module("app"))
     models_module = importlib.reload(importlib.import_module("models"))
     app_module.app.config["WTF_CSRF_ENABLED"] = False

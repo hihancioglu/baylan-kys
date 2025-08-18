@@ -73,7 +73,11 @@ def render_form_and_store(form_name: str, data: dict | None = None) -> tuple[byt
     docx_key = f"{base_key}.docx"
     pdf_key = f"{base_key}.pdf"
 
-    storage_client.put_object(Key=docx_key, Body=docx_bytes)
-    storage_client.put_object(Key=pdf_key, Body=pdf_bytes)
+    storage_client.put_object(
+        Bucket=storage_client.bucket_main, Key=docx_key, Body=docx_bytes
+    )
+    storage_client.put_object(
+        Bucket=storage_client.bucket_main, Key=pdf_key, Body=pdf_bytes
+    )
 
     return pdf_bytes, docx_key, pdf_key

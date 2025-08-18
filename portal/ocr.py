@@ -35,7 +35,9 @@ def extract_text(key_or_bytes: str | bytes) -> str:
                     doc = Document(key_or_bytes)
                     return "\n".join(p.text for p in doc.paragraphs)
                 return ""
-            obj = storage_client.get_object(Key=key_or_bytes)
+            obj = storage_client.get_object(
+                Bucket=storage_client.bucket_main, Key=key_or_bytes
+            )
             data = obj["Body"].read()
             ext = os.path.splitext(key_or_bytes)[1].lower()
 

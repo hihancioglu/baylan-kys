@@ -1,7 +1,7 @@
 """Cron job to archive documents whose retention period has expired."""
 from datetime import datetime, timedelta
 from models import get_session, Document, User
-from storage import move_to_archive
+from storage import storage_client
 from app import log_action
 
 
@@ -21,7 +21,7 @@ def run() -> None:
         base = doc.created_at or now
         expire_at = base + timedelta(days=doc.retention_period)
         if expire_at <= now:
-            move_to_archive(doc.doc_key, doc.retention_period or 0)
+            storage_client.move_to_archive(doc.doc_key, doc.retention_period or 0)
             doc.status = "Archived"
             doc.archived_at = now
             log_action(system_user_id, doc.id, "archive_document")
