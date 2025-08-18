@@ -10,13 +10,13 @@ RUN apt-get update && \
 COPY portal/requirements.txt ./requirements.txt
 RUN pip install -r requirements.txt
 
-# copy application source
-COPY portal/ ./
+# copy application source into /app/portal to preserve package structure
+COPY portal ./portal
 COPY alembic.ini ./
 COPY alembic ./alembic
 
 RUN pip install libsass rcssmin jsmin
-RUN python static/build.py
+RUN python portal/static/build.py
 
 # run database migrations before starting the app
-CMD ["sh", "-c", "alembic upgrade head && python app.py"]
+CMD ["sh", "-c", "alembic upgrade head && python portal/app.py"]
