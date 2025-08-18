@@ -1,4 +1,4 @@
-import os, json, time, base64, hmac, hashlib, csv, io, secrets, logging
+import os, json, time, base64, hmac, hashlib, csv, io, secrets, logging, tempfile
 from pathlib import Path
 from flask import (
     Flask,
@@ -54,6 +54,7 @@ from reports import (
 )
 from signing import create_signed_pdf
 from storage import generate_presigned_url
+import storage
 from permissions import permission_check
 from datetime import datetime
 from queue import Queue
@@ -1304,7 +1305,15 @@ def create_document():
 @roles_required(RoleEnum.CONTRIBUTOR.value)
 def create_document_api():
     data = request.get_json(silent=True) or {}
-    required_fields = ["code", "title", "type", "department", "tags", "file_path"]
+    required_fields = [
+        "code",
+        "title",
+        "type",
+        "department",
+        "tags",
+        "uploaded_file_data",
+        "uploaded_file_name",
+    ]
     errors = {}
     for field in required_fields:
         value = data.get(field)
@@ -1316,8 +1325,20 @@ def create_document_api():
     tags_val = _format_tags(data.get("tags"))
     if not tags_val:
         return jsonify({"errors": {"tags": "Invalid tags format."}}), 400
+    uploaded_file_name = data.get("uploaded_file_name")
+    uploaded_file_data = data.get("uploaded_file_data")
+    try:
+        file_bytes = base64.b64decode(uploaded_file_data)
+    except Exception:
+        return jsonify({"errors": {"uploaded_file_data": "Invalid base64 data."}}), 400
+    _, ext = os.path.splitext(uploaded_file_name or "")
+    doc_key = f"{data.get('doc_key') or secrets.token_hex(16)}{ext}"
+    try:
+        storage._s3.put_object(Bucket=storage.S3_BUCKET, Key=doc_key, Body=file_bytes)
+    except Exception as e:
+        return jsonify(error=str(e)), 500
     doc = Document(
-        doc_key=data.get("doc_key") or secrets.token_hex(16),
+        doc_key=doc_key,
         title=data.get("title"),
         code=data.get("code"),
         tags=tags_val,
@@ -1335,12 +1356,18 @@ def create_document_api():
         return jsonify(error="user_id required"), 400
     session_db.commit()
     log_action(user_id, doc.id, "create_document")
-    file_path = data.get("file_path")
-    content = extract_text(file_path) if file_path else ""
+    with tempfile.NamedTemporaryFile(delete=False, suffix=ext) as tmp:
+        tmp.write(file_bytes)
+        tmp.flush()
+        tmp_path = tmp.name
+    try:
+        content = extract_text(tmp_path)
+    finally:
+        os.unlink(tmp_path)
     index_document(doc, content)
     user_ids = [u.id for u in session_db.query(User).all()]
     notify_mandatory_read(doc, user_ids)
-    result = {"id": doc.id}
+    result = {"id": doc.id, "doc_key": doc_key}
     session_db.close()
     return jsonify(result), 201
 
