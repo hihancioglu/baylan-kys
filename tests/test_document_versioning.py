@@ -134,3 +134,18 @@ def test_revert_document_preserves_history(client, app_models):
     minor_versions = {r.minor_version for r in revisions}
     assert 0 in minor_versions and 2 in minor_versions
     session.close()
+
+
+def test_compare_nonexistent_document_returns_404(client, app_models):
+    app, m = app_models
+    session = m.SessionLocal()
+    last = session.query(m.Document).order_by(m.Document.id.desc()).first()
+    session.close()
+    missing_id = (last.id if last else 0) + 1
+
+    with client.session_transaction() as sess:
+        sess["user"] = {"id": 1, "name": "Tester"}
+        sess["roles"] = ["reader"]
+
+    resp = client.get(f"/documents/{missing_id}/compare?rev_id=1&rev_id=2")
+    assert resp.status_code == 404
