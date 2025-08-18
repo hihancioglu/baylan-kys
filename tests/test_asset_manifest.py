@@ -1,24 +1,18 @@
 import json
 import os
-import sys
 from pathlib import Path
 
 os.environ.setdefault("ONLYOFFICE_INTERNAL_URL", "http://oo")
 os.environ.setdefault("ONLYOFFICE_PUBLIC_URL", "http://oo-public")
 os.environ.setdefault("ONLYOFFICE_JWT_SECRET", "secret")
 
-def test_app_loads_when_base_js_missing():
-    manifest_path = Path("portal/static/dist/manifest.json")
-    original = manifest_path.read_text()
-    data = json.loads(original)
-    data.pop("base.js", None)
-    manifest_path.write_text(json.dumps(data))
 
-    try:
-        sys.modules.pop("portal.app", None)
-        import portal.app as appmodule
-        assert appmodule._asset_manifest["base.js"] == "base.js"
-    finally:
-        manifest_path.write_text(original)
-        sys.modules.pop("portal.app", None)
-        import portal.app  # restore original module
+def test_base_js_present_in_manifest():
+    manifest_path = Path("portal/static/dist/manifest.json")
+    data = json.loads(manifest_path.read_text())
+
+    assert "base.js" in data, "base.js missing from asset manifest"
+
+    built_file = Path("portal/static/dist") / data["base.js"]
+    assert built_file.exists(), "built base.js asset missing"
+

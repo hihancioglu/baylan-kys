@@ -2,6 +2,9 @@
 # Run security scanners and generate reports.
 set -e
 
+# Ensure static assets are built and base.js is present in the manifest.
+python portal/static/build.py
+
 # Bandit: Python static analysis
 if command -v bandit >/dev/null 2>&1; then
   bandit -r portal -f json -o bandit-report.json
