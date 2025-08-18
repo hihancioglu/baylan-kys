@@ -112,6 +112,18 @@ CSRFProtect(app)
 auth_init(app)
 app.register_blueprint(auth_bp)
 
+
+@app.errorhandler(403)
+def handle_forbidden(error):
+    app.logger.warning(
+        "403 Forbidden: path=%s user=%s roles=%s reason=%s",
+        request.path,
+        session.get("user"),
+        session.get("roles"),
+        getattr(error, "description", ""),
+    )
+    return "Forbidden", 403
+
 manifest_path = os.path.join(app.static_folder, "manifest.json")
 _asset_manifest: dict[str, str] = {}
 
