@@ -1,4 +1,5 @@
 import os
+import sys
 from logging.config import fileConfig
 
 from sqlalchemy import engine_from_config, pool
@@ -12,6 +13,9 @@ config = context.config
 # This line sets up loggers basically.
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
+
+# add the project root to the Python path so "portal" can be imported
+sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 
 # add your model's MetaData object here
 # for 'autogenerate' support
