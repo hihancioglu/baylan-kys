@@ -7,7 +7,7 @@ os.environ.setdefault("ONLYOFFICE_INTERNAL_URL", "http://oo")
 os.environ.setdefault("ONLYOFFICE_PUBLIC_URL", "http://oo-public")
 os.environ.setdefault("ONLYOFFICE_JWT_SECRET", "secret")
 os.environ.setdefault("S3_ENDPOINT", "http://s3")
-os.environ.setdefault("S3_BUCKET", "test-bucket")
+os.environ["S3_BUCKET"] = "test-bucket"
 os.environ.setdefault("S3_ACCESS_KEY", "test")
 os.environ.setdefault("S3_SECRET_KEY", "test")
 
@@ -68,6 +68,12 @@ def test_docxf_document_creation(client):
         aws_access_key_id="test",
         aws_secret_access_key="test",
     )
+    storage.storage_client.client = s3
+    docxf_render.storage_client.client = s3
+    docxf_render_module.storage_client.client = s3
+    storage.storage_client.bucket_main = "test-bucket"
+    docxf_render.storage_client.bucket_main = "test-bucket"
+    docxf_render_module.storage_client.bucket_main = "test-bucket"
     stubber = Stubber(s3)
     stubber.add_response(
         "put_object",
@@ -80,13 +86,6 @@ def test_docxf_document_creation(client):
         {"Bucket": storage.storage_client.bucket_main, "Key": ANY, "Body": ANY},
     )
     stubber.activate()
-
-    storage.storage_client.client = s3
-    docxf_render.storage_client.client = s3
-    docxf_render_module.storage_client.client = s3
-    storage.storage_client.bucket_main = "test-bucket"
-    docxf_render.storage_client.bucket_main = "test-bucket"
-    docxf_render_module.storage_client.bucket_main = "test-bucket"
     storage.generate_presigned_url = (
         lambda key, expires_in=None: f"https://example.com/{key}"
     )
