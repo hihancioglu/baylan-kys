@@ -1,4 +1,4 @@
-import os, json, time, base64, hmac, hashlib, csv, io, secrets
+import os, json, time, base64, hmac, hashlib, csv, io, secrets, logging
 from pathlib import Path
 from flask import (
     Flask,
@@ -110,17 +110,21 @@ auth_init(app)
 app.register_blueprint(auth_bp)
 
 manifest_path = os.path.join(app.static_folder, "manifest.json")
+_asset_manifest: dict[str, str] = {}
+
 try:
     with open(manifest_path) as f:
         _asset_manifest = json.load(f)
 except FileNotFoundError:
-    raise RuntimeError(
+    logging.warning(
         "Asset manifest not found. Run portal/static/build.py to generate assets."
     )
+
 if "base.js" not in _asset_manifest:
-    raise RuntimeError(
+    logging.warning(
         "base.js missing from asset manifest. Run portal/static/build.py to generate assets."
     )
+    _asset_manifest.setdefault("base.js", "base.js")
 
 
 def asset_url(name: str) -> str:
