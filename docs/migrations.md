@@ -5,18 +5,13 @@ database schema changes.
 
 ## Running migrations
 
-1. Ensure the `DATABASE_URL` environment variable points to the target
-   database. For example:
+The application now executes pending migrations automatically during startup.
+For manual invocation (for example in development), ensure the `DATABASE_URL`
+environment variable points to the target database and run:
 
-   ```bash
-   export DATABASE_URL=sqlite:///portal.db
-   ```
-
-2. Apply all pending migrations:
-
-   ```bash
-   alembic upgrade head
-   ```
+```bash
+alembic upgrade head
+```
 
 ## Creating a new migration
 
