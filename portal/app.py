@@ -1,4 +1,5 @@
 import os, json, time, base64, hmac, hashlib, csv, io, secrets
+from pathlib import Path
 from flask import (
     Flask,
     request,
@@ -56,6 +57,22 @@ from storage import generate_presigned_url
 from permissions import permission_check
 from datetime import datetime
 from queue import Queue
+
+# Automatically run database migrations in non-SQLite environments.
+def _run_migrations() -> None:
+    db_url = os.environ.get("DATABASE_URL", "")
+    if db_url.startswith("sqlite"):
+        return
+    from alembic import command
+    from alembic.config import Config
+
+    repo_root = Path(__file__).resolve().parent.parent
+    cfg = Config(str(repo_root / "alembic.ini"))
+    cfg.set_main_option("script_location", str(repo_root / "alembic"))
+    command.upgrade(cfg, "head")
+
+
+_run_migrations()
 
 app = Flask(__name__, static_folder="static/dist")
 app.secret_key = os.environ.get("SECRET_KEY", "dev")
