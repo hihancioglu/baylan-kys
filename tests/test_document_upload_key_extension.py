@@ -40,7 +40,7 @@ def test_api_appends_extension_to_key():
             return {}
 
     dummy_s3 = DummyS3()
-    storage._s3 = dummy_s3
+    storage.storage_client.client = dummy_s3
 
     portal_app.extract_text = lambda key: "dummy"
     portal_app.notify_mandatory_read = lambda doc, users: None
@@ -66,6 +66,6 @@ def test_api_appends_extension_to_key():
     session_db.close()
 
     assert dummy_s3.called_with == {
-        "Bucket": storage.S3_BUCKET,
+        "Bucket": storage.storage_client.bucket_main,
         "Key": "abc123.txt",
     }

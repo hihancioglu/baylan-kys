@@ -72,21 +72,21 @@ def test_docxf_document_creation(client):
     stubber.add_response(
         "put_object",
         {},
-        {"Bucket": storage.S3_BUCKET, "Key": ANY, "Body": ANY},
+        {"Bucket": storage.storage_client.bucket_main, "Key": ANY, "Body": ANY},
     )
     stubber.add_response(
         "put_object",
         {},
-        {"Bucket": storage.S3_BUCKET, "Key": ANY, "Body": ANY},
+        {"Bucket": storage.storage_client.bucket_main, "Key": ANY, "Body": ANY},
     )
     stubber.activate()
 
-    storage._s3 = s3
-    docxf_render._s3 = s3
-    docxf_render_module._s3 = s3
-    storage.S3_BUCKET = "test-bucket"
-    docxf_render.S3_BUCKET = "test-bucket"
-    docxf_render_module.S3_BUCKET = "test-bucket"
+    storage.storage_client.client = s3
+    docxf_render.storage_client.client = s3
+    docxf_render_module.storage_client.client = s3
+    storage.storage_client.bucket_main = "test-bucket"
+    docxf_render.storage_client.bucket_main = "test-bucket"
+    docxf_render_module.storage_client.bucket_main = "test-bucket"
     storage.generate_presigned_url = (
         lambda key, expires_in=None: f"https://example.com/{key}"
     )
