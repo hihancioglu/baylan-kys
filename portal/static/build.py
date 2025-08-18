@@ -1,7 +1,8 @@
 import hashlib, os, json, re
 
-SRC_DIR = 'src'
-DIST_DIR = 'dist'
+BASE_DIR = os.path.dirname(__file__)
+SRC_DIR = os.path.join(BASE_DIR, 'src')
+DIST_DIR = os.path.join(BASE_DIR, 'dist')
 
 def minify(content):
     """Basic minifier for JS/CSS files.
@@ -52,5 +53,7 @@ if __name__ == '__main__':
                 hash_name = rel_dir == '.' and fname != 'tokens.js'
                 key, out_rel = build_file(os.path.join(root, fname), rel_path, hash_name)
                 manifest[key] = out_rel
+    if 'base.js' not in manifest:
+        raise RuntimeError('base.js not found in manifest; ensure src/base.js exists')
     with open(os.path.join(DIST_DIR, 'manifest.json'), 'w') as f:
         json.dump(manifest, f, indent=2)
