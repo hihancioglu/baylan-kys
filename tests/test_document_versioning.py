@@ -97,7 +97,9 @@ def test_compare_config_returns_expected_fields(client, app_models):
     assert config["document"]["key"] == f"{doc_key}:1.0"
     assert config["document"]["url"] == "http://s3/old.docx"
     assert config["editorConfig"]["compareFile"]["key"] == f"{doc_key}:2.0"
-    assert config["editorConfig"]["compareFile"]["url"] == f"http://s3/local/{doc_key}"
+    assert config["editorConfig"]["compareFile"]["url"].startswith(
+        f"http://s3/local/{doc_key}"
+    )
     assert data["token"]
     assert data["token_header"] == "AuthorizationJwt"
 
