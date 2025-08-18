@@ -2158,6 +2158,10 @@ def edit_document(doc_id):
         db.close()
         return "Document not found", 404
     user = session.get("user") or {"id": "u1", "name": "Ibrahim H.", "email": "ih@baylan.local"}
+    public_base_url = os.environ.get(
+        "PORTAL_PUBLIC_BASE_URL", request.host_url.rstrip("/")
+    )
+    # Defaults to the incoming request's host when PORTAL_PUBLIC_BASE_URL is unset
     config = {
         "document": {
             "fileType": "docx",
@@ -2173,7 +2177,7 @@ def edit_document(doc_id):
         },
         "documentType": "text",
         "editorConfig": {
-            "callbackUrl": f"{os.environ['PORTAL_PUBLIC_BASE_URL']}/onlyoffice/callback/{doc.doc_key}",
+            "callbackUrl": f"{public_base_url}/onlyoffice/callback/{doc.doc_key}",
             "user": {"id": user["id"], "name": user["name"]},
             "mode": "edit",
         },
