@@ -33,7 +33,7 @@ def client(app_models):
     client = app_module.app.test_client()
     with client.session_transaction() as sess:
         sess["user"] = {"id": 1}
-        sess["roles"] = ["contributor"]
+        sess["roles"] = ["contributor", "reader"]
     return client
 
 
@@ -119,4 +119,16 @@ def test_update_document_standard(app_models, client):
     doc = session_db.get(models.Document, doc_id)
     assert doc.standard_code == "ISO14001"
     session_db.close()
+
+
+def test_filter_documents_by_standard(app_models, client):
+    _, models = app_models
+    models.seed_documents()
+
+    resp = client.get("/documents?standard=ISO9001")
+    assert resp.status_code == 200
+    body = resp.get_data(as_text=True)
+    assert "Seeded Document 1" in body
+    assert "Seeded Document 2" in body
+    assert "Seeded Document 3" not in body
 
