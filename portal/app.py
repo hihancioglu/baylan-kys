@@ -731,9 +731,18 @@ def new_document():
             data.update(request.form.to_dict())
             uploaded = request.files.get("upload_file")
             if uploaded and uploaded.filename:
-                file_data = base64.b64encode(uploaded.read()).decode("utf-8")
-                data["uploaded_file_name"] = uploaded.filename
-                data["uploaded_file_data"] = file_data
+                _, ext = os.path.splitext(uploaded.filename)
+                doc_key = f"{secrets.token_hex(16)}{ext}"
+                try:
+                    storage._s3.put_object(
+                        Bucket=storage.S3_BUCKET,
+                        Key=doc_key,
+                        Body=uploaded.read(),
+                    )
+                    data["uploaded_file_key"] = doc_key
+                    data["uploaded_file_name"] = uploaded.filename
+                except Exception as e:
+                    data["upload_error"] = str(e)
             data["generate_docxf"] = bool(request.form.get("generate_docxf"))
             DOCUMENT_DRAFTS[draft_id] = data
             return redirect(url_for("new_document", step=3))
@@ -1311,8 +1320,7 @@ def create_document_api():
         "type",
         "department",
         "tags",
-        "uploaded_file_data",
-        "uploaded_file_name",
+        "uploaded_file_key",
     ]
     errors = {}
     for field in required_fields:
@@ -1325,18 +1333,15 @@ def create_document_api():
     tags_val = _format_tags(data.get("tags"))
     if not tags_val:
         return jsonify({"errors": {"tags": "Invalid tags format."}}), 400
+    uploaded_file_key = data.get("uploaded_file_key")
     uploaded_file_name = data.get("uploaded_file_name")
-    uploaded_file_data = data.get("uploaded_file_data")
     try:
-        file_bytes = base64.b64decode(uploaded_file_data)
-    except Exception:
-        return jsonify({"errors": {"uploaded_file_data": "Invalid base64 data."}}), 400
-    _, ext = os.path.splitext(uploaded_file_name or "")
-    doc_key = f"{data.get('doc_key') or secrets.token_hex(16)}{ext}"
-    try:
-        storage._s3.put_object(Bucket=storage.S3_BUCKET, Key=doc_key, Body=file_bytes)
+        obj = storage._s3.get_object(Bucket=storage.S3_BUCKET, Key=uploaded_file_key)
+        file_bytes = obj["Body"].read()
     except Exception as e:
-        return jsonify(error=str(e)), 500
+        return jsonify({"errors": {"uploaded_file_key": str(e)}}), 400
+    _, ext = os.path.splitext(uploaded_file_name or uploaded_file_key)
+    doc_key = uploaded_file_key
     doc = Document(
         doc_key=doc_key,
         title=data.get("title"),

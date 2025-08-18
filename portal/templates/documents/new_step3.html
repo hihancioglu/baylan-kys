@@ -2,6 +2,11 @@
 {% block title %}New Document - Step 3{% endblock %}
 {% block content %}
 <h1 class="fw-bold" style="font-size: var(--font-size-lg); margin-bottom: var(--spacing-md);">New Document - Step 3</h1>
+{% if form.upload_error %}
+<div class="alert alert-danger">Upload failed: {{ form.upload_error }}</div>
+{% elif form.uploaded_file_key %}
+<div class="alert alert-success">File uploaded successfully.</div>
+{% endif %}
 <form method="post" action="{{ url_for('new_document', step=3) }}">
   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
   <p><strong>Code:</strong> {{ form.code }}</p>
@@ -20,10 +25,14 @@ document.getElementById('save-draft').addEventListener('click', async () => {
     process: "{{ form.type }}",
     tags: "{{ form.tags }}".split(',').map(t => t.trim()).filter(Boolean),
     template: "{{ form.template }}",
+    uploaded_file_key: "{{ form.uploaded_file_key }}",
     uploaded_file_name: "{{ form.uploaded_file_name }}",
-    uploaded_file_data: "{{ form.uploaded_file_data }}",
     generate_docxf: {{ 'true' if form.generate_docxf else 'false' }}
   };
+  if (!data.uploaded_file_key) {
+    alert('File upload failed.');
+    return;
+  }
   const response = await fetch('/api/documents', {
     method: 'POST',
     headers: {
@@ -35,6 +44,10 @@ document.getElementById('save-draft').addEventListener('click', async () => {
   const result = await response.json();
   if (result.id) {
     window.location = `/documents/${result.id}`;
+  } else if (result.errors) {
+    alert('Error: ' + JSON.stringify(result.errors));
+  } else {
+    alert('An error occurred while creating the document.');
   }
 });
 </script>
