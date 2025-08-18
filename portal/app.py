@@ -640,7 +640,7 @@ def list_documents():
         "params": params,
         "facets": facets,
         "breadcrumbs": [
-            {"title": "Home", "url": url_for("index")},
+            {"title": "Home", "url": url_for("dashboard")},
             {"title": "Documents"},
         ],
         "departments": departments,
@@ -714,7 +714,7 @@ def new_document():
     template = f"documents/new_step{step}.html"
     context = {
         "breadcrumbs": [
-            {"title": "Home", "url": url_for("index")},
+            {"title": "Home", "url": url_for("dashboard")},
             {"title": "Documents", "url": url_for("list_documents")},
             {"title": "New"},
         ],
@@ -776,7 +776,7 @@ def document_detail(doc_id: int):
         reviewers=reviewers,
         active_tab="versions" if (revision_id or tab == "versions") else "summary",
         breadcrumbs=[
-            {"title": "Home", "url": url_for("index")},
+            {"title": "Home", "url": url_for("dashboard")},
             {"title": "Documents", "url": url_for("list_documents")},
             {"title": doc.title},
         ],
@@ -924,7 +924,7 @@ def compare_document_versions(doc_id: int):
         revisions=revisions,
         diff=diff_html,
         breadcrumbs=[
-            {"title": "Home", "url": url_for("index")},
+            {"title": "Home", "url": url_for("dashboard")},
             {"title": "Documents", "url": url_for("list_documents")},
             {"title": doc.title, "url": url_for("document_detail", doc_id=doc_id)},
             {"title": "Compare"},
@@ -1225,7 +1225,7 @@ def create_document():
             "errors": errors,
             "form": request.form.to_dict(),
             "breadcrumbs": [
-                {"title": "Home", "url": url_for("index")},
+                {"title": "Home", "url": url_for("dashboard")},
                 {"title": "Documents", "url": url_for("list_documents")},
                 {"title": "New"},
             ],
@@ -1388,7 +1388,7 @@ def approval_queue():
             template,
             steps=steps,
             breadcrumbs=[
-                {"title": "Home", "url": url_for("index")},
+                {"title": "Home", "url": url_for("dashboard")},
                 {"title": "Approvals"},
             ],
         )
@@ -1424,7 +1424,7 @@ def approval_detail(id: int):
         if user:
             log_action(user["id"], doc.id, "view_approval")
         breadcrumbs = [
-            {"title": "Home", "url": url_for("index")},
+            {"title": "Home", "url": url_for("dashboard")},
             {"title": "Approvals", "url": url_for("approval_queue")},
             {"title": doc.title},
         ]
@@ -1615,7 +1615,7 @@ def search_view():
     }
     partial = bool(request.headers.get("HX-Request"))
     context["breadcrumbs"] = [
-        {"title": "Home", "url": url_for("index")},
+        {"title": "Home", "url": url_for("dashboard")},
         {"title": "Search"},
     ]
     template = "search/results.html" if partial else "search.html"
@@ -1626,7 +1626,7 @@ def reports_index():
     return render_template(
         "reports/index.html",
         breadcrumbs=[
-            {"title": "Home", "url": url_for("index")},
+            {"title": "Home", "url": url_for("dashboard")},
             {"title": "Reports"},
         ],
     )
@@ -1796,7 +1796,7 @@ def admin_users_page():
             users=users,
             roles=roles,
             breadcrumbs=[
-                {"title": "Home", "url": url_for("index")},
+                {"title": "Home", "url": url_for("dashboard")},
                 {"title": "Admin"},
                 {"title": "Users"},
             ],
@@ -1818,7 +1818,7 @@ def admin_roles_page():
             users=users,
             roles=roles,
             breadcrumbs=[
-                {"title": "Home", "url": url_for("index")},
+                {"title": "Home", "url": url_for("dashboard")},
                 {"title": "Admin"},
                 {"title": "Roles"},
             ],
@@ -1838,7 +1838,7 @@ def admin_departments_page():
             "admin/departments.html",
             departments=departments,
             breadcrumbs=[
-                {"title": "Home", "url": url_for("index")},
+                {"title": "Home", "url": url_for("dashboard")},
                 {"title": "Admin"},
                 {"title": "Departments"},
             ],
@@ -1858,7 +1858,7 @@ def admin_audit_page():
             "admin/audit.html",
             logs=logs,
             breadcrumbs=[
-                {"title": "Home", "url": url_for("index")},
+                {"title": "Home", "url": url_for("dashboard")},
                 {"title": "Admin"},
                 {"title": "Audit Logs"},
             ],
@@ -2054,7 +2054,7 @@ def edit_document(doc_id):
         token_header=ONLYOFFICE_JWT_HEADER,
         doc_id=doc_id,
         breadcrumbs=[
-            {"title": "Home", "url": url_for("index")},
+            {"title": "Home", "url": url_for("dashboard")},
             {"title": "Documents", "url": url_for("list_documents")},
             {"title": doc.title, "url": url_for("document_detail", doc_id=doc_id)},
             {"title": "Edit"},
@@ -2295,7 +2295,7 @@ def ack_list():
             "filters": filters,
         }
         context["breadcrumbs"] = [
-            {"title": "Home", "url": url_for("index")},
+            {"title": "Home", "url": url_for("dashboard")},
             {"title": "Acknowledgements"},
         ]
         partial = bool(request.headers.get("HX-Request"))
@@ -2384,7 +2384,7 @@ def acknowledgements():
         }
         partial = bool(request.headers.get("HX-Request"))
         context["breadcrumbs"] = [
-            {"title": "Home", "url": url_for("index")},
+            {"title": "Home", "url": url_for("dashboard")},
             {"title": "Acknowledgements"},
         ]
         return render_template("acknowledgements.html", partial=partial, **context)
@@ -2498,7 +2498,7 @@ def user_settings():
         user_id=user_id,
         new_token=new_token,
         breadcrumbs=[
-            {"title": "Home", "url": url_for("index")},
+            {"title": "Home", "url": url_for("dashboard")},
             {"title": "Settings"},
         ],
     )
@@ -2566,7 +2566,7 @@ def manage_permissions():
             permissions=perms,
             search=q,
             breadcrumbs=[
-                {"title": "Home", "url": url_for("index")},
+                {"title": "Home", "url": url_for("dashboard")},
                 {"title": "Permissions"},
             ],
         )
@@ -2600,7 +2600,7 @@ def training_quiz(id: int):
         "doc": doc_data,
         "questions": quiz_questions(),
         "breadcrumbs": [
-            {"title": "Home", "url": url_for("index")},
+            {"title": "Home", "url": url_for("dashboard")},
             {"title": "Training"},
         ],
     }
@@ -2663,7 +2663,7 @@ def training_submit(id: int):
         questions=quiz_questions(),
         error="Please try again",
         breadcrumbs=[
-            {"title": "Home", "url": url_for("index")},
+            {"title": "Home", "url": url_for("dashboard")},
             {"title": "Training"},
         ],
     )
@@ -2823,7 +2823,7 @@ def capa_track():
         "capa_track.html",
         actions=actions,
         breadcrumbs=[
-            {"title": "Home", "url": url_for("index")},
+            {"title": "Home", "url": url_for("dashboard")},
             {"title": "CAPA"},
         ],
     )
