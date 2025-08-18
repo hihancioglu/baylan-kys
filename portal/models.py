@@ -43,6 +43,7 @@ class Document(Base):
     doc_key = Column(String, nullable=False, unique=True)
     title = Column(String, index=True)
     code = Column(String, index=True)
+    standard_code = Column(String, index=True)
     tags = Column(String, index=True)
     department = Column(String, index=True)
     process = Column(String, index=True)
@@ -84,6 +85,14 @@ class DocumentPermission(Base):
 
     role = relationship("Role", back_populates="permissions")
     document = relationship("Document")
+
+
+class DocumentStandard(Base):
+    __tablename__ = "document_standards"
+    doc_id = Column(Integer, ForeignKey("documents.id"), primary_key=True)
+    standard_code = Column(String, primary_key=True)
+
+    document = relationship("Document", back_populates="standards")
 
 
 user_roles = Table(
@@ -286,6 +295,9 @@ Document.workflow_steps = relationship(
 )
 Document.revisions = relationship(
     DocumentRevision, back_populates="document", cascade="all, delete-orphan"
+)
+Document.standards = relationship(
+    DocumentStandard, back_populates="document", cascade="all, delete-orphan"
 )
 
 # Database schema migrations are now managed via Alembic. Tables are created
