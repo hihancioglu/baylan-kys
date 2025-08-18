@@ -85,6 +85,9 @@ app.config["SESSION_COOKIE_SECURE"] = (
     os.environ.get("SESSION_COOKIE_SECURE", "true").lower() == "true"
 )
 
+# Temporary in-memory storage for document drafts keyed by a random ID
+DOCUMENT_DRAFTS: dict[str, dict] = {}
+
 # Allow tests to add routes even after the first request has been handled.
 _orig_add_url_rule = app.add_url_rule
 
@@ -694,7 +697,11 @@ def documents_table():
 @roles_required(RoleEnum.CONTRIBUTOR.value)
 def new_document():
     step = request.args.get("step") or request.form.get("step") or "1"
-    data = session.get("new_doc", {})
+    draft_id = session.get("new_doc_id")
+    if not draft_id:
+        draft_id = secrets.token_urlsafe(16)
+        session["new_doc_id"] = draft_id
+    data = DOCUMENT_DRAFTS.get(draft_id, {})
 
     if request.method == "POST":
         if step == "1":
@@ -704,7 +711,7 @@ def new_document():
             data["department"] = request.form.get("department", "").strip()
             tags = request.form.get("tags", "")
             data["tags"] = ",".join([t.strip() for t in tags.split(",") if t.strip()])
-            session["new_doc"] = data
+            DOCUMENT_DRAFTS[draft_id] = data
             return redirect(url_for("new_document", step=2))
 
         if step == "2":
@@ -715,14 +722,15 @@ def new_document():
                 data["uploaded_file_name"] = uploaded.filename
                 data["uploaded_file_data"] = file_data
             data["generate_docxf"] = bool(request.form.get("generate_docxf"))
-            session["new_doc"] = data
+            DOCUMENT_DRAFTS[draft_id] = data
             return redirect(url_for("new_document", step=3))
 
         data.update(request.form.to_dict())
-        session["new_doc"] = data
+        DOCUMENT_DRAFTS[draft_id] = data
 
         if step == "3":
-            form_data = session.pop("new_doc", {})
+            form_data = DOCUMENT_DRAFTS.pop(draft_id, {})
+            session.pop("new_doc_id", None)
             user = session.get("user")
             roles = session.get("roles", [])
             with app.test_request_context("/api/documents", method="POST", json=form_data):
