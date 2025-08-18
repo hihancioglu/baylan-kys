@@ -94,6 +94,16 @@ def login():
     return render_template('login.html', breadcrumbs=[{"title": "Login"}])
 
 
+@auth_bp.route('/logout')
+def logout():
+    """Clear the user session and redirect to login."""
+    session.clear()
+    resp = redirect(url_for('auth.login'))
+    resp.delete_cookie('access_token')
+    resp.delete_cookie('refresh_token')
+    return resp
+
+
 @auth_bp.post('/api/auth/login')
 def api_login():
     """Authenticate user via LDAP."""
