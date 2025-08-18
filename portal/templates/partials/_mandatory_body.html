@@ -1,0 +1,5 @@
+{% for assignment in assignments %}
+  {% include 'partials/_mandatory_row.html' %}
+{% else %}
+<tr><td colspan="4" class="text-center">No assignments found.</td></tr>
+{% endfor %}

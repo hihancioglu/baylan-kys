@@ -24,22 +24,7 @@
     </tr>
   </thead>
   <tbody>
-    {% for assignment in assignments %}
-    <tr id="assignment-{{ assignment.id }}" data-assignment-id="{{ assignment.id }}">
-      <td><input type="checkbox" class="form-check-input assignment-checkbox" value="{{ assignment.id }}" aria-label="Select {{ assignment.assignee }}"></td>
-      <td>{{ assignment.assignee }}</td>
-      <td>{{ assignment.read_date or 'Unread' }}</td>
-      <td>
-        {% if not assignment.confirmed %}
-        <button class="btn btn-sm btn-success confirm-btn" hx-post="{{ url_for('confirm_assignment', assignment_id=assignment.id) }}" hx-target="#assignment-{{ assignment.id }}" hx-swap="outerHTML">Confirm</button>
-        {% else %}
-        Confirmed
-        {% endif %}
-      </td>
-    </tr>
-    {% else %}
-    <tr><td colspan="4" class="text-center">No assignments found.</td></tr>
-    {% endfor %}
+    {% include 'partials/_mandatory_body.html' %}
   </tbody>
 </table>
 

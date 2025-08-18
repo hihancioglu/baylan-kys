@@ -2273,6 +2273,95 @@ def assign_acknowledgements_endpoint():
         db.close()
 
 
+@app.get("/mandatory-reading")
+@login_required
+def mandatory_reading():
+    """Display mandatory reading assignments."""
+    filter_val = request.args.get("filter", "all")
+    db = get_session()
+    try:
+        query = db.query(Acknowledgement).join(User)
+        if filter_val == "unread":
+            query = query.filter(Acknowledgement.acknowledged_at.is_(None))
+        acks = query.order_by(User.username).all()
+        assignments = [
+            {
+                "id": ack.id,
+                "assignee": ack.user.username,
+                "read_date": ack.acknowledged_at.strftime("%Y-%m-%d") if ack.acknowledged_at else None,
+                "confirmed": ack.acknowledged_at is not None,
+            }
+            for ack in acks
+        ]
+    finally:
+        db.close()
+    breadcrumbs = [
+        {"title": "Home", "url": url_for("dashboard")},
+        {"title": "Mandatory Reading"},
+    ]
+    return render_template(
+        "mandatory_reading.html",
+        assignments=assignments,
+        filter=filter_val,
+        breadcrumbs=breadcrumbs,
+    )
+
+
+@app.post("/mandatory-reading/<int:assignment_id>/confirm")
+@login_required
+def confirm_assignment(assignment_id: int):
+    """Confirm a single assignment."""
+    db = get_session()
+    try:
+        ack = db.get(Acknowledgement, assignment_id)
+        if not ack:
+            return jsonify(error="assignment not found"), 404
+        if ack.acknowledged_at is None:
+            ack.acknowledged_at = datetime.utcnow()
+            db.commit()
+        assignment = {
+            "id": ack.id,
+            "assignee": ack.user.username,
+            "read_date": ack.acknowledged_at.strftime("%Y-%m-%d") if ack.acknowledged_at else None,
+            "confirmed": True,
+        }
+        return render_template("partials/_mandatory_row.html", assignment=assignment)
+    finally:
+        db.close()
+
+
+@app.post("/mandatory-reading/confirm-bulk")
+@login_required
+def confirm_assignments_bulk():
+    """Confirm multiple assignments."""
+    ids = request.form.getlist("assignment_ids")
+    db = get_session()
+    try:
+        if ids:
+            acks = db.query(Acknowledgement).filter(Acknowledgement.id.in_(ids)).all()
+            for ack in acks:
+                if ack.acknowledged_at is None:
+                    ack.acknowledged_at = datetime.utcnow()
+            db.commit()
+        filter_val = request.args.get("filter", "all")
+        query = db.query(Acknowledgement).join(User)
+        if filter_val == "unread":
+            query = query.filter(Acknowledgement.acknowledged_at.is_(None))
+        acks = query.order_by(User.username).all()
+        assignments = [
+            {
+                "id": ack.id,
+                "assignee": ack.user.username,
+                "read_date": ack.acknowledged_at.strftime("%Y-%m-%d") if ack.acknowledged_at else None,
+                "confirmed": ack.acknowledged_at is not None,
+            }
+            for ack in acks
+        ]
+        return render_template("partials/_mandatory_body.html", assignments=assignments)
+    finally:
+        db.close()
+
+
 @app.route("/ack", methods=["GET"], endpoint="ack.list")
 @roles_required(RoleEnum.READER.value)
 def ack_list():
