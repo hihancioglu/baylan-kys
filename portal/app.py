@@ -416,10 +416,13 @@ def _get_pending_approvals(
     ]
 
 
-def _get_mandatory_reading(db, user_id: int | None, limit: int = 5):
+def _get_mandatory_reading(
+    db, user_id: int | None, limit: int = 5, standard: str | None = None
+):
     if not user_id:
         return []
-    docs = (
+
+    query = (
         db.query(Document)
         .filter(Document.status == "Published")
         .outerjoin(
@@ -433,7 +436,17 @@ def _get_mandatory_reading(db, user_id: int | None, limit: int = 5):
                 Acknowledgement.acknowledged_at.is_(None),
             )
         )
-        .order_by(Document.id.desc())
+    )
+
+    if standard:
+        query = (
+            query.join(
+                DocumentStandard, DocumentStandard.doc_id == Document.id
+            ).filter(DocumentStandard.standard_code == standard)
+        )
+
+    docs = (
+        query.order_by(Document.id.desc())
         .limit(limit)
         .all()
     )
@@ -510,7 +523,9 @@ def dashboard_cards(card):
                 db, user_id, standard=standard
             )
         elif card == "mandatory":
-            context["mandatory_reading"] = _get_mandatory_reading(db, user_id)
+            context["mandatory_reading"] = _get_mandatory_reading(
+                db, user_id, standard=standard
+            )
         elif card == "recent":
             context["recent_revisions"] = _get_recent_revisions(db)
         elif card == "shortcuts":
@@ -543,10 +558,11 @@ def api_dashboard_pending_approvals():
 @login_required
 def api_dashboard_mandatory_reading():
     limit = request.args.get("limit", type=int) or 5
+    standard = request.args.get("standard")
     db = get_session()
     try:
         user = session.get("user") or {}
-        items = _get_mandatory_reading(db, user.get("id"), limit)
+        items = _get_mandatory_reading(db, user.get("id"), limit, standard)
         return jsonify({"items": items, "error": None})
     except Exception as e:
         return jsonify({"items": [], "error": str(e)}), 500

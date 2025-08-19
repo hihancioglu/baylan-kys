@@ -32,11 +32,25 @@
 
   <div class="col">
     <div class="card h-100">
-      <div class="card-header">Mandatory Reading</div>
-      <div class="card-body"
+      <div class="card-header d-flex align-items-center">
+        <span>Mandatory Reading</span>
+        <select id="mandatory-standard" class="form-select form-select-sm ms-auto"
+                name="standard"
+                hx-get="/api/dashboard/cards/mandatory"
+                hx-target="#mandatory-reading-body"
+                hx-trigger="change"
+                hx-swap="innerHTML">
+          <option value="">All standards</option>
+          {% for s in standards %}
+          <option value="{{ s }}">{{ s }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div id="mandatory-reading-body" class="card-body"
            hx-get="/api/dashboard/cards/mandatory"
            hx-trigger="load, every 10s"
-           hx-swap="innerHTML">
+           hx-swap="innerHTML"
+           hx-include="#mandatory-standard">
         {% set card = 'mandatory' %}
         {% include 'partials/dashboard/_cards.html' %}
       </div>
