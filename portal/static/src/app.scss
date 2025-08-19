@@ -144,6 +144,24 @@ a:focus {
   margin-left: $spacing-xs;
 }
 
+.table.document-table .group-toggle {
+  cursor: pointer;
+}
+
+.table.document-table .group-toggle::before {
+  content: '▾';
+  display: inline-block;
+  margin-right: $spacing-xs;
+}
+
+tbody.collapsed .group-toggle::before {
+  content: '▸';
+}
+
+tbody.collapsed tr:not(.group-toggle) {
+  display: none;
+}
+
 /* Responsive layout */
 @media (max-width: ($breakpoint-sm - 1)) {
   .container {

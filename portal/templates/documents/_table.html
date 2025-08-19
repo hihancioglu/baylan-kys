@@ -19,9 +19,9 @@
         <th style="position:sticky;top:0;" class="text-end">Actions</th>
       </tr>
     </thead>
-    <tbody>
-      {% for standard_code, docs in documents|groupby('standard_code') %}
-      <tr class="table-secondary">
+    {% for standard_code, docs in documents|groupby('standard_code') %}
+    <tbody data-group="{{ standard_code or 'no-standard' }}">
+      <tr class="table-secondary group-toggle">
         <th colspan="7">{{ standard_map.get(standard_code, standard_code or 'No Standard') }}</th>
       </tr>
       {% for doc in docs %}
@@ -43,10 +43,12 @@
         </td>
       </tr>
       {% endfor %}
-      {% else %}
-      <tr><td colspan="7">No documents found.</td></tr>
-      {% endfor %}
     </tbody>
+    {% else %}
+    <tbody>
+      <tr><td colspan="7">No documents found.</td></tr>
+    </tbody>
+    {% endfor %}
   </table>
 <nav>
   <ul class="pagination">
