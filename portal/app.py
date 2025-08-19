@@ -229,12 +229,28 @@ def _format_tags(value):
     return ",".join(tags) if tags else None
 
 
-ALLOWED_STANDARDS = {"ISO9001", "ISO27001", "ISO14001"}
-STANDARD_MAP = {
-    "ISO9001": "ISO 9001",
-    "ISO27001": "ISO 27001",
-    "ISO14001": "ISO 14001",
-}
+# Load ISO standards from environment.
+def _parse_standard_map(raw: str) -> dict[str, str]:
+    mapping: dict[str, str] = {}
+    for item in raw.split(","):
+        if ":" not in item:
+            continue
+        code, name = item.split(":", 1)
+        code = code.strip()
+        name = name.strip()
+        if code:
+            mapping[code] = name or code
+    return mapping
+
+
+# Default set mirrors previous constants for backwards compatibility.
+STANDARD_MAP = _parse_standard_map(
+    os.environ.get(
+        "ISO_STANDARDS",
+        "ISO9001:ISO 9001,ISO27001:ISO 27001,ISO14001:ISO 14001",
+    )
+)
+ALLOWED_STANDARDS = set(STANDARD_MAP.keys())
 
 
 # -- Acknowledgement helpers -------------------------------------------------
@@ -810,6 +826,7 @@ def new_document():
     }
     if step == "1":
         context["standards"] = sorted(ALLOWED_STANDARDS)
+        context["standard_map"] = STANDARD_MAP
     if step == "2":
         base_templates = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "templates"))
         template_options = {}
