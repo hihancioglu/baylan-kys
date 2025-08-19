@@ -13,6 +13,7 @@
   <p><strong>Title:</strong> {{ form.title }}</p>
   <p><strong>Department:</strong> {{ form.department }}</p>
   <p><strong>Type:</strong> {{ form.type }}</p>
+  <p><strong>Standard:</strong> {{ form.standard }}</p>
   <button type="submit" class="btn btn-primary">Create</button>
   <button type="button" id="save-draft" class="btn btn-secondary ms-2">Taslak olarak kaydet</button>
 </form>
@@ -23,6 +24,7 @@ document.getElementById('save-draft').addEventListener('click', async () => {
     title: "{{ form.title }}",
     department: "{{ form.department }}",
     process: "{{ form.type }}",
+    standard: "{{ form.standard }}",
     tags: "{{ form.tags }}".split(',').map(t => t.trim()).filter(Boolean),
     template: "{{ form.template }}",
     uploaded_file_key: "{{ form.uploaded_file_key }}",

@@ -24,6 +24,11 @@
     <input type="text" class="form-control{% if errors.department %} is-invalid{% endif %}" id="department" name="department" value="{{ form.department or '' }}">
     {% if errors.department %}<div class="invalid-feedback">{{ errors.department }}</div>{% endif %}
   </div>
+  <select name="standard" class="form-select mb-3">
+    <option value="ISO9001"{% if form.standard == 'ISO9001' %} selected{% endif %}>ISO 9001</option>
+    <option value="ISO27001"{% if form.standard == 'ISO27001' %} selected{% endif %}>ISO 27001</option>
+    <option value="ISO14001"{% if form.standard == 'ISO14001' %} selected{% endif %}>ISO 14001</option>
+  </select>
   <div class="mb-3">
     <label for="tags" class="form-label">Tags</label>
     <input type="text" class="form-control{% if errors.tags %} is-invalid{% endif %}" id="tags" name="tags" value="{{ form.tags or '' }}" placeholder="tag1, tag2">
