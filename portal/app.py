@@ -743,6 +743,14 @@ def _get_documents():
     # Sort documents by standard_code to ensure grouped display in templates
     docs = sorted(docs, key=lambda d: (d.standard_code or "", d.id))
 
+    # Normalize missing standard codes to empty strings so template
+    # grouping via ``groupby('standard_code')`` does not attempt to
+    # compare ``None`` values, which causes a ``TypeError`` in Jinja's
+    # sorting.
+    for d in docs:
+        if d.standard_code is None:
+            d.standard_code = ""
+
     session.close()
 
     params = request.args.to_dict()
