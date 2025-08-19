@@ -2018,14 +2018,17 @@ def create_role():
     """Create a new role."""
     data = request.get_json(silent=True) or {}
     role_name = data.get("role")
+    standard_scope = (data.get("standard_scope") or "ALL").upper()
     if not role_name:
         return jsonify(error="role required"), 400
+    if standard_scope != "ALL" and standard_scope not in ALLOWED_STANDARDS:
+        return jsonify(error="invalid standard_scope"), 400
     session = get_session()
     try:
         existing = session.query(Role).filter_by(name=role_name).first()
         if existing:
             return jsonify(error="role exists"), 400
-        role = Role(name=role_name)
+        role = Role(name=role_name, standard_scope=standard_scope)
         session.add(role)
         session.commit()
         log_action(None, None, f"create_role:{role_name}")
@@ -2090,6 +2093,7 @@ def admin_roles_page():
             "admin/roles.html",
             users=users,
             roles=roles,
+            standards=sorted(ALLOWED_STANDARDS),
             breadcrumbs=[
                 {"title": "Home", "url": url_for("dashboard")},
                 {"title": "Admin"},

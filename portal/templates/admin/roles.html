@@ -25,19 +25,26 @@
   <button class="btn btn-primary" type="submit">Assign</button>
 </form>
 
-<h2 class="mt-4">Add Role</h2>
-<form id="newRoleForm" class="d-flex mb-4">
-  <input class="form-control me-2" name="role" placeholder="Role name">
-  <button class="btn btn-success" type="submit">Add</button>
-</form>
+  <h2 class="mt-4">Add Role</h2>
+  <form id="newRoleForm" class="d-flex mb-4">
+    <input class="form-control me-2" name="role" placeholder="Role name">
+    <select class="form-select me-2" name="standard_scope">
+      <option value="ALL">ALL</option>
+      {% for s in standards %}
+      <option value="{{ s }}">{{ s }}</option>
+      {% endfor %}
+    </select>
+    <button class="btn btn-success" type="submit">Add</button>
+  </form>
 
 <h2>Existing Roles</h2>
 <table class="table">
-  <thead><tr><th>Name</th><th>Users</th><th>Actions</th></tr></thead>
+  <thead><tr><th>Name</th><th>Standard Scope</th><th>Users</th><th>Actions</th></tr></thead>
   <tbody>
   {% for r in roles %}
     <tr>
       <td>{{ r.name }}</td>
+      <td>{{ r.standard_scope }}</td>
       <td>
         <button type="button" class="btn btn-sm btn-secondary" data-bs-toggle="collapse" data-bs-target="#role-users-{{ r.id }}" aria-expanded="false">View Users</button>
         <div class="collapse mt-2" id="role-users-{{ r.id }}">
@@ -73,11 +80,12 @@ const newRoleForm = document.getElementById('newRoleForm');
 newRoleForm.addEventListener('submit', async (e) => {
   e.preventDefault();
   const role = newRoleForm.role.value.trim();
+  const standard_scope = newRoleForm.standard_scope.value;
   if (!role) return;
   await fetch('/roles', {
     method: 'POST',
     headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({role})
+    body: JSON.stringify({role, standard_scope})
   });
   location.reload();
 });
