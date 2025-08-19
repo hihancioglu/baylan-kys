@@ -12,3 +12,13 @@ document.addEventListener('htmx:afterSwap', function (evt) {
     window.scrollTo(0, 0);
   }
 });
+
+document.addEventListener('click', (e) => {
+  const toggle = e.target.closest('.group-toggle');
+  if (toggle) {
+    const group = toggle.closest('tbody[data-group]');
+    if (group) {
+      group.classList.toggle('collapsed');
+    }
+  }
+});
