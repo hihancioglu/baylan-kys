@@ -704,6 +704,7 @@ def list_documents():
             {"title": "Documents"},
         ],
         "departments": departments,
+        "standards": sorted(ALLOWED_STANDARDS),
     }
     return render_template(template, **context)
 
@@ -719,6 +720,7 @@ def documents_table():
         "filters": filters,
         "params": params,
         "facets": facets,
+        "standards": sorted(ALLOWED_STANDARDS),
     }
     return render_template("documents/_table.html", **context)
 

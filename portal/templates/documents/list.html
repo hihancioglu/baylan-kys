@@ -39,6 +39,16 @@
       </select>
     </div>
     <div class="col-md-3">
+      <select class="form-select" name="standard" data-filter="select">
+        <option value="">Any standard</option>
+        {% for s in standards %}
+        <option value="{{ s }}" {% if filters.standard == s %}selected{% endif %}>
+          {{ s }}{% if facets.standard %} ({{ facets.standard.get(s, 0) }}){% endif %}
+        </option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-md-3">
       <select class="form-select" multiple name="tags" data-filter="multi-tag">
         {% for t in filters.tags or [] %}
         <option value="{{ t }}" selected>{{ t }}</option>
