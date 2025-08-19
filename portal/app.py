@@ -671,6 +671,9 @@ def _get_documents():
             .all()
         )
 
+    # Sort documents by standard_code to ensure grouped display in templates
+    docs = sorted(docs, key=lambda d: (d.standard_code or "", d.id))
+
     session.close()
 
     params = request.args.to_dict()
