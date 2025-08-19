@@ -15,6 +15,7 @@ from flask_wtf.csrf import CSRFProtect
 from auth import auth_bp, init_app as auth_init, login_required, roles_required
 from models import (
     Document,
+    DocumentStandard,
     DocumentRevision,
     DocumentPermission,
     User,
@@ -563,6 +564,28 @@ def api_dashboard_search_shortcuts():
         return jsonify({"items": items, "error": None})
     except Exception as e:
         return jsonify({"items": [], "error": str(e)}), 500
+
+
+@app.get("/api/dashboard/standard-summary")
+@login_required
+def api_dashboard_standard_summary():
+    db = get_session()
+    try:
+        rows = (
+            db.query(
+                DocumentStandard.standard_code,
+                func.count().label("count"),
+            )
+            .join(Document)
+            .group_by(DocumentStandard.standard_code)
+            .all()
+        )
+        data = [
+            {"standard": code, "count": count} for code, count in rows
+        ]
+        return jsonify(data)
+    finally:
+        db.close()
 
 
 @app.get("/health")

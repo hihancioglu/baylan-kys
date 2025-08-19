@@ -42,17 +42,28 @@
     </div>
   </div>
 
-  <div class="col">
-    <div class="card h-100">
-      <div class="card-header">Search Shortcuts</div>
-      <div class="card-body"
-           hx-get="/api/dashboard/cards/shortcuts"
-           hx-trigger="load, every 10s"
-           hx-swap="innerHTML">
-        {% set card = 'shortcuts' %}
-        {% include 'partials/dashboard/_cards.html' %}
+    <div class="col">
+      <div class="card h-100">
+        <div class="card-header">Search Shortcuts</div>
+        <div class="card-body"
+             hx-get="/api/dashboard/cards/shortcuts"
+             hx-trigger="load, every 10s"
+             hx-swap="innerHTML">
+          {% set card = 'shortcuts' %}
+          {% include 'partials/dashboard/_cards.html' %}
+        </div>
+      </div>
+    </div>
+
+    <div class="col">
+      <div class="card h-100">
+        <div class="card-header">Documents by Standard</div>
+        <div class="card-body">
+          <canvas id="standard-chart"></canvas>
+        </div>
       </div>
     </div>
   </div>
-</div>
-{% endblock %}
+  <script src="https://cdn.jsdelivr.net/npm/chart.js" defer></script>
+  <script type="module" src="{{ asset_url('dashboard.js') }}"></script>
+  {% endblock %}
