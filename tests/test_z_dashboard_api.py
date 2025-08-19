@@ -206,3 +206,27 @@ def test_api_standard_summary(client, models):
     data = resp.get_json()
     assert any(d["standard"] == "STD1" and d["count"] == 2 for d in data)
     assert any(d["standard"] == "STD2" and d["count"] == 1 for d in data)
+
+
+def test_reports_standard_summary(client, models, app_module):
+    with client.session_transaction() as sess:
+        sess["user"] = {"id": 1, "name": "Tester"}
+        sess["roles"] = [app_module.RoleEnum.AUDITOR.value]
+
+    resp = client.get("/reports/standard-summary?format=json")
+    assert resp.status_code == 200
+    data = resp.get_json()
+    assert any(d["standard"] == "STD1" and d["count"] == 2 for d in data)
+    assert any(d["standard"] == "STD2" and d["count"] == 1 for d in data)
+
+    resp = client.get("/reports/standard-summary?format=csv")
+    assert resp.status_code == 200
+    assert resp.mimetype == "text/csv"
+    text = resp.data.decode()
+    assert "standard,count" in text
+    assert "STD1" in text and "STD2" in text
+
+    resp = client.get("/reports/export?kind=standard-summary&type=pdf")
+    assert resp.status_code == 200
+    assert resp.mimetype == "application/pdf"
+    assert resp.data.startswith(b"%PDF")
