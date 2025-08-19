@@ -22,12 +22,12 @@
     {% for standard_code, docs in documents|groupby('standard_code') %}
     <tbody data-group="{{ standard_code or 'no-standard' }}">
       <tr class="table-secondary group-toggle">
-        <th colspan="7">{{ standard_map.get(standard_code, standard_code or 'No Standard') }}</th>
+        <th colspan="7">{{ standard_map.get(standard_code) or standard_code or 'No Standard' }}</th>
       </tr>
       {% for doc in docs %}
       <tr>
         <td>{{ doc.code }}</td>
-        <td>{{ standard_map.get(doc.standard_code, doc.standard_code) }}</td>
+        <td>{{ standard_map.get(doc.standard_code) or doc.standard_code }}</td>
         <td>{{ doc.title }}</td>
         <td><span class="badge badge-status-{{ doc.status|lower }}">{{ doc.status }}</span></td>
         <td>{{ doc.department }}</td>

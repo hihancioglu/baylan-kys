@@ -13,6 +13,14 @@ os.environ.setdefault("S3_ENDPOINT", "http://s3")
 os.environ.setdefault("S3_BUCKET_MAIN", "test-bucket")
 os.environ.setdefault("S3_ACCESS_KEY", "test")
 os.environ.setdefault("S3_SECRET_KEY", "test")
+os.environ.setdefault(
+    "ISO_STANDARDS",
+    "ISO9001:ISO 9001,ISO27001:ISO 27001,ISO14001:ISO 14001",
+)
+
+ISO_MAP = dict(item.split(":", 1) for item in os.environ["ISO_STANDARDS"].split(","))
+FIRST_STANDARD = list(ISO_MAP.keys())[0]
+SECOND_STANDARD = list(ISO_MAP.keys())[1] if len(ISO_MAP) > 1 else FIRST_STANDARD
 
 repo_root = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(repo_root))
@@ -57,17 +65,17 @@ def test_create_document_with_standard(app_models, client):
         "tags": "tag1,tag2",
         "uploaded_file_key": "abc123",
         "uploaded_file_name": "file.txt",
-        "standard": "ISO9001",
+        "standard": FIRST_STANDARD,
     }
 
     resp = client.post("/api/documents", json=payload)
     assert resp.status_code == 201
     data = resp.get_json()
-    assert data["standard"] == "ISO9001"
+    assert data["standard"] == FIRST_STANDARD
 
     session_db = models.SessionLocal()
     doc = session_db.get(models.Document, data["id"])
-    assert doc.standard_code == "ISO9001"
+    assert doc.standard_code == FIRST_STANDARD
     session_db.close()
 
 
@@ -104,20 +112,20 @@ def test_update_document_standard(app_models, client):
         "tags": "tag1,tag2",
         "uploaded_file_key": "abc123",
         "uploaded_file_name": "file.txt",
-        "standard": "ISO9001",
+        "standard": FIRST_STANDARD,
     }
 
     resp = client.post("/api/documents", json=create_payload)
     doc_id = resp.get_json()["id"]
 
-    resp = client.put(f"/api/documents/{doc_id}", json={"standard": "ISO14001"})
+    resp = client.put(f"/api/documents/{doc_id}", json={"standard": SECOND_STANDARD})
     assert resp.status_code == 200
     data = resp.get_json()
-    assert data["standard"] == "ISO14001"
+    assert data["standard"] == SECOND_STANDARD
 
     session_db = models.SessionLocal()
     doc = session_db.get(models.Document, doc_id)
-    assert doc.standard_code == "ISO14001"
+    assert doc.standard_code == SECOND_STANDARD
     session_db.close()
 
 
@@ -125,7 +133,7 @@ def test_filter_documents_by_standard(app_models, client):
     _, models = app_models
     models.seed_documents()
 
-    resp = client.get("/documents?standard=ISO9001")
+    resp = client.get(f"/documents?standard={FIRST_STANDARD}")
     assert resp.status_code == 200
     body = resp.get_data(as_text=True)
     assert "Seeded Document 1" in body
@@ -141,11 +149,11 @@ def test_seed_documents_with_standards(app_models):
     session_db = models.SessionLocal()
     docs = {d.code: d for d in session_db.query(models.Document).all()}
 
-    assert [s.standard_code for s in docs["SD1"].standards] == ["ISO9001"]
+    assert [s.standard_code for s in docs["SD1"].standards] == [FIRST_STANDARD]
     assert set(s.standard_code for s in docs["SD2"].standards) == {
-        "ISO9001",
-        "ISO14001",
+        FIRST_STANDARD,
+        SECOND_STANDARD,
     }
-    assert [s.standard_code for s in docs["SD3"].standards] == ["ISO14001"]
+    assert [s.standard_code for s in docs["SD3"].standards] == [SECOND_STANDARD]
     session_db.close()
 

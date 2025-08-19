@@ -14,6 +14,14 @@ os.environ.setdefault("S3_ENDPOINT", "http://s3")
 os.environ.setdefault("S3_BUCKET_MAIN", "test-bucket")
 os.environ.setdefault("S3_ACCESS_KEY", "test")
 os.environ.setdefault("S3_SECRET_KEY", "test")
+os.environ.setdefault(
+    "ISO_STANDARDS",
+    "ISO9001:ISO 9001,ISO27001:ISO 27001,ISO14001:ISO 14001",
+)
+
+ISO_MAP = dict(item.split(":", 1) for item in os.environ["ISO_STANDARDS"].split(","))
+FIRST_STANDARD = list(ISO_MAP.keys())[0]
+FIRST_LABEL = ISO_MAP[FIRST_STANDARD]
 
 repo_root = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(repo_root))
@@ -57,7 +65,7 @@ def test_document_standard_creation_flow(app_models, client):
         "type": "T",
         "department": "Dept",
         "tags": "tag1,tag2",
-        "standard": "ISO9001",
+        "standard": FIRST_STANDARD,
     }
     resp = client.post("/documents/new?step=1", data=step1_data)
     assert resp.status_code == 302
@@ -74,8 +82,8 @@ def test_document_standard_creation_flow(app_models, client):
     resp = client.post("/documents/new?step=3", data={})
     assert resp.status_code == 302
 
-    resp = client.get("/documents?standard=ISO9001")
+    resp = client.get(f"/documents?standard={FIRST_STANDARD}")
     assert resp.status_code == 200
     body = resp.get_data(as_text=True)
     assert "Flow Doc" in body
-    assert "<th colspan=\"7\">ISO 9001</th>" in body
+    assert f"<th colspan=\"7\">{FIRST_LABEL}</th>" in body
