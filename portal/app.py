@@ -54,6 +54,7 @@ from reports import (
     revision_report,
     training_compliance_report,
     pending_approvals_report,
+    standard_summary_report,
 )
 from signing import create_signed_pdf
 from storage import generate_presigned_url, storage_client
@@ -1935,6 +1936,7 @@ def report_download(kind):
         "revisions": lambda: revision_report(start_dt, end_dt),
         "training": lambda: training_compliance_report(start_dt, end_dt),
         "pending-approvals": lambda: pending_approvals_report(start_dt, end_dt),
+        "standard-summary": lambda: standard_summary_report(start_dt, end_dt),
     }
     if fmt == "json":
         fn = mapping.get(kind)

@@ -18,5 +18,6 @@ GET /reports/<kind>?start=YYYY-MM-DD&end=YYYY-MM-DD&format=csv|pdf
 | `training`        | Reading compliance results    |
 | `pending-approvals` | Pending approval details     |
 | `revisions`       | Document revision history     |
+| `standard-summary` | Documents per standard       |
 
 Each export returns a file named `<kind>.<ext>` where `<ext>` matches the requested format.

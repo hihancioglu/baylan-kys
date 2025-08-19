@@ -6,6 +6,8 @@ import pandas as pd
 from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen import canvas
 
+from sqlalchemy import func
+
 from models import (
     get_session,
     DocumentRevision,
@@ -13,6 +15,7 @@ from models import (
     TrainingResult,
     User,
     WorkflowStep,
+    DocumentStandard,
 )
 
 
@@ -148,6 +151,32 @@ def pending_approvals_report(
         session.close()
 
 
+def standard_summary_report(
+    start: Optional[datetime] = None, end: Optional[datetime] = None
+) -> List[Dict]:
+    session = get_session()
+    try:
+        query = (
+            session.query(
+                DocumentStandard.standard_code,
+                func.count().label("count"),
+            )
+            .join(Document)
+            .group_by(DocumentStandard.standard_code)
+            .order_by(None)
+        )
+        if start:
+            query = query.filter(Document.created_at >= start)
+        if end:
+            query = query.filter(Document.created_at <= end)
+        rows = query.all()
+        return [
+            {"standard": code, "count": count} for code, count in rows
+        ]
+    finally:
+        session.close()
+
+
 def build_report(
     kind: str, fmt: str, start: Optional[datetime] = None, end: Optional[datetime] = None
 ) -> Tuple[bytes, str, str]:
@@ -155,6 +184,7 @@ def build_report(
         "revisions": revision_report,
         "training": training_compliance_report,
         "pending-approvals": pending_approvals_report,
+        "standard-summary": standard_summary_report,
     }
     fn = mapping.get(kind)
     if not fn:
