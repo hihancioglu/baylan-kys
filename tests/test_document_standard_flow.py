@@ -14,6 +14,10 @@ os.environ.setdefault("S3_ENDPOINT", "http://s3")
 os.environ.setdefault("S3_BUCKET_MAIN", "test-bucket")
 os.environ.setdefault("S3_ACCESS_KEY", "test")
 os.environ.setdefault("S3_SECRET_KEY", "test")
+os.environ.setdefault(
+    "ISO_STANDARDS",
+    "ISO9001:ISO 9001,ISO27001:ISO 27001,ISO14001:ISO 14001",
+)
 
 repo_root = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(repo_root))
@@ -50,6 +54,7 @@ def _mock_env(app_module):
 def test_document_standard_creation_flow(app_models, client):
     app_module, models = app_models
     storage = _mock_env(app_module)
+    first_code = list(app_module.STANDARD_MAP.keys())[0]
 
     step1_data = {
         "code": "FLOW1",
@@ -57,7 +62,7 @@ def test_document_standard_creation_flow(app_models, client):
         "type": "T",
         "department": "Dept",
         "tags": "tag1,tag2",
-        "standard": "ISO9001",
+        "standard": first_code,
     }
     resp = client.post("/documents/new?step=1", data=step1_data)
     assert resp.status_code == 302
@@ -74,8 +79,8 @@ def test_document_standard_creation_flow(app_models, client):
     resp = client.post("/documents/new?step=3", data={})
     assert resp.status_code == 302
 
-    resp = client.get("/documents?standard=ISO9001")
+    resp = client.get(f"/documents?standard={first_code}")
     assert resp.status_code == 200
     body = resp.get_data(as_text=True)
     assert "Flow Doc" in body
-    assert "<th colspan=\"7\">ISO 9001</th>" in body
+    assert f"<th colspan=\"7\">{app_module.STANDARD_MAP[first_code]}</th>" in body

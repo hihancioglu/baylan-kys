@@ -27,6 +27,27 @@ Base = declarative_base()
 sys.modules["portal.models"] = sys.modules[__name__]
 
 
+def _parse_standard_map(raw: str) -> dict[str, str]:
+    mapping: dict[str, str] = {}
+    for item in raw.split(","):
+        if ":" not in item:
+            continue
+        code, name = item.split(":", 1)
+        code = code.strip()
+        name = name.strip()
+        if code:
+            mapping[code] = name or code
+    return mapping
+
+
+STANDARD_MAP = _parse_standard_map(
+    os.environ.get(
+        "ISO_STANDARDS",
+        "ISO9001:ISO 9001,ISO27001:ISO 27001,ISO14001:ISO 14001",
+    )
+)
+
+
 class RoleEnum(PyEnum):
     READER = "reader"
     CONTRIBUTOR = "contributor"
@@ -334,29 +355,36 @@ def seed_documents():
     session = get_session()
     try:
         if session.query(Document).count() == 0:
+            codes = list(STANDARD_MAP.keys())
+            if not codes:
+                return
+            first = codes[0]
+            second = codes[1] if len(codes) > 1 else first
+            third = codes[2] if len(codes) > 2 else (second if len(codes) > 1 else first)
+
             doc1 = Document(
                 doc_key="seed_doc1.docx",
                 title="Seeded Document 1",
                 code="SD1",
-                standard_code="ISO9001",
-                standards=[DocumentStandard(standard_code="ISO9001")],
+                standard_code=first,
+                standards=[DocumentStandard(standard_code=first)],
             )
             doc2 = Document(
                 doc_key="seed_doc2.docx",
                 title="Seeded Document 2",
                 code="SD2",
-                standard_code="ISO9001",
+                standard_code=first,
                 standards=[
-                    DocumentStandard(standard_code="ISO9001"),
-                    DocumentStandard(standard_code="ISO14001"),
+                    DocumentStandard(standard_code=first),
+                    DocumentStandard(standard_code=second),
                 ],
             )
             doc3 = Document(
                 doc_key="seed_doc3.docx",
                 title="Seeded Document 3",
                 code="SD3",
-                standard_code="ISO14001",
-                standards=[DocumentStandard(standard_code="ISO14001")],
+                standard_code=third,
+                standards=[DocumentStandard(standard_code=third)],
             )
             session.add_all([doc1, doc2, doc3])
             session.commit()
