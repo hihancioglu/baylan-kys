@@ -1,15 +1,17 @@
 <table class="table table-striped table-sm document-table">
-    <colgroup>
+  <colgroup>
+      <col style="width:15%">
       <col style="width:15%">
       <col style="width:35%">
       <col style="width:15%">
       <col style="width:20%">
       <col style="width:15%">
       <col style="width:10%">
-    </colgroup>
-    <thead class="table-light">
+  </colgroup>
+  <thead class="table-light">
       <tr>
         <th style="position:sticky;top:0;">Code</th>
+        <th style="position:sticky;top:0;">Standard</th>
         <th style="position:sticky;top:0;">Title</th>
         <th style="position:sticky;top:0;">Status</th>
         <th style="position:sticky;top:0;">Department</th>
@@ -21,6 +23,7 @@
       {% for doc in documents %}
       <tr>
         <td>{{ doc.code }}</td>
+        <td>{{ standard_map.get(doc.standard_code, doc.standard_code) }}</td>
         <td>{{ doc.title }}</td>
         <td><span class="badge badge-status-{{ doc.status|lower }}">{{ doc.status }}</span></td>
         <td>{{ doc.department }}</td>
@@ -36,7 +39,7 @@
         </td>
       </tr>
       {% else %}
-      <tr><td colspan="6">No documents found.</td></tr>
+      <tr><td colspan="7">No documents found.</td></tr>
       {% endfor %}
     </tbody>
   </table>
