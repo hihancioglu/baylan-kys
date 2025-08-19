@@ -739,6 +739,7 @@ def new_document():
             data["title"] = request.form.get("title", "").strip()
             data["type"] = request.form.get("type", "").strip()
             data["department"] = request.form.get("department", "").strip()
+            data["standard"] = request.form.get("standard", "").strip()
             tags = request.form.get("tags", "")
             data["tags"] = ",".join([t.strip() for t in tags.split(",") if t.strip()])
             DOCUMENT_DRAFTS[draft_id] = data
@@ -795,6 +796,8 @@ def new_document():
         "form": data,
         "step": int(step),
     }
+    if step == "1":
+        context["standards"] = sorted(ALLOWED_STANDARDS)
     if step == "2":
         base_templates = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "templates"))
         template_options = {}
