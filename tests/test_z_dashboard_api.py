@@ -31,6 +31,7 @@ def models(reset_database):
     m = get_models()
     SessionLocal = m.SessionLocal
     Document = m.Document
+    DocumentStandard = m.DocumentStandard
     WorkflowStep = m.WorkflowStep
     DocumentRevision = m.DocumentRevision
     Acknowledgement = m.Acknowledgement
@@ -48,6 +49,12 @@ def models(reset_database):
     mandatory_doc1 = Document(doc_key="mandatory1.docx", title="Mandatory Doc 1", status="Published")
     mandatory_doc2 = Document(doc_key="mandatory2.docx", title="Mandatory Doc 2", status="Published")
     session.add_all([assigned_doc1, assigned_doc2, unassigned_doc, mandatory_doc1, mandatory_doc2])
+    session.commit()
+
+    sd1 = DocumentStandard(doc_id=assigned_doc1.id, standard_code="STD1")
+    sd2 = DocumentStandard(doc_id=mandatory_doc1.id, standard_code="STD1")
+    sd3 = DocumentStandard(doc_id=mandatory_doc2.id, standard_code="STD2")
+    session.add_all([sd1, sd2, sd3])
     session.commit()
 
     step1 = WorkflowStep(doc_id=assigned_doc1.id, step_order=1, user_id=user.id, status="Pending", step_type="approval")
@@ -188,3 +195,14 @@ def test_api_search_shortcuts(client, app_module, monkeypatch):
     resp = client.get("/api/dashboard/search-shortcuts")
     assert resp.status_code == 200
     assert resp.get_json()["items"] == []
+
+
+def test_api_standard_summary(client, models):
+    with client.session_transaction() as sess:
+        sess["user"] = {"id": 1, "name": "Tester"}
+        sess["roles"] = []
+    resp = client.get("/api/dashboard/standard-summary")
+    assert resp.status_code == 200
+    data = resp.get_json()
+    assert any(d["standard"] == "STD1" and d["count"] == 2 for d in data)
+    assert any(d["standard"] == "STD2" and d["count"] == 1 for d in data)
