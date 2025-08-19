@@ -374,7 +374,9 @@ def notifications_stream():
     return Response(stream(), mimetype="text/event-stream")
 
 
-def _get_pending_approvals(db, user_id: int | None, limit: int = 5):
+def _get_pending_approvals(
+    db, user_id: int | None, limit: int = 5, standard: str | None = None
+):
     """Return titles and approval URLs for pending workflow steps.
 
     Older deployments may not yet have the ``user_id`` column.  If the column is
@@ -389,6 +391,12 @@ def _get_pending_approvals(db, user_id: int | None, limit: int = 5):
         .join(Document)
         .filter(WorkflowStep.status == "Pending")
     )
+
+    if standard:
+        query = (
+            query.join(DocumentStandard, DocumentStandard.doc_id == Document.id)
+            .filter(DocumentStandard.standard_code == standard)
+        )
 
     inspector = inspect(db.get_bind())
     columns = {c["name"] for c in inspector.get_columns("workflow_steps")}
@@ -472,6 +480,7 @@ def dashboard():
             "mandatory_reading": _get_mandatory_reading(db, user_id),
             "recent_revisions": _get_recent_revisions(db),
             "search_shortcuts": _get_search_shortcuts(),
+            "standards": sorted(ALLOWED_STANDARDS),
         }
         return render_template("dashboard.html", **context)
     finally:
@@ -494,9 +503,12 @@ def dashboard_cards(card):
     try:
         user = session.get("user") or {}
         user_id = user.get("id")
+        standard = request.args.get("standard")
         context = {"card": card}
         if card == "pending":
-            context["pending_approvals"] = _get_pending_approvals(db, user_id)
+            context["pending_approvals"] = _get_pending_approvals(
+                db, user_id, standard=standard
+            )
         elif card == "mandatory":
             context["mandatory_reading"] = _get_mandatory_reading(db, user_id)
         elif card == "recent":
@@ -514,11 +526,12 @@ def dashboard_cards(card):
 @login_required
 def api_dashboard_pending_approvals():
     limit = request.args.get("limit", type=int) or 5
+    standard = request.args.get("standard")
     db = get_session()
     try:
         user = session.get("user") or {}
         user_id = user.get("id")
-        items = _get_pending_approvals(db, user_id, limit)
+        items = _get_pending_approvals(db, user_id, limit, standard)
         return jsonify({"items": items, "error": None})
     except Exception as e:
         return jsonify({"items": [], "error": str(e)}), 500

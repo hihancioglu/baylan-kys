@@ -5,11 +5,25 @@
 <div class="row row-cols-1 row-cols-md-2 g-3">
   <div class="col">
     <div class="card h-100">
-      <div class="card-header">Pending Approvals</div>
-      <div class="card-body"
+      <div class="card-header d-flex align-items-center">
+        <span>Pending Approvals</span>
+        <select id="pending-standard" class="form-select form-select-sm ms-auto"
+                name="standard"
+                hx-get="/api/dashboard/cards/pending"
+                hx-target="#pending-approvals-body"
+                hx-trigger="change"
+                hx-swap="innerHTML">
+          <option value="">All standards</option>
+          {% for s in standards %}
+          <option value="{{ s }}">{{ s }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div id="pending-approvals-body" class="card-body"
            hx-get="/api/dashboard/cards/pending"
            hx-trigger="load, every 10s"
-           hx-swap="innerHTML">
+           hx-swap="innerHTML"
+           hx-include="#pending-standard">
         {% set card = 'pending' %}
         {% include 'partials/dashboard/_cards.html' %}
       </div>
