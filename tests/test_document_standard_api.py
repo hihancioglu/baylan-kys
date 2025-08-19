@@ -132,3 +132,20 @@ def test_filter_documents_by_standard(app_models, client):
     assert "Seeded Document 2" in body
     assert "Seeded Document 3" not in body
 
+
+def test_seed_documents_with_standards(app_models):
+    """Seeding helper populates single and multi-standard docs."""
+    _, models = app_models
+    models.seed_documents()
+
+    session_db = models.SessionLocal()
+    docs = {d.code: d for d in session_db.query(models.Document).all()}
+
+    assert [s.standard_code for s in docs["SD1"].standards] == ["ISO9001"]
+    assert set(s.standard_code for s in docs["SD2"].standards) == {
+        "ISO9001",
+        "ISO14001",
+    }
+    assert [s.standard_code for s in docs["SD3"].standards] == ["ISO14001"]
+    session_db.close()
+
