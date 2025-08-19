@@ -132,3 +132,14 @@ def test_get_documents_filter_by_standard():
     assert filters["standard"] == "ISO9001"
     assert params["standard"] == "ISO9001"
 
+
+def test_get_documents_normalizes_missing_standard_code():
+    """Documents with no standard_code are normalized for grouping."""
+    _populate_docs()
+    with app.test_request_context("/documents"):
+        docs, _, _, _, _, _ = _get_documents()
+
+    codes = {d.standard_code for d in docs}
+    assert None not in codes
+    assert "" in codes
+
