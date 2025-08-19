@@ -131,6 +131,7 @@ class Role(Base):
     id = Column(Integer, primary_key=True)
     name = Column(String, unique=True, nullable=False)
     ldap_group = Column(String, unique=True)
+    standard_scope = Column(String, nullable=False, default="ALL")
     users = relationship(
         "User", secondary=user_roles, back_populates="roles"
     )
@@ -334,7 +335,7 @@ def seed_roles_and_users():
     try:
         for role in RoleEnum:
             if not session.query(Role).filter_by(name=role.value).first():
-                session.add(Role(name=role.value))
+                session.add(Role(name=role.value, standard_scope="ALL"))
         session.commit()
         for role in RoleEnum:
             username = f"test_{role.value}"
