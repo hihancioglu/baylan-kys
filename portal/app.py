@@ -230,6 +230,11 @@ def _format_tags(value):
 
 
 ALLOWED_STANDARDS = {"ISO9001", "ISO27001", "ISO14001"}
+STANDARD_MAP = {
+    "ISO9001": "ISO 9001",
+    "ISO27001": "ISO 27001",
+    "ISO14001": "ISO 14001",
+}
 
 
 # -- Acknowledgement helpers -------------------------------------------------
@@ -705,6 +710,7 @@ def list_documents():
         ],
         "departments": departments,
         "standards": sorted(ALLOWED_STANDARDS),
+        "standard_map": STANDARD_MAP,
     }
     return render_template(template, **context)
 
@@ -721,6 +727,7 @@ def documents_table():
         "params": params,
         "facets": facets,
         "standards": sorted(ALLOWED_STANDARDS),
+        "standard_map": STANDARD_MAP,
     }
     return render_template("documents/_table.html", **context)
 
