@@ -24,11 +24,15 @@
     <input type="text" class="form-control{% if errors.department %} is-invalid{% endif %}" id="department" name="department" value="{{ form.department or '' }}">
     {% if errors.department %}<div class="invalid-feedback">{{ errors.department }}</div>{% endif %}
   </div>
-  <select name="standard" class="form-select mb-3">
-    {% for code, label in standard_map.items() %}
-      <option value="{{ code }}"{% if form.standard == code %} selected{% endif %}>{{ label }}</option>
-    {% endfor %}
-  </select>
+  <div class="mb-3">
+    <label for="standard" class="form-label">Standard</label>
+    <select id="standard" name="standard" class="form-select{% if errors.standard %} is-invalid{% endif %}" required>
+      {% for code, label in standard_map.items() %}
+        <option value="{{ code }}"{% if form.standard == code %} selected{% endif %}>{{ label }}</option>
+      {% endfor %}
+    </select>
+    {% if errors.standard %}<div class="invalid-feedback">{{ errors.standard }}</div>{% endif %}
+  </div>
   <div class="mb-3">
     <label for="tags" class="form-label">Tags</label>
     <input type="text" class="form-control{% if errors.tags %} is-invalid{% endif %}" id="tags" name="tags" value="{{ form.tags or '' }}" placeholder="tag1, tag2">
