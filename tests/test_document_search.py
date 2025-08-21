@@ -11,23 +11,31 @@ os.environ.setdefault("S3_ENDPOINT", "http://s3")
 import pytest
 from sqlalchemy import or_
 import importlib
+from flask import session as flask_session
 
 SessionLocal = None
 Document = None
+Role = None
 app = None
 _get_documents = None
 
 
 @pytest.fixture(autouse=True)
 def app_models():
-    global SessionLocal, Document, app, _get_documents
+    global SessionLocal, Document, Role, app, _get_documents
     m = importlib.reload(importlib.import_module("models"))
     a = importlib.reload(importlib.import_module("app"))
     m.Base.metadata.create_all(bind=m.engine)
     SessionLocal = m.SessionLocal
     Document = m.Document
+    Role = m.Role
     app = a.app
     _get_documents = a._get_documents
+    db = SessionLocal()
+    db.query(Role).delete()
+    db.add(Role(name="reader", standard_scope="ALL"))
+    db.commit()
+    db.close()
     return m
 
 def _populate_docs():
@@ -94,6 +102,7 @@ def test_get_documents_search_filters_by_q():
     """Documents can be filtered by title or code using the q parameter."""
     _populate_docs()
     with app.test_request_context("/documents", query_string={"q": "manual"}):
+        flask_session["roles"] = ["reader"]
         docs, _, _, filters, params, facets = _get_documents()
     titles = {d.title for d in docs}
     assert titles == {"Quality Manual"}
@@ -102,6 +111,7 @@ def test_get_documents_search_filters_by_q():
     assert facets["status"]["Published"] == 1
 
     with app.test_request_context("/documents", query_string={"q": "doc-001"}):
+        flask_session["roles"] = ["reader"]
         docs, _, _, _, _, _ = _get_documents()
     codes = {d.code for d in docs}
     assert codes == {"DOC-001"}
@@ -113,6 +123,7 @@ def test_get_documents_search_pagination():
     with app.test_request_context(
         "/documents", query_string={"status": "Published", "page": 2, "page_size": 1}
     ):
+        flask_session["roles"] = ["reader"]
         docs, page, pages, filters, params, facets = _get_documents()
 
     assert len(docs) == 1
@@ -125,6 +136,7 @@ def test_get_documents_filter_by_standard():
     """Documents can be filtered by standard code."""
     _populate_docs()
     with app.test_request_context("/documents", query_string={"standard": "ISO9001"}):
+        flask_session["roles"] = ["reader"]
         docs, _, _, filters, params, _ = _get_documents()
 
     titles = {d.title for d in docs}
@@ -137,9 +149,25 @@ def test_get_documents_normalizes_missing_standard_code():
     """Documents with no standard_code are normalized for grouping."""
     _populate_docs()
     with app.test_request_context("/documents"):
+        flask_session["roles"] = ["reader"]
         docs, _, _, _, _, _ = _get_documents()
 
     codes = {d.standard_code for d in docs}
     assert None not in codes
     assert "" in codes
+
+
+def test_get_documents_filters_by_role_scope():
+    """Users only see documents within their role's standard scope."""
+    _populate_docs()
+    db = SessionLocal()
+    db.add(Role(name="auditor", standard_scope="ISO9001"))
+    db.commit()
+    db.close()
+    with app.test_request_context("/documents"):
+        flask_session["roles"] = ["auditor"]
+        docs, _, _, _, _, _ = _get_documents()
+
+    titles = {d.title for d in docs}
+    assert titles == {"Safety Procedure"}
 
