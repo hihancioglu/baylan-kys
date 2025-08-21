@@ -642,9 +642,29 @@ def list_archived_documents():
 
 
 def _get_documents():
-    session = get_session()
+    db = get_session()
     filters: dict[str, object] = {}
     facets: dict[str, dict] = {}
+
+    role_names = session.get("roles", [])
+    scopes = {
+        r.standard_scope
+        for r in db.query(Role).filter(Role.name.in_(role_names)).all()
+    }
+
+    def _apply_scope(query):
+        if "ALL" in scopes or not scopes:
+            return query
+        return (
+            query.outerjoin(DocumentStandard, DocumentStandard.doc_id == Document.id)
+            .filter(
+                or_(
+                    DocumentStandard.standard_code.in_(scopes),
+                    Document.standard_code.in_(scopes),
+                )
+            )
+            .distinct()
+        )
 
     status = request.args.get("status")
     normalized_status = status.capitalize() if status else None
@@ -676,7 +696,7 @@ def _get_documents():
                 q, search_filters, page=page, per_page=page_size
             )
             ids = [int(r["id"]) for r in results]
-            query = session.query(Document).filter(Document.id.in_(ids))
+            query = _apply_scope(db.query(Document).filter(Document.id.in_(ids)))
             docs = query.all()
             docs = sorted(docs, key=lambda d: ids.index(d.id))
             if tags:
@@ -684,7 +704,7 @@ def _get_documents():
                 filters["tags"] = tags
             pages = (total + page_size - 1) // page_size
         except RuntimeError:
-            query = session.query(Document)
+            query = _apply_scope(db.query(Document))
             if normalized_status:
                 query = query.filter(Document.status == normalized_status)
                 filters["status"] = normalized_status
@@ -712,7 +732,7 @@ def _get_documents():
                 .all()
             )
     else:
-        query = session.query(Document)
+        query = _apply_scope(db.query(Document))
         if normalized_status:
             query = query.filter(Document.status == normalized_status)
             filters["status"] = normalized_status
@@ -751,7 +771,7 @@ def _get_documents():
         if d.standard_code is None:
             d.standard_code = ""
 
-    session.close()
+    db.close()
 
     params = request.args.to_dict()
     params.pop("page", None)
