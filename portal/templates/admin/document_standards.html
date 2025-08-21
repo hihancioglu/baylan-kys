@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Document Standards</h1>
+<table class="table">
+  <thead><tr><th>ID</th><th>Code</th><th>Title</th><th>Standard</th></tr></thead>
+  <tbody>
+  {% for doc in documents %}
+  <tr>
+    <td>{{ doc.id }}</td>
+    <td>{{ doc.code }}</td>
+    <td>{{ doc.title }}</td>
+    <td>
+      <form method="post" action="{{ url_for('update_document_standard', doc_id=doc.id) }}">
+        <select name="standard" class="form-select form-select-sm d-inline w-auto">
+          {% for code in standards %}
+          <option value="{{ code }}" {% if code == doc.standard_code %}selected{% endif %}>{{ standard_map[code] }}</option>
+          {% endfor %}
+        </select>
+        <button type="submit" class="btn btn-sm btn-primary">Save</button>
+      </form>
+    </td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

@@ -1,4 +1,5 @@
 import os
+import os
 import sys
 import importlib
 from pathlib import Path
@@ -9,10 +10,6 @@ repo_root = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(repo_root))
 sys.path.insert(0, str(repo_root / "portal"))
 
-os.environ.setdefault(
-    "ISO_STANDARDS",
-    "ISO9001:ISO 9001,ISO27001:ISO 27001,ISO14001:ISO 14001",
-)
 os.environ.setdefault("ONLYOFFICE_INTERNAL_URL", "http://oo")
 os.environ.setdefault("ONLYOFFICE_PUBLIC_URL", "http://oo-public")
 os.environ.setdefault("ONLYOFFICE_JWT_SECRET", "secret")
@@ -22,10 +19,18 @@ os.environ.setdefault("S3_ACCESS_KEY", "test")
 os.environ.setdefault("S3_SECRET_KEY", "test")
 
 
+@pytest.fixture(autouse=True)
+def iso_standards_env(monkeypatch):
+    monkeypatch.setenv(
+        "ISO_STANDARDS",
+        "ISO9001:ISO 9001,ISO27001:ISO 27001,ISO14001:ISO 14001",
+    )
+
+
 @pytest.fixture()
 def client(monkeypatch):
-    app_module = importlib.import_module("app")
-    models_module = importlib.import_module("models")
+    app_module = importlib.reload(importlib.import_module("app"))
+    models_module = importlib.reload(importlib.import_module("models"))
     app_module.app.config["WTF_CSRF_ENABLED"] = False
     client = app_module.app.test_client()
     with client.session_transaction() as sess:

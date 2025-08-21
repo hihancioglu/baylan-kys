@@ -2,6 +2,8 @@ import io
 import os
 import sys
 import importlib
+import os
+import sys
 from pathlib import Path
 from unittest.mock import MagicMock
 
@@ -14,20 +16,24 @@ os.environ.setdefault("S3_ENDPOINT", "http://s3")
 os.environ.setdefault("S3_BUCKET_MAIN", "test-bucket")
 os.environ.setdefault("S3_ACCESS_KEY", "test")
 os.environ.setdefault("S3_SECRET_KEY", "test")
-os.environ.setdefault(
-    "ISO_STANDARDS",
-    "ISO9001:ISO 9001,ISO27001:ISO 27001,ISO14001:ISO 14001",
-)
 
 repo_root = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(repo_root))
 sys.path.insert(0, str(repo_root / "portal"))
 
 
+@pytest.fixture(autouse=True)
+def iso_standards_env(monkeypatch):
+    monkeypatch.setenv(
+        "ISO_STANDARDS",
+        "ISO9001:ISO 9001,ISO27001:ISO 27001,ISO14001:ISO 14001",
+    )
+
+
 @pytest.fixture()
 def app_models():
-    app_module = importlib.import_module("app")
-    models_module = importlib.import_module("models")
+    app_module = importlib.reload(importlib.import_module("app"))
+    models_module = importlib.reload(importlib.import_module("models"))
     app_module.app.config["WTF_CSRF_ENABLED"] = False
     return app_module, models_module
 
