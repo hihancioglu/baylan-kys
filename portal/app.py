@@ -252,6 +252,7 @@ STANDARD_MAP = _parse_standard_map(
         "ISO9001:ISO 9001,ISO27001:ISO 27001,ISO14001:ISO 14001",
     )
 )
+STANDARD_MAP.setdefault("Uncategorized", "Uncategorized")
 ALLOWED_STANDARDS = set(STANDARD_MAP.keys())
 
 
