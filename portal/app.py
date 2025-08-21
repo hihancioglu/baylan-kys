@@ -245,14 +245,11 @@ def _parse_standard_map(raw: str) -> dict[str, str]:
     return mapping
 
 
-# Default set mirrors previous constants for backwards compatibility.
-STANDARD_MAP = _parse_standard_map(
-    os.environ.get(
-        "ISO_STANDARDS",
-        "ISO9001:ISO 9001,ISO27001:ISO 27001,ISO14001:ISO 14001",
-    )
-)
-STANDARD_MAP.setdefault("Uncategorized", "Uncategorized")
+# Parse ISO standards from environment. If none provided, standards are optional.
+raw_standards = os.environ.get("ISO_STANDARDS", "")
+STANDARD_MAP = _parse_standard_map(raw_standards) if raw_standards else {}
+if STANDARD_MAP:
+    STANDARD_MAP.setdefault("Uncategorized", "Uncategorized")
 ALLOWED_STANDARDS = set(STANDARD_MAP.keys())
 
 
@@ -1496,9 +1493,12 @@ def create_document_api():
         if not value:
             errors[field] = f"{field} is required."
     standard = data.get("standard")
-    if not standard:
-        errors["standard"] = "Standard is required."
-    elif standard not in ALLOWED_STANDARDS:
+    if ALLOWED_STANDARDS:
+        if not standard:
+            errors["standard"] = "Standard is required."
+        elif standard not in ALLOWED_STANDARDS:
+            errors["standard"] = "Invalid standard."
+    elif standard:
         errors["standard"] = "Invalid standard."
     if errors:
         return jsonify({"errors": errors}), 400
@@ -1557,7 +1557,11 @@ def update_document_api(id: int):
 
     if "standard" in data:
         standard = data.get("standard")
-        if standard and standard not in ALLOWED_STANDARDS:
+        if ALLOWED_STANDARDS:
+            if standard and standard not in ALLOWED_STANDARDS:
+                session_db.close()
+                return jsonify({"errors": {"standard": "Invalid standard."}}), 400
+        elif standard:
             session_db.close()
             return jsonify({"errors": {"standard": "Invalid standard."}}), 400
         doc.standard_code = standard
@@ -2133,6 +2137,56 @@ def admin_roles_page():
         )
     finally:
         db.close()
+
+
+@app.get("/admin/document-standards")
+@roles_required(RoleEnum.QUALITY_ADMIN.value)
+def admin_document_standards_page():
+    """Render document standard mapping page."""
+    db = get_session()
+    try:
+        docs = db.query(Document).order_by(Document.id).all()
+        return render_template(
+            "admin/document_standards.html",
+            documents=docs,
+            standards=sorted(ALLOWED_STANDARDS),
+            standard_map=STANDARD_MAP,
+            breadcrumbs=[
+                {"title": "Home", "url": url_for("dashboard")},
+                {"title": "Admin"},
+                {"title": "Document Standards"},
+            ],
+        )
+    finally:
+        db.close()
+
+
+@app.route("/admin/document-standards/<int:doc_id>", methods=["POST", "PUT"])
+@roles_required(RoleEnum.QUALITY_ADMIN.value)
+def update_document_standard(doc_id: int):
+    data = request.get_json(silent=True) or {}
+    standard = data.get("standard") or request.form.get("standard")
+    if not standard or standard not in ALLOWED_STANDARDS:
+        if request.is_json:
+            return jsonify(error="Invalid standard"), 400
+        return "Invalid standard", 400
+    db = get_session()
+    doc = db.get(Document, doc_id)
+    if not doc:
+        db.close()
+        if request.is_json:
+            return jsonify(error="Document not found"), 404
+        return "Document not found", 404
+    doc.standard_code = standard
+    doc.standards = [DocumentStandard(standard_code=standard)]
+    db.commit()
+    user_id = (session.get("user") or {}).get("id")
+    if user_id:
+        log_action(user_id, doc_id, "update_document_standard")
+    db.close()
+    if request.is_json:
+        return jsonify(ok=True)
+    return redirect(url_for("admin_document_standards_page"))
 
 
 @app.get("/admin/departments")
