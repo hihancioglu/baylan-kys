@@ -97,6 +97,26 @@ def test_create_document_invalid_standard(app_models, client):
     assert "standard" in data["errors"]
 
 
+def test_create_document_missing_standard(app_models, client):
+    app_module, _ = app_models
+    _mock_env(app_module)
+
+    payload = {
+        "code": "DOC1",
+        "title": "My Doc",
+        "type": "T",
+        "department": "Dept",
+        "tags": "tag1,tag2",
+        "uploaded_file_key": "abc123",
+        "uploaded_file_name": "file.txt",
+    }
+
+    resp = client.post("/api/documents", json=payload)
+    assert resp.status_code == 400
+    data = resp.get_json()
+    assert data["errors"]["standard"] == "Standard is required."
+
+
 def test_update_document_standard(app_models, client):
     app_module, models = app_models
     _mock_env(app_module)

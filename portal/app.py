@@ -1496,7 +1496,9 @@ def create_document_api():
         if not value:
             errors[field] = f"{field} is required."
     standard = data.get("standard")
-    if standard and standard not in ALLOWED_STANDARDS:
+    if not standard:
+        errors["standard"] = "Standard is required."
+    elif standard not in ALLOWED_STANDARDS:
         errors["standard"] = "Invalid standard."
     if errors:
         return jsonify({"errors": errors}), 400
