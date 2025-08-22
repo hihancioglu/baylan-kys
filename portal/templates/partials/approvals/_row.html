@@ -9,7 +9,7 @@
     <button id="approve-{{ step.id }}" class="btn btn-success btn-sm" hx-post="/api/approvals/{{ step.id }}/approve" hx-target="#step-{{ step.id }}" hx-swap="outerHTML" title="Approve this step">Approve</button>
     <button id="reject-{{ step.id }}" class="btn btn-danger btn-sm" hx-post="/api/approvals/{{ step.id }}/reject" hx-target="#step-{{ step.id }}" hx-swap="outerHTML" title="Reject this step">Reject</button>
     <script type="module">
-      import { attachTooltip } from '/static/src/forms/index.js';
+      import { attachTooltip } from '{{ url_for('static', filename='dist/forms/index.js') }}';
       attachTooltip(document.getElementById('approve-{{ step.id }}'), 'Approve this step');
       attachTooltip(document.getElementById('reject-{{ step.id }}'), 'Reject this step');
     </script>

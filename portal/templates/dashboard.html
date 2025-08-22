@@ -106,5 +106,5 @@
     </div>
   </div>
   <script src="https://cdn.jsdelivr.net/npm/chart.js" defer></script>
-  <script type="module" src="/static/dashboard.js"></script>
+  <script type="module" src="{{ url_for('static', filename='dist/dashboard.js') }}"></script>
   {% endblock %}

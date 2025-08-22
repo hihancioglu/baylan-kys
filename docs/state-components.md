@@ -4,7 +4,7 @@ Reusable UI helpers for displaying loading, empty and error states.
 
 ## Installation
 
-Import the helpers directly from `state-components.js` located in `portal/static/src`.
+Import the helpers directly from `state-components.js` located in `portal/static/dist`.
 
 ```
 import { createSkeleton, createNoData, createErrorCard } from './state-components';

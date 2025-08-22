@@ -10,5 +10,5 @@
   window.editorTokenHeader = {{ token_header | tojson }};
 </script>
 <script src="{{ editor_js }}"></script>
-<script type="module" src="/static/document_edit.js"></script>
+<script type="module" src="{{ url_for('static', filename='dist/document_edit.js') }}"></script>
 {% endblock %}
