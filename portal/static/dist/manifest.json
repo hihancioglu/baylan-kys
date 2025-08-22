@@ -1,11 +1,10 @@
 {
-  "data-table.css": "data-table-5ed2eab5.css",
   "document_list.js": "document_list-07da6a49.js",
   "tokens.js": "tokens.js",
   "quick_search.js": "quick_search-53a45077.js",
   "app.js": "app-5ab8cac7.js",
   "document_edit.js": "document_edit-b7f39ce8.js",
-  "app.css": "app-8af1267e.css",
+  "app.css": "app.css",
   "profile_index.js": "profile_index-e0733369.js",
   "document_detail.js": "document_detail-ee7c3386.js",
   "data-table.js": "data-table-111d9460.js",
@@ -23,13 +22,9 @@
   "forms/help-text.js": "forms/help-text.js",
   "forms/index.js": "forms/index.js",
   "forms/validation.js": "forms/validation.js",
-  "components/drawer.css": "components/drawer.css",
-  "components/toast.css": "components/toast.css",
-  "components/modal.css": "components/modal.css",
   "components/modal.js": "components/modal.js",
   "components/index.js": "components/index.js",
   "components/drawer.js": "components/drawer.js",
   "components/toast.js": "components/toast.js",
-  "toolbar/toolbar.css": "toolbar/toolbar.css",
   "toolbar/toolbar.js": "toolbar/toolbar.js"
 }
