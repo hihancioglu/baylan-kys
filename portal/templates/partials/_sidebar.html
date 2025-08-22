@@ -37,4 +37,9 @@
     <li class="nav-item"><a class="nav-link {% if p.startswith('/settings') %}active{% endif %}" href="/settings" {% if p.startswith('/settings') %}aria-current="page"{% endif %}>Settings</a></li>
   </ul>
   {% endif %}
+
+  <h6 class="nav-heading">Help</h6>
+  <ul class="nav flex-column subnav mb-3">
+    <li class="nav-item"><a class="nav-link {% if p.startswith('/help') %}active{% endif %}" href="/help" {% if p.startswith('/help') %}aria-current="page"{% endif %}>Help</a></li>
+  </ul>
 </nav>
