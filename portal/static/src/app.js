@@ -7,7 +7,7 @@ function displayToast(message) {
   const toastEl = document.getElementById('action-toast');
   if (!toastEl) return;
   toastEl.querySelector('.toast-body').textContent = message;
-  const toast = bootstrap.Toast.getOrCreateInstance(toastEl);
+  const toast = window.bootstrap.Toast.getOrCreateInstance(toastEl);
   toast.show();
 }
 
