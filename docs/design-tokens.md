@@ -17,7 +17,7 @@ Design tokens centralize style values for colors, typography, spacing, and more.
 
 ### JavaScript
 ```javascript
-import { getToken } from './tokens';
+import { getToken } from './tokens.js';
 
 const primary = getToken('color-primary');
 ```
