@@ -1540,6 +1540,9 @@ def create_document_api():
         session_db.rollback()
         session_db.close()
         return jsonify(error="user_id required"), 400
+    session_db.flush()
+    if standard:
+        session_db.add(DocumentStandard(doc_id=doc.id, standard_code=standard))
     session_db.commit()
     log_action(user_id, doc.id, "create_document")
     content = extract_text(doc_key)
@@ -1571,6 +1574,18 @@ def update_document_api(id: int):
             session_db.close()
             return jsonify({"errors": {"standard": "Invalid standard."}}), 400
         doc.standard_code = standard
+        existing = (
+            session_db.query(DocumentStandard)
+            .filter_by(doc_id=doc.id)
+            .first()
+        )
+        if standard:
+            if existing:
+                existing.standard_code = standard
+            else:
+                session_db.add(DocumentStandard(doc_id=doc.id, standard_code=standard))
+        elif existing:
+            session_db.delete(existing)
 
     if "title" in data:
         doc.title = data.get("title")

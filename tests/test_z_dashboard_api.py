@@ -208,6 +208,15 @@ def test_api_standard_summary(client, models):
     assert any(d["standard"] == "STD2" and d["count"] == 1 for d in data)
 
 
+def test_document_standard_relationship(models):
+    SessionLocal = models.SessionLocal
+    Document = models.Document
+    session_db = SessionLocal()
+    doc = session_db.query(Document).filter_by(doc_key="assigned1.docx").one()
+    assert [s.standard_code for s in doc.standards] == ["STD1"]
+    session_db.close()
+
+
 def test_reports_standard_summary(client, models, app_module):
     with client.session_transaction() as sess:
         sess["user"] = {"id": 1, "name": "Tester"}
