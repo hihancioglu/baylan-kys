@@ -6,18 +6,18 @@
   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
   <div class="mb-3">
     <label for="department" class="form-label">Department</label>
-    <input type="text" class="form-control{% if errors.department %} is-invalid{% endif %}" id="department" name="department" value="{{ form.department or '' }}">
+    <input type="text" class="form-control{% if errors.department %} is-invalid{% endif %}" id="department" name="department" value="{{ form.department or '' }}" title="Responsible department">
     {% if errors.department %}<div class="invalid-feedback">{{ errors.department }}</div>{% endif %}
   </div>
   <div class="mb-3">
     <label for="type" class="form-label">Type</label>
-    <input type="text" class="form-control{% if errors.type %} is-invalid{% endif %}" id="type" name="type" value="{{ form.type or '' }}">
+    <input type="text" class="form-control{% if errors.type %} is-invalid{% endif %}" id="type" name="type" value="{{ form.type or '' }}" title="Document type">
     {% if errors.type %}<div class="invalid-feedback">{{ errors.type }}</div>{% endif %}
   </div>
 
   <div class="mb-3">
     <label for="template" class="form-label">Template</label>
-    <select class="form-select" id="template" name="template">
+    <select class="form-select" id="template" name="template" title="Select a template">
       <option value="">-- Select Template --</option>
       {% for group, files in template_options.items() %}
         <optgroup label="{{ group|capitalize }}">
@@ -31,13 +31,40 @@
 
   <div class="mb-3">
     <label for="upload_file" class="form-label">Upload File</label>
-    <input type="file" class="form-control" id="upload_file" name="upload_file">
+    <input type="file" class="form-control" id="upload_file" name="upload_file" title="Upload document file">
   </div>
 
   <div class="mb-3 form-check">
-    <input type="checkbox" class="form-check-input" id="generate_docxf" name="generate_docxf" value="1"{% if form.generate_docxf %} checked{% endif %}>
+    <input type="checkbox" class="form-check-input" id="generate_docxf" name="generate_docxf" value="1"{% if form.generate_docxf %} checked{% endif %} title="Generate document from DOCXF">
     <label class="form-check-label" for="generate_docxf">Generate from DOCXF</label>
   </div>
-  <button type="submit" class="btn btn-primary">Next</button>
+  <button type="submit" class="btn btn-primary" id="next-step2" title="Proceed to next step">Next</button>
 </form>
+
+<script type="module">
+  import { attachHelpText, attachTooltip } from '/static/src/forms/index.js';
+
+  const departmentInput = document.getElementById('department');
+  attachHelpText(departmentInput, 'Department responsible for the document.');
+  attachTooltip(departmentInput, 'Responsible department');
+
+  const typeInput = document.getElementById('type');
+  attachHelpText(typeInput, 'Type of document.');
+  attachTooltip(typeInput, 'Document type');
+
+  const templateSelect = document.getElementById('template');
+  attachHelpText(templateSelect, 'Select a template to start from.');
+  attachTooltip(templateSelect, 'Select a template');
+
+  const uploadInput = document.getElementById('upload_file');
+  attachHelpText(uploadInput, 'Upload the document file.');
+  attachTooltip(uploadInput, 'Upload document file');
+
+  const generateDocxf = document.getElementById('generate_docxf');
+  attachHelpText(generateDocxf, 'Generate document from a DOCXF file.');
+  attachTooltip(generateDocxf, 'Generate from DOCXF');
+
+  const nextBtn = document.getElementById('next-step2');
+  attachTooltip(nextBtn, 'Proceed to next step');
+</script>
 {% endblock %}
