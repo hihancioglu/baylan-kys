@@ -9,6 +9,11 @@
             hx-headers='{"Content-Type":"application/json"}'
             hx-vals="js:{comment: this.querySelector('textarea[name=comment]').value}">
         <div class="modal-body">
+          <ol class="mb-3">
+            <li>Review the document.</li>
+            <li>Enter a comment.</li>
+            <li>Approve or Reject.</li>
+          </ol>
           <div class="mb-3">
             <label class="form-label">Comment</label>
             <textarea class="form-control" name="comment" rows="3"></textarea>
@@ -16,7 +21,7 @@
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-          <button type="submit" class="btn btn-{{ 'success' if action=='approve' else 'danger' }}" data-bs-dismiss="modal">{{ action|capitalize }}</button>
+          <button type="submit" class="btn btn-{{ 'success' if action=='approve' else 'danger' }}" data-bs-dismiss="modal" data-bs-toggle="tooltip" title="{{ 'Approve the document' if action=='approve' else 'Reject the document' }}">{{ action|capitalize }}</button>
         </div>
       </form>
     </div>
