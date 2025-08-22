@@ -20,6 +20,7 @@ from models import (
     DocumentPermission,
     User,
     Role,
+    Standard,
     Acknowledgement,
     Notification,
     TrainingResult,
@@ -35,6 +36,7 @@ from models import (
     get_session,
     RoleEnum,
     engine,
+    STANDARD_MAP as MODEL_STANDARD_MAP,
 )
 from search import index_document, search_documents
 from sqlalchemy import func, or_, and_, inspect
@@ -237,7 +239,9 @@ def _format_tags(value):
     return ",".join(tags) if tags else None
 
 
-# Load ISO standards from environment.
+# Load ISO standards from the ``standards`` table.  For test fixtures that
+# populate ``ISO_STANDARDS`` via the environment, we lazily create the
+# corresponding rows if the table is empty.
 def _parse_standard_map(raw: str) -> dict[str, str]:
     mapping: dict[str, str] = {}
     for item in raw.split(","):
@@ -251,12 +255,47 @@ def _parse_standard_map(raw: str) -> dict[str, str]:
     return mapping
 
 
-# Parse ISO standards from environment. If none provided, standards are optional.
-raw_standards = os.environ.get("ISO_STANDARDS", "")
-STANDARD_MAP = _parse_standard_map(raw_standards) if raw_standards else {}
-if STANDARD_MAP:
-    STANDARD_MAP.setdefault("Uncategorized", "Uncategorized")
-ALLOWED_STANDARDS = set(STANDARD_MAP.keys())
+def get_standard_map() -> dict[str, str]:
+    """Return a mapping of standard code to description.
+
+    The data is sourced from the ``Standard`` table.  If the table is empty –
+    as is the case in tests that only provide ``ISO_STANDARDS`` via the
+    environment – the helper seeds the table based on that variable.
+    """
+
+    session = get_session()
+    try:
+        standards = session.query(Standard).all()
+        if not standards:
+            raw = os.environ.get("ISO_STANDARDS", "")
+            if not raw and MODEL_STANDARD_MAP:
+                raw = ",".join(f"{k}:{v}" for k, v in MODEL_STANDARD_MAP.items())
+            for code, label in _parse_standard_map(raw).items():
+                session.add(Standard(code=code, description=label))
+            session.commit()
+            standards = session.query(Standard).all()
+        mapping = {s.code: (s.description or s.code) for s in standards}
+        if mapping:
+            mapping.setdefault("Uncategorized", "Uncategorized")
+        return mapping
+    finally:
+        session.close()
+
+
+STANDARD_MAP = get_standard_map()
+
+
+def get_allowed_standards() -> set[str]:
+    """Return a set of allowed standard codes.
+
+    Standards are only enforced when the ``ISO_STANDARDS`` environment variable is
+    defined.  This mirrors previous behaviour where the absence of this
+    variable meant standards were optional.
+    """
+
+    if not os.environ.get("ISO_STANDARDS"):
+        return set()
+    return set(get_standard_map().keys())
 
 
 # -- Acknowledgement helpers -------------------------------------------------
@@ -391,6 +430,9 @@ def _get_pending_approvals(
     we only select the specific columns we need.
     """
 
+    # Ensure standards are seeded when database has been freshly recreated.
+    get_standard_map()
+
     query = (
         db.query(Document.title, WorkflowStep.id)
         .join(Document)
@@ -400,7 +442,8 @@ def _get_pending_approvals(
     if standard:
         query = (
             query.join(DocumentStandard, DocumentStandard.doc_id == Document.id)
-            .filter(DocumentStandard.standard_code == standard)
+            .join(Standard, Standard.code == DocumentStandard.standard_code)
+            .filter(Standard.code == standard)
         )
 
     inspector = inspect(db.get_bind())
@@ -498,7 +541,8 @@ def dashboard():
             "mandatory_reading": _get_mandatory_reading(db, user_id),
             "recent_revisions": _get_recent_revisions(db),
             "search_shortcuts": _get_search_shortcuts(),
-            "standards": sorted(ALLOWED_STANDARDS),
+            "standards": sorted(get_standard_map().keys()),
+            "standard_map": get_standard_map(),
         }
         return render_template("dashboard.html", **context)
     finally:
@@ -608,14 +652,23 @@ def api_dashboard_standard_summary():
         rows = (
             db.query(
                 DocumentStandard.standard_code,
+                Standard.description,
                 func.count().label("count"),
             )
             .join(Document)
-            .group_by(DocumentStandard.standard_code)
+            .outerjoin(
+                Standard, Standard.code == DocumentStandard.standard_code
+            )
+            .group_by(DocumentStandard.standard_code, Standard.description)
             .all()
         )
         data = [
-            {"standard": code, "count": count} for code, count in rows
+            {
+                "standard": code,
+                "description": desc or code,
+                "count": count,
+            }
+            for code, desc, count in rows
         ]
         return jsonify(data)
     finally:
@@ -813,8 +866,10 @@ def list_documents():
             {"title": "Documents"},
         ],
         "departments": departments,
-        "standards": sorted(ALLOWED_STANDARDS),
-        "standard_map": STANDARD_MAP,
+        **{
+            "standards": sorted(get_standard_map().keys()),
+            "standard_map": get_standard_map(),
+        },
     }
     return render_template(template, **context)
 
@@ -830,8 +885,10 @@ def documents_table():
         "filters": filters,
         "params": params,
         "facets": facets,
-        "standards": sorted(ALLOWED_STANDARDS),
-        "standard_map": STANDARD_MAP,
+        **{
+            "standards": sorted(get_standard_map().keys()),
+            "standard_map": get_standard_map(),
+        },
     }
     return render_template("documents/_table.html", **context)
 
@@ -910,8 +967,9 @@ def new_document():
         "step": int(step),
     }
     if step == "1":
-        context["standards"] = sorted(ALLOWED_STANDARDS)
-        context["standard_map"] = STANDARD_MAP
+        standard_map = get_standard_map()
+        context["standards"] = sorted(standard_map.keys())
+        context["standard_map"] = standard_map
     if step == "2":
         base_templates = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "templates"))
         template_options = {}
@@ -920,6 +978,8 @@ def new_document():
             if os.path.isdir(path):
                 template_options[folder] = [f for f in os.listdir(path) if os.path.isfile(os.path.join(path, f))]
         context["template_options"] = template_options
+    if step == "3":
+        context["standard_map"] = get_standard_map()
     return render_template(template, **context)
 
 
@@ -1499,10 +1559,11 @@ def create_document_api():
         if not value:
             errors[field] = f"{field} is required."
     standard = data.get("standard")
-    if ALLOWED_STANDARDS:
+    allowed = get_allowed_standards()
+    if allowed:
         if not standard:
             errors["standard"] = "Standard is required."
-        elif standard not in ALLOWED_STANDARDS:
+        elif standard not in allowed:
             errors["standard"] = "Invalid standard."
     elif standard:
         errors["standard"] = "Invalid standard."
@@ -1566,26 +1627,18 @@ def update_document_api(id: int):
 
     if "standard" in data:
         standard = data.get("standard")
-        if ALLOWED_STANDARDS:
-            if standard and standard not in ALLOWED_STANDARDS:
+        allowed = get_allowed_standards()
+        if allowed:
+            if standard and standard not in allowed:
                 session_db.close()
                 return jsonify({"errors": {"standard": "Invalid standard."}}), 400
         elif standard:
             session_db.close()
             return jsonify({"errors": {"standard": "Invalid standard."}}), 400
-        doc.standard_code = standard
-        existing = (
-            session_db.query(DocumentStandard)
-            .filter_by(doc_id=doc.id)
-            .first()
-        )
+        session_db.query(DocumentStandard).filter_by(doc_id=id).delete()
         if standard:
-            if existing:
-                existing.standard_code = standard
-            else:
-                session_db.add(DocumentStandard(doc_id=doc.id, standard_code=standard))
-        elif existing:
-            session_db.delete(existing)
+            session_db.add(DocumentStandard(doc_id=id, standard_code=standard))
+        session_db.query(Document).filter_by(id=id).update({"standard_code": standard})
 
     if "title" in data:
         doc.title = data.get("title")
@@ -1605,6 +1658,7 @@ def update_document_api(id: int):
         doc.tags = tags_val
 
     session_db.commit()
+    doc = session_db.get(Document, id)
     user_id = (session.get("user") or {}).get("id") or data.get("user_id")
     if user_id:
         log_action(user_id, doc.id, "update_document")
@@ -2077,7 +2131,8 @@ def create_role():
     standard_scope = (data.get("standard_scope") or "ALL").upper()
     if not role_name:
         return jsonify(error="role required"), 400
-    if standard_scope != "ALL" and standard_scope not in ALLOWED_STANDARDS:
+    allowed = get_allowed_standards()
+    if standard_scope != "ALL" and standard_scope not in allowed:
         return jsonify(error="invalid standard_scope"), 400
     session = get_session()
     try:
@@ -2149,7 +2204,8 @@ def admin_roles_page():
             "admin/roles.html",
             users=users,
             roles=roles,
-            standards=sorted(ALLOWED_STANDARDS),
+            standards=sorted(get_standard_map().keys()),
+            standard_map=get_standard_map(),
             breadcrumbs=[
                 {"title": "Home", "url": url_for("dashboard")},
                 {"title": "Admin"},
@@ -2170,8 +2226,8 @@ def admin_document_standards_page():
         return render_template(
             "admin/document_standards.html",
             documents=docs,
-            standards=sorted(ALLOWED_STANDARDS),
-            standard_map=STANDARD_MAP,
+            standards=sorted(get_standard_map().keys()),
+            standard_map=get_standard_map(),
             breadcrumbs=[
                 {"title": "Home", "url": url_for("dashboard")},
                 {"title": "Admin"},
@@ -2187,7 +2243,8 @@ def admin_document_standards_page():
 def update_document_standard(doc_id: int):
     data = request.get_json(silent=True) or {}
     standard = data.get("standard") or request.form.get("standard")
-    if not standard or standard not in ALLOWED_STANDARDS:
+    allowed = get_allowed_standards()
+    if not standard or standard not in allowed:
         if request.is_json:
             return jsonify(error="Invalid standard"), 400
         return "Invalid standard", 400

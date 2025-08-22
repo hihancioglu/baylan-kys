@@ -15,7 +15,7 @@
                 hx-swap="innerHTML">
           <option value="">All standards</option>
           {% for s in standards %}
-          <option value="{{ s }}">{{ s }}</option>
+          <option value="{{ s }}">{{ standard_map.get(s, s) }}</option>
           {% endfor %}
         </select>
       </div>
@@ -42,7 +42,7 @@
                 hx-swap="innerHTML">
           <option value="">All standards</option>
           {% for s in standards %}
-          <option value="{{ s }}">{{ s }}</option>
+          <option value="{{ s }}">{{ standard_map.get(s, s) }}</option>
           {% endfor %}
         </select>
       </div>

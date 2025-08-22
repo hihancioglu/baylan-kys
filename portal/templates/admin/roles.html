@@ -31,7 +31,7 @@
     <select class="form-select me-2" name="standard_scope">
       <option value="ALL">ALL</option>
       {% for s in standards %}
-      <option value="{{ s }}">{{ s }}</option>
+      <option value="{{ s }}">{{ standard_map.get(s, s) }}</option>
       {% endfor %}
     </select>
     <button class="btn btn-success" type="submit">Add</button>
@@ -44,7 +44,7 @@
   {% for r in roles %}
     <tr>
       <td>{{ r.name }}</td>
-      <td>{{ r.standard_scope }}</td>
+      <td>{{ standard_map.get(r.standard_scope, r.standard_scope) }}</td>
       <td>
         <button type="button" class="btn btn-sm btn-secondary" data-bs-toggle="collapse" data-bs-target="#role-users-{{ r.id }}" aria-expanded="false">View Users</button>
         <div class="collapse mt-2" id="role-users-{{ r.id }}">
