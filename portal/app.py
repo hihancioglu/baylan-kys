@@ -11,6 +11,7 @@ from flask import (
     session,
     make_response,
 )
+from markupsafe import Markup
 from flask_wtf.csrf import CSRFProtect
 from auth import auth_bp, init_app as auth_init, login_required, roles_required
 from models import (
@@ -569,6 +570,15 @@ def profile_view():
         "profile/index.html",
         breadcrumbs=[{"title": "Profile"}]
     )
+
+
+@app.route("/help")
+def help_page():
+    docs_path = Path(__file__).resolve().parent.parent / "docs" / "help.md"
+    help_content = ""
+    if docs_path.exists():
+        help_content = docs_path.read_text(encoding="utf-8")
+    return render_template("help.html", help_content=Markup(help_content))
 
 
 @app.get("/api/dashboard/cards/recent-docs")
