@@ -42,7 +42,7 @@
   </form>
 
 <script type="module">
-  import { attachHelpText, attachTooltip } from '{{ url_for('static', filename='dist/forms/index.js') }}';
+  import { attachHelpText, attachTooltip } from '{{ url_for('static', filename='forms/index.js') }}';
 
   const code = document.getElementById('code');
   attachHelpText(code, 'Unique identifier for the document.');

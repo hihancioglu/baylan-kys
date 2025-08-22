@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block title %}Document Detail{% endblock %}
 {% block page_actions %}
-<link rel="stylesheet" href="{{ url_for('static', filename='dist/toolbar/toolbar.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='toolbar/toolbar.css') }}">
 <div class="toolbar" data-component="toolbar">
   {% if has_role('CONTRIBUTOR') %}
   <a class="btn btn-primary" href="{{ url_for('edit_document', doc_id=doc.id) }}">Edit</a>
@@ -17,7 +17,7 @@
   <a class="btn btn-outline-secondary" href="{{ url_for('compare_document_versions', doc_id=doc.id) }}">Karşılaştır</a>
   <a class="btn btn-outline-primary" href="{{ url_for('download_document', doc_id=doc.id) }}">Download</a>
 </div>
-<script type="module" src="{{ url_for('static', filename='dist/toolbar/toolbar.js') }}"></script>
+<script type="module" src="{{ url_for('static', filename='toolbar/toolbar.js') }}"></script>
 {% endblock %}
 {% block content %}
 {% set status_classes = {
@@ -160,9 +160,9 @@
     </div>
   </div>
 
-  <script type="module" src="{{ url_for('static', filename='dist/document_detail.js') }}"></script>
+  <script type="module" src="{{ url_for('static', filename='document_detail.js') }}"></script>
   <script type="module">
-    import { showToast } from '{{ url_for('static', filename='dist/components/index.js') }}';
+    import { showToast } from '{{ url_for('static', filename='components/index.js') }}';
 
     document.getElementById('revise-form').addEventListener('submit', async function (e) {
       if (!confirm('Revizyonu başlatmak istediğinize emin misiniz?')) {
