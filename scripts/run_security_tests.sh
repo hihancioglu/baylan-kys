@@ -2,8 +2,12 @@
 # Run security scanners and generate reports.
 set -e
 
-# Ensure static assets are built and base.js is present in the manifest.
+# Ensure static assets are built and expected files are present.
 python portal/static/build.py
+if [ ! -f portal/static/dist/base.js ]; then
+  echo "base.js not found" >&2
+  exit 1
+fi
 
 # Bandit: Python static analysis
 if command -v bandit >/dev/null 2>&1; then
