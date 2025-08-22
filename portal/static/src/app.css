@@ -211,6 +211,23 @@ tbody.collapsed tr:not(.group-toggle) {
   padding: 1rem 0;
 }
 
+.sidebar .nav-link {
+  border-left: 4px solid transparent;
+  padding-left: calc(1rem - 4px);
+}
+
+.sidebar .nav-link[aria-current="page"] {
+  background-color: rgba(0, 94, 162, 0.1);
+  border-left-color: #005ea2;
+  color: #003a75;
+  font-weight: bold;
+}
+
+.sidebar .nav-link[aria-current="page"]:focus {
+  outline: 2px solid #003a75;
+  outline-offset: 2px;
+}
+
 .nav-heading {
   font-size: var(--font-size-xs);
   text-transform: uppercase;

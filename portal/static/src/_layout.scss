@@ -9,6 +9,24 @@
   padding: $spacing-md 0;
 }
 
+// Highlight current navigation item for accessibility and clarity
+.sidebar .nav-link {
+  border-left: 4px solid transparent;
+  padding-left: calc($spacing-md - 4px);
+}
+
+.sidebar .nav-link[aria-current="page"] {
+  background-color: rgba($color-primary, 0.1);
+  border-left-color: $color-primary;
+  color: $color-primary-dark;
+  font-weight: bold;
+}
+
+.sidebar .nav-link[aria-current="page"]:focus {
+  outline: 2px solid $color-primary-dark;
+  outline-offset: 2px;
+}
+
 .content-container {
   padding: $spacing-md;
 }
