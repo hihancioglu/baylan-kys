@@ -67,7 +67,7 @@ function initVersionSelection() {
         (cb) => cb.checked && cb.value !== currentRevId
       );
       if (other.length !== 1) {
-        alert('Select another version to compare.');
+        showToast('Karşılaştırılacak başka bir sürüm seçin');
         return;
       }
       const url = new URL(compareUrl, window.location.origin);
