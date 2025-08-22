@@ -109,6 +109,17 @@ def test_dashboard_card_endpoints(app_models, client):
     assert "Recent Doc" in html
     assert recent_url in html
 
+    # Recent documents
+    resp = client.get(
+        "/api/dashboard/cards/recent-docs", headers={"HX-Request": "true"}
+    )
+    assert resp.status_code == 200
+    html = resp.get_data(as_text=True)
+    with app.test_request_context():
+        recent_doc_url = url_for("document_detail", doc_id=recent_doc_id)
+    assert "Recent Doc" in html
+    assert recent_doc_url in html
+
     # Dashboard main page loads successfully
     resp = client.get("/")
     assert resp.status_code == 200

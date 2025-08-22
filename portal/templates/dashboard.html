@@ -70,6 +70,19 @@
     </div>
   </div>
 
+  <div class="col">
+    <div class="card h-100">
+      <div class="card-header">Recent Documents</div>
+      <div class="card-body"
+           hx-get="/api/dashboard/cards/recent-docs"
+           hx-trigger="load, every 10s"
+           hx-swap="innerHTML">
+        {% set card = 'recent_docs' %}
+        {% include 'partials/dashboard/_cards.html' %}
+      </div>
+    </div>
+  </div>
+
     <div class="col">
       <div class="card h-100">
         <div class="card-header">Search Shortcuts</div>

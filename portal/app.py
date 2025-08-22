@@ -503,6 +503,18 @@ def _get_mandatory_reading(
     ]
 
 
+def _get_recent_documents(db, user_id: int | None, limit: int = 5):
+    query = db.query(Document).filter(Document.status == "Published")
+    docs = (
+        query.order_by(Document.created_at.desc())
+        .limit(limit)
+        .all()
+    )
+    return [
+        (d.title, url_for("document_detail", doc_id=d.id)) for d in docs
+    ]
+
+
 def _get_recent_revisions(db, limit: int = 5):
     revisions = (
         db.query(DocumentRevision)
@@ -540,6 +552,7 @@ def dashboard():
             "pending_approvals": _get_pending_approvals(db, user_id),
             "mandatory_reading": _get_mandatory_reading(db, user_id),
             "recent_revisions": _get_recent_revisions(db),
+            "recent_documents": _get_recent_documents(db, user_id),
             "search_shortcuts": _get_search_shortcuts(),
             "standards": sorted(get_standard_map().keys()),
             "standard_map": get_standard_map(),
@@ -556,6 +569,22 @@ def profile_view():
         "profile/index.html",
         breadcrumbs=[{"title": "Profile"}]
     )
+
+
+@app.get("/api/dashboard/cards/recent-docs")
+@login_required
+def dashboard_recent_docs_card():
+    db = get_session()
+    try:
+        user = session.get("user") or {}
+        user_id = user.get("id")
+        context = {
+            "card": "recent_docs",
+            "recent_documents": _get_recent_documents(db, user_id),
+        }
+        return render_template("partials/dashboard/_cards.html", **context)
+    finally:
+        db.close()
 
 
 @app.get("/api/dashboard/cards/<card>")
@@ -577,6 +606,9 @@ def dashboard_cards(card):
             )
         elif card == "recent":
             context["recent_revisions"] = _get_recent_revisions(db)
+        elif card == "recent-docs":
+            context["card"] = "recent_docs"
+            context["recent_documents"] = _get_recent_documents(db, user_id)
         elif card == "shortcuts":
             context["search_shortcuts"] = _get_search_shortcuts()
         else:
