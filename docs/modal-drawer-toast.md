@@ -1,6 +1,6 @@
 # Modal, Drawer & Toast Components
 
-Reusable UI elements available under `portal/static/dist/components`.
+Reusable UI elements available under `portal/static/components`.
 
 ## Confirmation Modal
 

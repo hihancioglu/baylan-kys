@@ -107,7 +107,7 @@ services:
       - elasticsearch
     networks: [qdms]
     volumes:
-      - portal_static:/app/portal/static/dist
+      - portal_static:/app/portal/static
 
   scheduler:
     image: python:3.12-slim
@@ -130,7 +130,7 @@ services:
       - onlyoffice
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
-      - portal_static:/app/portal/static/dist:ro
+      - portal_static:/app/portal/static:ro
       - nginx_cache:/var/cache/nginx
       # SSL sertifikası kullanacaksanız aşağıyı açın ve dosyaları koyun
       # - ./nginx/certs:/etc/nginx/certs:ro

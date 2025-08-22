@@ -4,7 +4,7 @@ import os
 
 
 def test_static_assets_present():
-    base = os.path.join('portal', 'static', 'dist')
+    base = os.path.join('portal', 'static')
     expected_files = ['base.js', 'app.js', 'app.css']
     for fname in expected_files:
         path = os.path.join(base, fname)
