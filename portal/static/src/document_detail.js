@@ -1,4 +1,5 @@
 import { getToken } from './tokens.js';
+import { showToast } from './components/index.js';
 getToken('color-primary');
 
 function initTabs() {
@@ -104,6 +105,14 @@ document.addEventListener('DOMContentLoaded', () => {
   initTabs();
   initVersionSelection();
   initWorkflowForm();
+
+  const params = new URLSearchParams(window.location.search);
+  if (params.get('created') === '1') {
+    showToast('Doküman başarıyla yüklendi ve onaya gönderildi');
+    params.delete('created');
+    const url = `${window.location.pathname}${params.toString() ? `?${params.toString()}` : ''}${window.location.hash}`;
+    history.replaceState(null, '', url);
+  }
 });
 
 document.addEventListener('htmx:afterSwap', (evt) => {
