@@ -161,7 +161,9 @@
   </div>
 
   <script type="module" src="{{ asset_url('document_detail.js') }}"></script>
-  <script defer>
+  <script type="module">
+    import { showToast } from '/static/src/components/index.js';
+
     document.getElementById('revise-form').addEventListener('submit', async function (e) {
       if (!confirm('Revizyonu başlatmak istediğinize emin misiniz?')) {
         e.preventDefault();
@@ -183,11 +185,15 @@
         },
         body: JSON.stringify(payload)
       });
-      if (resp.ok) {
-        window.location.href = '{{ url_for("edit_document", doc_id=doc.id) }}';
-      } else {
-        alert('Revizyon başlatılamadı');
+      if (!resp.ok) {
+        showToast('Revizyon başlatılamadı', { timeout: 6000 });
+        const detail = await resp.text();
+        if (detail) {
+          showToast(detail);
+        }
+        return;
       }
+      window.location.href = '{{ url_for("edit_document", doc_id=doc.id) }}';
     });
   </script>
   {% endblock %}
