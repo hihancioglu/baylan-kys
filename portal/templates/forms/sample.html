@@ -8,6 +8,7 @@
 </form>
 <script type="module">
   import { createInput, attachHelpText, attachValidation, attachTooltip } from '/static/src/forms/index.js';
+  import { showToast } from '/static/src/components/index.js';
   const container = document.getElementById('form-container');
   const emailField = createInput({ id: 'email', name: 'email', label: 'Email', type: 'email', required: true, copyable: true });
   container.appendChild(emailField.wrapper);
@@ -21,7 +22,7 @@
   document.getElementById('sample-form').addEventListener('submit', (e) => {
     e.preventDefault();
     if (emailValidator.validate()) {
-      alert(`Submitted: ${emailField.input.value}`);
+      showToast(`Submitted: ${emailField.input.value}`);
     }
   });
 </script>
