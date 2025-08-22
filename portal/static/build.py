@@ -40,9 +40,9 @@ def build_file(src_path, rel_path, hash_name):
     os.makedirs(os.path.dirname(out_full), exist_ok=True)
     with open(out_full, 'w') as f:
         f.write(minified)
-    if rel_path == 'base.js':
-        # Provide an un-hashed copy for environments where the manifest is missing.
-        plain_path = os.path.join(DIST_DIR, 'base.js')
+    if rel_path in ('base.js', 'app.css'):
+        # Provide an un-hashed copy for environments where the manifest may be missing.
+        plain_path = os.path.join(DIST_DIR, os.path.basename(rel_path))
         with open(plain_path, 'w') as f:
             f.write(minified)
     return rel_path, out_rel
@@ -56,7 +56,7 @@ if __name__ == '__main__':
             if fname.endswith(('.css', '.js')):
                 rel_path = fname if rel_dir == '.' else os.path.join(rel_dir, fname)
                 ext = os.path.splitext(fname)[1]
-                hash_name = ext == '.js' and rel_dir == '.' and fname != 'tokens.js'
+                hash_name = rel_dir == '.' and fname != 'tokens.js' and ext in ('.js', '.css')
                 key, out_rel = build_file(os.path.join(root, fname), rel_path, hash_name)
                 manifest[key] = out_rel
     if 'base.js' not in manifest:
