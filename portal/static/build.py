@@ -55,7 +55,8 @@ if __name__ == '__main__':
         for fname in files:
             if fname.endswith(('.css', '.js')):
                 rel_path = fname if rel_dir == '.' else os.path.join(rel_dir, fname)
-                hash_name = rel_dir == '.' and fname != 'tokens.js'
+                ext = os.path.splitext(fname)[1]
+                hash_name = ext == '.js' and rel_dir == '.' and fname != 'tokens.js'
                 key, out_rel = build_file(os.path.join(root, fname), rel_path, hash_name)
                 manifest[key] = out_rel
     if 'base.js' not in manifest:
