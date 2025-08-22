@@ -2,6 +2,7 @@ export function attachTooltip(element, text) {
   element.setAttribute('title', text);
   element.setAttribute('aria-label', text);
   element.setAttribute('data-bs-toggle', 'tooltip');
+  new bootstrap.Tooltip(element);
   return element;
 }
 
