@@ -40,6 +40,11 @@ def build_file(src_path, rel_path, hash_name):
     os.makedirs(os.path.dirname(out_full), exist_ok=True)
     with open(out_full, 'w') as f:
         f.write(minified)
+    if rel_path == 'base.js':
+        # Provide an un-hashed copy for environments where the manifest is missing.
+        plain_path = os.path.join(DIST_DIR, 'base.js')
+        with open(plain_path, 'w') as f:
+            f.write(minified)
     return rel_path, out_rel
 
 if __name__ == '__main__':
