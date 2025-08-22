@@ -43,7 +43,7 @@
         <option value="">Any standard</option>
         {% for s in standards %}
         <option value="{{ s }}" {% if filters.standard == s %}selected{% endif %}>
-          {{ s }}{% if facets.standard %} ({{ facets.standard.get(s, 0) }}){% endif %}
+          {{ standard_map.get(s, s) }}{% if facets.standard %} ({{ facets.standard.get(s, 0) }}){% endif %}
         </option>
         {% endfor %}
       </select>
