@@ -211,6 +211,18 @@ tbody.collapsed tr:not(.group-toggle) {
   padding: 1rem 0;
 }
 
+.nav-heading {
+  font-size: var(--font-size-xs);
+  text-transform: uppercase;
+  margin: var(--spacing-md) 0 var(--spacing-xs);
+  padding: 0 var(--spacing-md);
+  color: var(--color-primary-dark);
+}
+
+.subnav .nav-link {
+  padding-left: calc(var(--spacing-md) * 2);
+}
+
 .content-container {
   padding: 1rem;
 }

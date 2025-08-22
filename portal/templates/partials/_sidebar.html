@@ -1,27 +1,40 @@
 {% set p = request.path %}
 <nav aria-label="Sidebar navigation">
-  <ul class="nav flex-column mt-4">
-    {% if has_role('reader') %}
+  {% if has_role('reader') %}
+  <h6 class="nav-heading mt-4">Genel</h6>
+  <ul class="nav flex-column mb-3">
     <li class="nav-item"><a class="nav-link {% if p == '/' %}active{% endif %}" href="/">Dashboard</a></li>
-    {% endif %}
-    {% if has_role('reader') %}
+  </ul>
+  {% endif %}
+
+  {% if has_role('reader') %}
+  <h6 class="nav-heading">Dokümanlar</h6>
+  <ul class="nav flex-column subnav mb-3">
     <li class="nav-item"><a class="nav-link {% if p.startswith('/documents') %}active{% endif %}" href="/documents">Documents</a></li>
-    {% endif %}
-    {% if has_role('reader') %}
     <li class="nav-item"><a class="nav-link {% if p.startswith('/mandatory-reading') %}active{% endif %}" href="/mandatory-reading">Mandatory Reading</a></li>
-    {% endif %}
-    {% if has_role('approver') or has_role('reviewer') %}
-    <li class="nav-item"><a class="nav-link {% if p.startswith('/approvals') %}active{% endif %}" href="/approvals">Approvals</a></li>
-    {% endif %}
-    {% if has_role('reader') %}
     <li class="nav-item"><a class="nav-link {% if p.startswith('/search') %}active{% endif %}" href="/search">Search</a></li>
-    {% endif %}
-    {% if has_role('reader') %}
+  </ul>
+  {% endif %}
+
+  {% if has_role('approver') or has_role('reviewer') %}
+  <h6 class="nav-heading">Onay Süreçleri</h6>
+  <ul class="nav flex-column subnav mb-3">
+    <li class="nav-item"><a class="nav-link {% if p.startswith('/approvals') %}active{% endif %}" href="/approvals">Approvals</a></li>
+  </ul>
+  {% endif %}
+
+  {% if has_role('reader') %}
+  <h6 class="nav-heading">Raporlama</h6>
+  <ul class="nav flex-column subnav mb-3">
     <li class="nav-item"><a class="nav-link {% if p.startswith('/reports') %}active{% endif %}" href="/reports">Reports</a></li>
-    {% endif %}
-    {% if has_role('quality_admin') %}
+  </ul>
+  {% endif %}
+
+  {% if has_role('quality_admin') %}
+  <h6 class="nav-heading">Yönetim</h6>
+  <ul class="nav flex-column subnav">
     <li class="nav-item"><a class="nav-link {% if p.startswith('/permissions') %}active{% endif %}" href="/permissions">Permissions</a></li>
     <li class="nav-item"><a class="nav-link {% if p.startswith('/settings') %}active{% endif %}" href="/settings">Settings</a></li>
-    {% endif %}
   </ul>
+  {% endif %}
 </nav>
