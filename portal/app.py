@@ -1,4 +1,4 @@
-import os, json, time, base64, hmac, hashlib, csv, io, secrets, logging, tempfile
+import os, json, time, base64, hmac, hashlib, csv, io, secrets, logging, tempfile, shutil
 from pathlib import Path
 from flask import (
     Flask,
@@ -152,6 +152,12 @@ if "base.js" not in _asset_manifest:
     logging.warning(
         "base.js missing from asset manifest. Run portal/static/build.py to generate assets."
     )
+    base_js_path = os.path.join(app.static_folder, "base.js")
+    if not os.path.exists(base_js_path):
+        src_base_js = os.path.join(os.path.dirname(app.static_folder), "src", "base.js")
+        if os.path.exists(src_base_js):
+            os.makedirs(app.static_folder, exist_ok=True)
+            shutil.copyfile(src_base_js, base_js_path)
     _asset_manifest.setdefault("base.js", "base.js")
 
 
