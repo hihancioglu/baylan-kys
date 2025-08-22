@@ -81,12 +81,16 @@ def _run_migrations() -> None:
 
 _run_migrations()
 
-# Serve compiled assets from ``/static`` so the application's static URLs
-# match the web server configuration. Previously the Flask app exposed
-# assets under ``/dist`` which did not align with Nginx's ``/static/``
-# alias, causing requests like ``/dist/app.css`` to miss the static-file
-# mapping and return 404s.
-app = Flask(__name__, static_folder="static/dist", static_url_path="/static")
+# Serve static assets from the root ``static`` directory and load templates from the
+# project-level ``templates`` folder. Explicitly setting these paths ensures static
+# URLs such as ``/static/app.css`` resolve correctly in both the development server and
+# when deployed behind a web server.
+app = Flask(
+    __name__,
+    static_url_path="/static",
+    static_folder="static",
+    template_folder="../templates",
+)
 app.secret_key = os.environ.get("SECRET_KEY", "dev")
 app.config.update(
     SESSION_COOKIE_HTTPONLY=True,
