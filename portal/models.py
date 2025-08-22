@@ -108,12 +108,23 @@ class DocumentPermission(Base):
     document = relationship("Document")
 
 
+class Standard(Base):
+    __tablename__ = "standards"
+    code = Column(String, primary_key=True)
+    description = Column(String)
+
+    documents = relationship(
+        "DocumentStandard", back_populates="standard", cascade="all, delete-orphan"
+    )
+
+
 class DocumentStandard(Base):
     __tablename__ = "document_standards"
     doc_id = Column(Integer, ForeignKey("documents.id"), primary_key=True)
-    standard_code = Column(String, primary_key=True)
+    standard_code = Column(String, ForeignKey("standards.code"), primary_key=True)
 
     document = relationship("Document", back_populates="standards")
+    standard = relationship("Standard", back_populates="documents")
 
 
 user_roles = Table(
@@ -404,6 +415,7 @@ __all__ = [
     "Document",
     "DocumentRevision",
     "DocumentPermission",
+    "Standard",
     "DocumentStandard",
     "Role",
     "User",
