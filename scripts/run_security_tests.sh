@@ -4,7 +4,7 @@ set -e
 
 # Ensure static assets are built and expected files are present.
 python portal/static/build.py
-if [ ! -f portal/static/dist/base.js ]; then
+if [ ! -f portal/static/base.js ]; then
   echo "base.js not found" >&2
   exit 1
 fi

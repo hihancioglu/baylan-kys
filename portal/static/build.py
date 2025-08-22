@@ -2,7 +2,10 @@ import os, re
 
 BASE_DIR = os.path.dirname(__file__)
 SRC_DIR = os.path.join(BASE_DIR, 'src')
-DIST_DIR = os.path.join(BASE_DIR, 'dist')
+# Previously assets were written to ``static/dist``. The build step now
+# outputs directly into ``static`` so the runtime container and nginx can
+# serve them from a single location.
+DEST_DIR = BASE_DIR
 
 def minify(content):
     """Basic minifier for JS/CSS files.
@@ -30,13 +33,13 @@ def build_file(src_path, rel_path):
     with open(src_path) as f:
         content = f.read()
     minified = minify(content)
-    out_full = os.path.join(DIST_DIR, rel_path)
+    out_full = os.path.join(DEST_DIR, rel_path)
     os.makedirs(os.path.dirname(out_full), exist_ok=True)
     with open(out_full, 'w') as f:
         f.write(minified)
 
 if __name__ == '__main__':
-    os.makedirs(DIST_DIR, exist_ok=True)
+    os.makedirs(DEST_DIR, exist_ok=True)
     for root, _, files in os.walk(SRC_DIR):
         rel_dir = os.path.relpath(root, SRC_DIR)
         for fname in files:
