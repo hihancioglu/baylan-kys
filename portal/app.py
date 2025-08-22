@@ -1,4 +1,4 @@
-import os, json, time, base64, hmac, hashlib, csv, io, secrets, logging, tempfile, shutil
+import os, json, time, base64, hmac, hashlib, csv, io, secrets, tempfile
 from pathlib import Path
 from flask import (
     Flask,
@@ -137,33 +137,9 @@ def handle_forbidden(error):
     )
     return "Forbidden", 403
 
-manifest_path = os.path.join(app.static_folder, "manifest.json")
-_asset_manifest: dict[str, str] = {}
-
-try:
-    with open(manifest_path) as f:
-        _asset_manifest = json.load(f)
-except FileNotFoundError:
-    logging.warning(
-        "Asset manifest not found. Run portal/static/build.py to generate assets."
-    )
-
-if "base.js" not in _asset_manifest:
-    logging.warning(
-        "base.js missing from asset manifest. Run portal/static/build.py to generate assets."
-    )
-    base_js_path = os.path.join(app.static_folder, "base.js")
-    if not os.path.exists(base_js_path):
-        src_base_js = os.path.join(os.path.dirname(app.static_folder), "src", "base.js")
-        if os.path.exists(src_base_js):
-            os.makedirs(app.static_folder, exist_ok=True)
-            shutil.copyfile(src_base_js, base_js_path)
-    _asset_manifest.setdefault("base.js", "base.js")
-
 
 def asset_url(name: str) -> str:
-    filename = _asset_manifest.get(name, name)
-    return url_for("static", filename=filename)
+    return url_for("static", filename=name)
 
 
 app.jinja_env.globals["asset_url"] = asset_url
