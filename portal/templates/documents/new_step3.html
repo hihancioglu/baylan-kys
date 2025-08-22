@@ -18,7 +18,7 @@
   <button type="button" id="save-draft" class="btn btn-secondary ms-2">Taslak olarak kaydet</button>
 </form>
 <script type="module">
-import { showToast } from '{{ url_for('static', filename='dist/components/index.js') }}';
+import { showToast } from '{{ url_for('static', filename='components/index.js') }}';
 
 document.getElementById('save-draft').addEventListener('click', async () => {
   const data = {
