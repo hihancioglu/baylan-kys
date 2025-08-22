@@ -6,27 +6,27 @@
   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
   <div class="mb-3">
     <label for="code" class="form-label">Code</label>
-    <input type="text" class="form-control{% if errors.code %} is-invalid{% endif %}" id="code" name="code" value="{{ form.code or '' }}">
+    <input type="text" class="form-control{% if errors.code %} is-invalid{% endif %}" id="code" name="code" value="{{ form.code or '' }}" title="Unique document code">
     {% if errors.code %}<div class="invalid-feedback">{{ errors.code }}</div>{% endif %}
   </div>
   <div class="mb-3">
     <label for="title" class="form-label">Title</label>
-    <input type="text" class="form-control{% if errors.title %} is-invalid{% endif %}" id="title" name="title" value="{{ form.title or '' }}">
+    <input type="text" class="form-control{% if errors.title %} is-invalid{% endif %}" id="title" name="title" value="{{ form.title or '' }}" title="Document title">
     {% if errors.title %}<div class="invalid-feedback">{{ errors.title }}</div>{% endif %}
   </div>
   <div class="mb-3">
     <label for="type" class="form-label">Type</label>
-    <input type="text" class="form-control{% if errors.type %} is-invalid{% endif %}" id="type" name="type" value="{{ form.type or '' }}">
+    <input type="text" class="form-control{% if errors.type %} is-invalid{% endif %}" id="type" name="type" value="{{ form.type or '' }}" title="Document type">
     {% if errors.type %}<div class="invalid-feedback">{{ errors.type }}</div>{% endif %}
   </div>
   <div class="mb-3">
     <label for="department" class="form-label">Department</label>
-    <input type="text" class="form-control{% if errors.department %} is-invalid{% endif %}" id="department" name="department" value="{{ form.department or '' }}">
+    <input type="text" class="form-control{% if errors.department %} is-invalid{% endif %}" id="department" name="department" value="{{ form.department or '' }}" title="Responsible department">
     {% if errors.department %}<div class="invalid-feedback">{{ errors.department }}</div>{% endif %}
   </div>
   <div class="mb-3">
     <label for="standard" class="form-label">Standard</label>
-    <select id="standard" name="standard" class="form-select{% if errors.standard %} is-invalid{% endif %}" required>
+    <select id="standard" name="standard" class="form-select{% if errors.standard %} is-invalid{% endif %}" required title="Applicable standard">
       {% for code, label in standard_map.items() %}
         <option value="{{ code }}"{% if form.standard == code %} selected{% endif %}>{{ label }}</option>
       {% endfor %}
@@ -35,9 +35,40 @@
   </div>
   <div class="mb-3">
     <label for="tags" class="form-label">Tags</label>
-    <input type="text" class="form-control{% if errors.tags %} is-invalid{% endif %}" id="tags" name="tags" value="{{ form.tags or '' }}" placeholder="tag1, tag2">
+    <input type="text" class="form-control{% if errors.tags %} is-invalid{% endif %}" id="tags" name="tags" value="{{ form.tags or '' }}" placeholder="tag1, tag2" title="Comma-separated tags">
     {% if errors.tags %}<div class="invalid-feedback">{{ errors.tags }}</div>{% endif %}
   </div>
-  <button type="submit" class="btn btn-primary">Next</button>
-</form>
-{% endblock %}
+    <button type="submit" class="btn btn-primary" id="next-step1" title="Proceed to next step">Next</button>
+  </form>
+
+<script type="module">
+  import { attachHelpText, attachTooltip } from '/static/src/forms/index.js';
+
+  const code = document.getElementById('code');
+  attachHelpText(code, 'Unique identifier for the document.');
+  attachTooltip(code, 'Unique document code');
+
+  const titleInput = document.getElementById('title');
+  attachHelpText(titleInput, 'Title of the document.');
+  attachTooltip(titleInput, 'Document title');
+
+  const typeInput = document.getElementById('type');
+  attachHelpText(typeInput, 'Type of document.');
+  attachTooltip(typeInput, 'Document type');
+
+  const departmentInput = document.getElementById('department');
+  attachHelpText(departmentInput, 'Department responsible for the document.');
+  attachTooltip(departmentInput, 'Responsible department');
+
+  const standardSelect = document.getElementById('standard');
+  attachHelpText(standardSelect, 'Choose the standard that applies.');
+  attachTooltip(standardSelect, 'Applicable standard');
+
+  const tagsInput = document.getElementById('tags');
+  attachHelpText(tagsInput, 'Add comma-separated tags.');
+  attachTooltip(tagsInput, 'Comma-separated tags');
+
+  const nextBtn = document.getElementById('next-step1');
+  attachTooltip(nextBtn, 'Proceed to next step');
+</script>
+  {% endblock %}
