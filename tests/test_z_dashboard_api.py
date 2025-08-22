@@ -232,7 +232,7 @@ def test_reports_standard_summary(client, models, app_module):
     assert resp.status_code == 200
     assert resp.mimetype == "text/csv"
     text = resp.data.decode()
-    assert "standard,count" in text
+    assert "standard,description,count" in text
     assert "STD1" in text and "STD2" in text
 
     resp = client.get("/reports/export?kind=standard-summary&type=pdf")

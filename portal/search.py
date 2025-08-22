@@ -63,6 +63,16 @@ def index_document(doc, content: str = "") -> None:
     if es is None:
         return
 
+    # ``doc.standards`` is a relationship yielding ``DocumentStandard``
+    # instances. Collect all associated codes so that a document can be indexed
+    # under multiple standards. If no relationship entries exist we fall back to
+    # the legacy single ``standard_code`` attribute for backward compatibility.
+    standards = [s.standard_code for s in getattr(doc, "standards", [])]
+    if not standards:
+        legacy = getattr(doc, "standard_code", None)
+        if legacy:
+            standards = [legacy]
+
     body = {
         "title": doc.title,
         "code": doc.code,
@@ -70,7 +80,7 @@ def index_document(doc, content: str = "") -> None:
         "department": doc.department,
         "status": getattr(doc, "status", ""),
         "type": getattr(doc, "type", ""),
-        "standard": getattr(doc, "standard_code", ""),
+        "standard": standards,
         "content": content,
     }
     try:
