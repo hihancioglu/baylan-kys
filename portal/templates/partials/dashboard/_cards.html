@@ -28,6 +28,8 @@
   {{ render_items(mandatory_reading, 'No mandatory reading.') }}
 {% elif card == 'recent' %}
   {{ render_items(recent_revisions, 'No recent changes.') }}
+{% elif card == 'recent_docs' %}
+  {{ render_items(recent_documents, 'No recent documents.') }}
 {% elif card == 'shortcuts' %}
   {{ render_items(search_shortcuts, 'No search shortcuts.') }}
 {% endif %}
