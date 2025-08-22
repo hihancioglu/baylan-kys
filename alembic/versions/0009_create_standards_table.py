@@ -51,6 +51,7 @@ def upgrade() -> None:
         INSERT INTO document_standards (doc_id, standard_code)
         SELECT d.id, d.standard_code
         FROM documents d
+        JOIN standards s ON s.code = d.standard_code
         WHERE d.standard_code IS NOT NULL
           AND NOT EXISTS (
                 SELECT 1 FROM document_standards ds
@@ -67,4 +68,3 @@ def downgrade() -> None:
         type_="foreignkey",
     )
     op.drop_table("standards")
-
