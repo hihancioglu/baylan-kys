@@ -28,7 +28,7 @@
     .quick-search-box{max-width:600px;margin:10vh auto;background:#fff;padding:1rem;border-radius:.5rem;}
     .quick-search-overlay .list-group-item{cursor:pointer;}
   </style>
-  <link rel="stylesheet" href="https://cdn.example.com/app.css">
+  <link rel="stylesheet" href="{{ url_for('static', filename='dist/app.css') }}">
 </head>
 <body>
 <a href="#main-content" class="skip-link">Skip to main content</a>
@@ -77,6 +77,6 @@
   integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz"
   crossorigin="anonymous"
 ></script>
-<script type="module" src="https://cdn.example.com/app.js"></script>
+<script type="module" src="{{ url_for('static', filename='dist/app.js') }}"></script>
 </body>
 </html>

@@ -1,14 +1,14 @@
 {% extends "base.html" %}
 {% block title %}Documents{% endblock %}
 {% block page_actions %}
-<link rel="stylesheet" href="/static/toolbar/toolbar.css">
+<link rel="stylesheet" href="{{ url_for('static', filename='dist/toolbar/toolbar.css') }}">
 <div class="toolbar" data-component="toolbar" data-variant="icon-text">
   <a href="/documents/new" class="btn btn-primary" data-action="new"><svg class="icon"><use xlink:href="#icon-plus"></use></svg><span>New</span></a>
   <a href="#" class="btn btn-outline-primary" data-action="import"><svg class="icon"><use xlink:href="#icon-upload"></use></svg><span>Import</span></a>
   <a href="#" class="btn btn-outline-primary" data-action="export"><svg class="icon"><use xlink:href="#icon-download"></use></svg><span>Export</span></a>
   <button type="button" class="btn btn-outline-secondary" data-action="filter"><svg class="icon"><use xlink:href="#icon-filter"></use></svg><span>Filter</span></button>
 </div>
-<script type="module" src="/static/toolbar/toolbar.js"></script>
+<script type="module" src="{{ url_for('static', filename='dist/toolbar/toolbar.js') }}"></script>
 {% endblock %}
 {% block content %}
   <h1 class="fw-bold" style="font-size: var(--font-size-lg); margin-bottom: var(--spacing-md);">Documents</h1>
@@ -68,5 +68,5 @@
 <div id="document-table">
   {% include 'documents/_table.html' %}
 </div>
-<script type="module" src="/static/document_list.js"></script>
+<script type="module" src="{{ url_for('static', filename='dist/document_list.js') }}"></script>
 {% endblock %}
