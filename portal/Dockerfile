@@ -16,7 +16,10 @@ COPY alembic.ini ./
 COPY alembic ./alembic
 
 RUN pip install libsass rcssmin jsmin
-RUN python portal/static/build.py
 
-# run database migrations before starting the app
-CMD ["sh", "-c", "alembic upgrade head && python portal/app.py"]
+# Build static assets after the volume is mounted so nginx can serve them
+# from the shared ``portal_static`` volume. The build step previously ran at
+# image build time, but the runtime volume mount would hide the generated
+# files. Running the build here ensures the output is written into the
+# mounted directory.
+CMD ["sh", "-c", "python portal/static/build.py && alembic upgrade head && python portal/app.py"]
