@@ -76,6 +76,8 @@ def test_create_document_with_standard(app_models, client):
     session_db = models.SessionLocal()
     doc = session_db.get(models.Document, data["id"])
     assert doc.standard_code == first
+    standards = [s.standard_code for s in doc.standards]
+    assert standards == [first]
     session_db.close()
 
 
@@ -149,6 +151,8 @@ def test_update_document_standard(app_models, client):
     session_db = models.SessionLocal()
     doc = session_db.get(models.Document, doc_id)
     assert doc.standard_code == second
+    standards = [s.standard_code for s in doc.standards]
+    assert standards == [second]
     session_db.close()
 
 
