@@ -4,10 +4,10 @@
 <h1>Acknowledgements (<span id="ack-count">{{ remaining }}</span>)</h1>
 <form hx-get="{{ url_for('ack.list') }}" hx-target="#ack-table" hx-push-url="true" class="row g-2 mb-3">
   <div class="col-md-3">
-    <input class="form-control" name="status" placeholder="Status" value="{{ filters.status or '' }}">
+    <input class="form-control" name="status" placeholder="Status" value="{{ filters.status or '' }}" title="Filter by acknowledgement status">
   </div>
   <div class="col-md-3">
-    <input class="form-control" type="date" name="due" value="{{ filters.due or '' }}">
+    <input class="form-control" type="date" name="due" value="{{ filters.due or '' }}" title="Filter by due date">
   </div>
   <div class="col-md-2">
     <button class="btn btn-primary w-100" type="submit">Filter</button>

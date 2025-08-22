@@ -581,6 +581,17 @@ def help_page():
     return render_template("help.html", help_content=Markup(help_content))
 
 
+@app.route("/terminology")
+def terminology_page():
+    docs_path = Path(__file__).resolve().parent.parent / "docs" / "terminology.md"
+    glossary_content = ""
+    if docs_path.exists():
+        glossary_content = docs_path.read_text(encoding="utf-8")
+    return render_template(
+        "terminology.html", terminology_content=Markup(glossary_content)
+    )
+
+
 @app.get("/api/dashboard/cards/recent-docs")
 @login_required
 def dashboard_recent_docs_card():
