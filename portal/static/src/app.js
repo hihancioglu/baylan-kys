@@ -3,6 +3,12 @@ import { getToken } from './tokens.js';
 // so there's no need for an ES module import here.
 getToken('color-primary');
 
+document.addEventListener('DOMContentLoaded', () => {
+  document
+    .querySelectorAll('[data-bs-toggle="tooltip"]')
+    .forEach((el) => new bootstrap.Tooltip(el));
+});
+
 function displayToast(message) {
   const toastEl = document.getElementById('action-toast');
   if (!toastEl) return;
