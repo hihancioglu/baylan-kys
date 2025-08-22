@@ -82,11 +82,10 @@ def _run_migrations() -> None:
 _run_migrations()
 
 # Serve compiled assets from ``/static`` so the application's static URLs
-# match the web server configuration.  Previously the Flask app exposed
+# match the web server configuration. Previously the Flask app exposed
 # assets under ``/dist`` which did not align with Nginx's ``/static/``
 # alias, causing requests like ``/dist/app.css`` to miss the static-file
-# mapping and return 404s.  Using ``/static`` ensures ``asset_url``
-# generates paths Nginx can serve correctly.
+# mapping and return 404s.
 app = Flask(__name__, static_folder="static/dist", static_url_path="/static")
 app.secret_key = os.environ.get("SECRET_KEY", "dev")
 app.config.update(
@@ -136,15 +135,6 @@ def handle_forbidden(error):
         getattr(error, "description", ""),
     )
     return "Forbidden", 403
-
-
-def asset_url(name: str) -> str:
-    return url_for("static", filename=name)
-
-
-app.jinja_env.globals["asset_url"] = asset_url
-
-
 @app.context_processor
 def inject_user():
     roles = session.get("roles", [])
