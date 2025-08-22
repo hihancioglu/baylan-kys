@@ -16,6 +16,7 @@ from models import (
     User,
     WorkflowStep,
     DocumentStandard,
+    Standard,
 )
 
 
@@ -159,10 +160,12 @@ def standard_summary_report(
         query = (
             session.query(
                 DocumentStandard.standard_code,
+                Standard.description,
                 func.count().label("count"),
             )
             .join(Document)
-            .group_by(DocumentStandard.standard_code)
+            .outerjoin(Standard, Standard.code == DocumentStandard.standard_code)
+            .group_by(DocumentStandard.standard_code, Standard.description)
             .order_by(None)
         )
         if start:
@@ -171,7 +174,12 @@ def standard_summary_report(
             query = query.filter(Document.created_at <= end)
         rows = query.all()
         return [
-            {"standard": code, "count": count} for code, count in rows
+            {
+                "standard": code,
+                "description": desc or code,
+                "count": count,
+            }
+            for code, desc, count in rows
         ]
     finally:
         session.close()
