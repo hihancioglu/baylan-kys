@@ -1,3 +1,10 @@
+"""Build and minify static assets for the portal.
+
+This script expects the source files to exist under ``static/src``. In
+container deployments the directory is often provided via a volume mount; if
+it is missing, the build cannot proceed.
+"""
+
 import os, re
 
 BASE_DIR = os.path.join(os.path.dirname(__file__), 'static')
@@ -40,6 +47,11 @@ def build_file(src_path, rel_path):
 
 if __name__ == '__main__':
     os.makedirs(DEST_DIR, exist_ok=True)
+    if not os.path.isdir(SRC_DIR):
+        raise FileNotFoundError(
+            f"Static source directory '{SRC_DIR}' not found. Ensure the static "
+            "files volume is mounted or the project is configured correctly."
+        )
     for root, _, files in os.walk(SRC_DIR):
         rel_dir = os.path.relpath(root, SRC_DIR)
         for fname in files:
