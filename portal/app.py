@@ -1029,6 +1029,10 @@ def document_detail(doc_id: int | None = None, id: int | None = None):
     if not doc:
         return "Document not found", 404
 
+    user = session.get("user")
+    if user and user.get("id"):
+        log_action(user["id"], doc.id, "view")
+
     revisions = sorted(
         doc.revisions,
         key=lambda r: (r.major_version, r.minor_version),

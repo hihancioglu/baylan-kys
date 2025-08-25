@@ -312,6 +312,7 @@ class AuditLog(Base):
     action = Column(String, nullable=False)
     endpoint = Column(String)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    timestamp = synonym("created_at")
 
     user = relationship("User")
     document = relationship("Document")
