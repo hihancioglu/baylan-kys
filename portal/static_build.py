@@ -2,10 +2,10 @@ import os, re
 
 BASE_DIR = os.path.join(os.path.dirname(__file__), 'static')
 SRC_DIR = os.path.join(BASE_DIR, 'src')
-# Previously assets were written to ``static/dist``. The build step now
-# outputs directly into ``static`` so the runtime container and nginx can
-# serve them from a single location.
-DEST_DIR = BASE_DIR
+# Write minified assets into a dedicated ``static-dist`` directory. This
+# directory is mounted as a shared volume between the portal and nginx
+# containers so both can access the generated files.
+DEST_DIR = os.path.join(os.path.dirname(__file__), 'static-dist')
 
 def minify(content):
     """Basic minifier for JS/CSS files.
