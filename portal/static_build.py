@@ -1,6 +1,6 @@
 import os, re
 
-BASE_DIR = os.path.dirname(__file__)
+BASE_DIR = os.path.join(os.path.dirname(__file__), 'static')
 SRC_DIR = os.path.join(BASE_DIR, 'src')
 # Previously assets were written to ``static/dist``. The build step now
 # outputs directly into ``static`` so the runtime container and nginx can
