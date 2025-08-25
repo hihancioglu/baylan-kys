@@ -4,6 +4,13 @@
 
 {% block content %}
 <h1>{{ doc.title }}</h1>
+{% if preview.type %}
+<div id="preview-container" class="mb-4"></div>
+<script>
+  window.previewData = {{ preview | tojson }};
+</script>
+<script type="module" src="{{ url_for('static', filename='document_preview.js') }}"></script>
+{% endif %}
 <ul>
   <li><strong>Code:</strong> {{ doc.code }}</li>
   <li><strong>Status:</strong> {{ doc.status }}</li>

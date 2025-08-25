@@ -147,10 +147,40 @@ def inject_user():
         return role in roles
     return {"current_user": user, "user_roles": roles, "has_role": has_role}
 
-ONLYOFFICE_INTERNAL_URL = os.environ["ONLYOFFICE_INTERNAL_URL"]  # http://onlyoffice
-ONLYOFFICE_PUBLIC_URL   = os.environ["ONLYOFFICE_PUBLIC_URL"]    # https://qdms.example.com/onlyoffice
-ONLYOFFICE_JWT_SECRET   = os.environ["ONLYOFFICE_JWT_SECRET"]
-ONLYOFFICE_JWT_HEADER   = os.environ.get("ONLYOFFICE_JWT_HEADER", "AuthorizationJwt")
+# -- Preview configuration -------------------------------------------------
+#
+# ``USE_ONLYOFFICE`` toggles whether Office documents are displayed using
+# the OnlyOffice document server or the Microsoft Office Web Viewer.  The
+# environment variables required for OnlyOffice are optional when this flag
+# is disabled so that deployments without OnlyOffice can still render
+# documents via the fallback viewer.
+app.config["USE_ONLYOFFICE"] = (
+    os.environ.get("USE_ONLYOFFICE", "true").lower() == "true"
+)
+
+USE_ONLYOFFICE = app.config["USE_ONLYOFFICE"]
+
+if USE_ONLYOFFICE:
+    ONLYOFFICE_INTERNAL_URL = os.environ.get("ONLYOFFICE_INTERNAL_URL")
+    ONLYOFFICE_PUBLIC_URL = os.environ.get("ONLYOFFICE_PUBLIC_URL")
+    ONLYOFFICE_JWT_SECRET = os.environ.get("ONLYOFFICE_JWT_SECRET", "")
+    ONLYOFFICE_JWT_HEADER = os.environ.get(
+        "ONLYOFFICE_JWT_HEADER", "AuthorizationJwt"
+    )
+else:
+    ONLYOFFICE_INTERNAL_URL = None
+    ONLYOFFICE_PUBLIC_URL = None
+    ONLYOFFICE_JWT_SECRET = ""
+    ONLYOFFICE_JWT_HEADER = None
+
+OFFICE_MIMETYPES = {
+    "application/msword",
+    "application/vnd.ms-excel",
+    "application/vnd.ms-powerpoint",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+}
 
 # Demo: örnek bir dokümanı MinIO'ya kaydettiğinizi varsayın ve anahtarını (storage key) biliyorsunuz:
 def sign_payload(payload: dict) -> str:
@@ -988,22 +1018,73 @@ def new_document():
 @roles_required(RoleEnum.READER.value)
 def document_detail(doc_id: int | None = None, id: int | None = None):
     doc_id = doc_id if doc_id is not None else id
-    session = get_session()
+    db = get_session()
     doc = (
-        session.query(Document)
+        db.query(Document)
         .options(joinedload(Document.revisions))
         .filter(Document.id == doc_id)
         .one_or_none()
     )
-    session.close()
+    db.close()
     if not doc:
         return "Document not found", 404
+
     revisions = sorted(
         doc.revisions,
         key=lambda r: (r.major_version, r.minor_version),
         reverse=True,
     )
-    return render_template("document_detail.html", doc=doc, revisions=revisions)
+
+    preview: dict[str, object] = {}
+    file_url = generate_presigned_url(doc.file_key)
+    mime = (doc.mime or "").lower()
+    if file_url and mime == "application/pdf":
+        preview = {"type": "pdf", "url": file_url}
+    elif file_url and mime in OFFICE_MIMETYPES:
+        preview = {"type": "office", "url": file_url, "useOnlyOffice": USE_ONLYOFFICE}
+        if USE_ONLYOFFICE and ONLYOFFICE_PUBLIC_URL:
+            user = session.get("user") or {"id": "viewer", "name": "Viewer"}
+            user_name = (
+                user.get("name")
+                or user.get("username")
+                or user.get("email", "")
+            )
+            ext = doc.file_key.split(".")[-1]
+            config = {
+                "document": {
+                    "fileType": ext,
+                    "key": f"{doc.doc_key}",
+                    "title": doc.title or doc.doc_key.split("/")[-1],
+                    "url": file_url,
+                    "permissions": {
+                        "edit": False,
+                        "download": True,
+                        "review": False,
+                        "comment": False,
+                    },
+                },
+                "documentType": "text",
+                "editorConfig": {
+                    "mode": "view",
+                    "user": {"id": user["id"], "name": user_name},
+                },
+            }
+            token = sign_payload(config) if ONLYOFFICE_JWT_SECRET else ""
+            preview.update(
+                {
+                    "editorJs": f"{ONLYOFFICE_PUBLIC_URL}/web-apps/apps/api/documents/api.js",
+                    "config": config,
+                    "token": token,
+                    "tokenHeader": ONLYOFFICE_JWT_HEADER,
+                }
+            )
+
+    return render_template(
+        "document_detail.html",
+        doc=doc,
+        revisions=revisions,
+        preview=preview,
+    )
 
 
 @app.get("/documents/<int:doc_id>/workflow")
