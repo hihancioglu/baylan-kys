@@ -1061,6 +1061,33 @@ def download_document(doc_id: int):
         db.close()
 
 
+@app.get("/files/<path:file_key>")
+@roles_required(RoleEnum.READER.value)
+def get_file(file_key: str):
+    """Redirect to a storage-backed URL for the given file key.
+
+    The view ensures the requesting user has download permissions for the
+    corresponding document before generating a presigned URL with an optional
+    TTL. The actual URL generation is delegated to the storage adapter, which
+    abstracts over the configured backend.
+    """
+    db = get_session()
+    try:
+        doc = db.query(Document).filter_by(file_key=file_key).first()
+        if not doc:
+            return "File not found", 404
+        user = session.get("user")
+        if not user or not permission_check(user["id"], doc, download=True):
+            return "Forbidden", 403
+        ttl = request.args.get("ttl", type=int)
+        url = storage_client.generate_presigned_url(file_key, expires_in=ttl)
+        if not url:
+            return "File not available", 404
+        return redirect(url)
+    finally:
+        db.close()
+
+
 @app.post("/workflow/start")
 @roles_required(RoleEnum.CONTRIBUTOR.value)
 def start_workflow():
