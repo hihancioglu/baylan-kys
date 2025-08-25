@@ -130,11 +130,11 @@ services:
     depends_on:
       - portal
       - onlyoffice
-      volumes:
-        - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
-        # Serve static assets from the build output directory
-        - portal_static:/app/portal/static-dist:ro
-        - nginx_cache:/var/cache/nginx
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      # Serve static assets from the build output directory
+      - portal_static:/app/portal/static-dist:ro
+      - nginx_cache:/var/cache/nginx
       # SSL sertifikası kullanacaksanız aşağıyı açın ve dosyaları koyun
       # - ./nginx/certs:/etc/nginx/certs:ro
     ports:
