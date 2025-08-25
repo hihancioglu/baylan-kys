@@ -53,50 +53,63 @@ document.body.addEventListener('htmx:afterSwap', (event) => {
 });
 
 console.log('app loaded');
+const POLL_INTERVAL = parseInt(document.body.dataset.pollInterval, 10) || 5000;
+const RETRY_DELAY = 10000;
 
-function connectEvents() {
-  const evt = new EventSource('/events');
-  evt.addEventListener('counts', (e) => {
-    try {
-      const data = JSON.parse(e.data);
-      const approvalEl = document.getElementById('approval-count');
-      if (approvalEl) approvalEl.textContent = data.approvals;
-      const ackEl = document.getElementById('ack-count');
-      if (ackEl) ackEl.textContent = data.acknowledgements;
-      const notifEl = document.getElementById('notif-count');
-      if (notifEl) notifEl.textContent = (data.approvals || 0) + (data.acknowledgements || 0);
-    } catch (err) {
-      console.error('Failed to parse event', err);
-    }
+function fetchCounts() {
+  return fetch('/api/counts').then((resp) => {
+    if (!resp.ok) throw new Error('Request failed');
+    return resp.json();
+  }).then((data) => {
+    const approvalEl = document.getElementById('approval-count');
+    if (approvalEl) approvalEl.textContent = data.approvals;
+    const ackEl = document.getElementById('ack-count');
+    if (ackEl) ackEl.textContent = data.acknowledgements;
+    const notifEl = document.getElementById('notif-count');
+    if (notifEl) notifEl.textContent = (data.approvals || 0) + (data.acknowledgements || 0);
   });
-  evt.onerror = () => {
-    evt.close();
-    setTimeout(connectEvents, 1000);
-  };
 }
 
-connectEvents();
+function startCountPolling() {
+  let timer;
+  const run = () => {
+    fetchCounts().catch(() => {
+      clearInterval(timer);
+      setTimeout(startCountPolling, RETRY_DELAY);
+    });
+  };
+  run();
+  timer = setInterval(run, POLL_INTERVAL);
+}
 
-function connectNotifications() {
-  const evt = new EventSource('/notifications/stream');
-  evt.onmessage = (e) => {
-    try {
-      const data = JSON.parse(e.data);
+function fetchNotifications() {
+  return fetch('/api/notifications').then((resp) => {
+    if (!resp.ok) throw new Error('Request failed');
+    return resp.json();
+  }).then((list) => {
+    const panel = document.getElementById('notification-list');
+    list.forEach((data) => {
       displayToast(data.message);
-      const panel = document.getElementById('notification-list');
       if (panel) {
         const li = document.createElement('li');
         li.textContent = data.message;
         panel.prepend(li);
       }
-    } catch (err) {
-      console.error('Failed to parse notification', err);
-    }
-  };
-  evt.onerror = () => {
-    evt.close();
-    setTimeout(connectNotifications, 1000);
-  };
+    });
+  });
 }
 
-connectNotifications();
+function startNotificationPolling() {
+  let timer;
+  const run = () => {
+    fetchNotifications().catch(() => {
+      clearInterval(timer);
+      setTimeout(startNotificationPolling, RETRY_DELAY);
+    });
+  };
+  run();
+  timer = setInterval(run, POLL_INTERVAL);
+}
+
+startCountPolling();
+startNotificationPolling();
