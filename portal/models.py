@@ -16,7 +16,14 @@ from sqlalchemy import (
     Float,
     Table,
 )
-from sqlalchemy.orm import declarative_base, relationship, sessionmaker, scoped_session
+from sqlalchemy.orm import (
+    declarative_base,
+    relationship,
+    sessionmaker,
+    scoped_session,
+    joinedload,
+    synonym,
+)
 import sys
 
 DATABASE_URL = os.environ.get("DATABASE_URL", "sqlite:///portal.db")
@@ -61,9 +68,11 @@ class RoleEnum(PyEnum):
 class Document(Base):
     __tablename__ = "documents"
     id = Column(Integer, primary_key=True)
-    doc_key = Column(String, nullable=False, unique=True)
+    file_key = Column(String, nullable=False, unique=True)
+    doc_key = synonym("file_key")
     title = Column(String, index=True)
     code = Column(String, index=True)
+    rev_no = Column(Integer, default=0)
     standard_code = Column(String, index=True, nullable=True)
     tags = Column(String, index=True)
     department = Column(String, index=True)
@@ -72,6 +81,8 @@ class Document(Base):
     minor_version = Column(Integer, default=0)
     revision_notes = Column(Text)
     created_at = Column(DateTime, default=datetime.utcnow)
+    mime = Column(String)
+    owner_id = Column(Integer, ForeignKey("users.id"), nullable=True)
     retention_period = Column(Integer)
     archived_at = Column(DateTime)
 
@@ -80,6 +91,8 @@ class Document(Base):
         default="Draft",
         nullable=False,
     )
+
+    owner = relationship("User", foreign_keys=[owner_id])
 
 
 class DocumentRevision(Base):
@@ -338,6 +351,20 @@ Document.standards = relationship(
 
 def get_session():
     return SessionLocal()
+
+
+def get_document(doc_id: int):
+    """Fetch a document with its revision history."""
+    session = get_session()
+    try:
+        return (
+            session.query(Document)
+            .options(joinedload(Document.revisions))
+            .filter(Document.id == doc_id)
+            .one_or_none()
+        )
+    finally:
+        session.close()
 
 
 def seed_roles_and_users():
