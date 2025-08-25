@@ -3,7 +3,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from portal.static.build import minify
+from portal.static_build import minify
 
 
 def test_minify_removes_single_line_comments():
