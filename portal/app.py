@@ -41,7 +41,7 @@ from models import (
 )
 from search import index_document, search_documents
 from sqlalchemy import func, or_, and_, inspect
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import sessionmaker, joinedload
 from ocr import extract_text
 from docxf_render import render_form_and_store
 from notifications import (
@@ -984,53 +984,26 @@ def new_document():
 
 
 @app.get("/documents/<int:doc_id>")
+@app.get("/documents/<int:id>")
 @roles_required(RoleEnum.READER.value)
-def document_detail(doc_id: int):
+def document_detail(doc_id: int | None = None, id: int | None = None):
+    doc_id = doc_id if doc_id is not None else id
     session = get_session()
-    doc = session.get(Document, doc_id)
-    if not doc:
-        session.close()
-        return "Document not found", 404
-
-    revision_id = request.args.get("revision_id", type=int)
-    tab = request.args.get("tab")
-    revisions = (
-        session.query(DocumentRevision)
-        .filter_by(doc_id=doc_id)
-        .order_by(DocumentRevision.major_version.desc(), DocumentRevision.minor_version.desc())
-        .all()
-    )
-    revision = None
-    if revision_id:
-        revision = (
-            session.query(DocumentRevision)
-            .filter_by(id=revision_id, doc_id=doc_id)
-            .first()
-        )
-    reviewers = (
-        session.query(User)
-        .join(User.roles)
-        .filter(Role.name == RoleEnum.REVIEWER.value)
-        .all()
+    doc = (
+        session.query(Document)
+        .options(joinedload(Document.revisions))
+        .filter(Document.id == doc_id)
+        .one_or_none()
     )
     session.close()
-    partial = bool(request.headers.get("HX-Request"))
-    template = (
-        "partials/documents/_versions.html" if partial else "document_detail.html"
+    if not doc:
+        return "Document not found", 404
+    revisions = sorted(
+        doc.revisions,
+        key=lambda r: (r.major_version, r.minor_version),
+        reverse=True,
     )
-    return render_template(
-        template,
-        doc=doc,
-        revisions=revisions,
-        revision=revision,
-        reviewers=reviewers,
-        active_tab="versions" if (revision_id or tab == "versions") else "summary",
-        breadcrumbs=[
-            {"title": "Home", "url": url_for("dashboard")},
-            {"title": "Documents", "url": url_for("list_documents")},
-            {"title": doc.title},
-        ],
-    )
+    return render_template("document_detail.html", doc=doc, revisions=revisions)
 
 
 @app.get("/documents/<int:doc_id>/workflow")
