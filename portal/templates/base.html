@@ -30,7 +30,7 @@
   </style>
   <link rel="stylesheet" href="{{ url_for('static', filename='app.css') }}">
 </head>
-<body>
+<body data-poll-interval="{{ config['POLL_INTERVAL_MS'] }}">
 <a href="#main-content" class="skip-link">Skip to main content</a>
 {% include 'partials/_icons.html' %}
 

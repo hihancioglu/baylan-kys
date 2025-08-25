@@ -63,7 +63,6 @@ from signing import create_signed_pdf
 from storage import generate_presigned_url, storage_client
 from permissions import permission_check
 from datetime import datetime
-from queue import Queue, Empty
 
 # Automatically run database migrations in non-SQLite environments.
 def _run_migrations() -> None:
@@ -100,6 +99,9 @@ app.config.update(
 app.config["SESSION_COOKIE_SECURE"] = (
     os.environ.get("SESSION_COOKIE_SECURE", "true").lower() == "true"
 )
+
+# Interval for client-side polling of counts/notifications (milliseconds)
+app.config["POLL_INTERVAL_MS"] = int(os.environ.get("POLL_INTERVAL_MS", "5000"))
 
 # Temporary in-memory storage for document drafts keyed by a random ID
 DOCUMENT_DRAFTS: dict[str, dict] = {}
@@ -289,10 +291,6 @@ def _assign_acknowledgements(db, doc_id, user_ids):
             db.add(Acknowledgement(user_id=uid, doc_id=doc_id))
 
 
-# --- Real-time count streaming ---
-sse_clients = []
-
-
 def _compute_counts(db, user_id, roles):
     inspector = inspect(db.get_bind())
     columns = {c["name"] for c in inspector.get_columns("workflow_steps")}
@@ -328,77 +326,46 @@ def _compute_counts(db, user_id, roles):
 
 
 def broadcast_counts():
+    """Placeholder retained for backward compatibility."""
+    return None
+
+
+@app.get("/api/counts")
+@login_required
+def api_counts():
+    user = session.get("user")
+    if not user:
+        return "Unauthorized", 401
+    user_id = user.get("id")
     db = get_session()
     try:
-        for client in list(sse_clients):
-            counts = _compute_counts(db, client["user_id"], client["roles"])
-            client["queue"].put(json.dumps(counts))
+        counts = _compute_counts(db, user_id, session.get("roles", []))
     finally:
         db.close()
+    return jsonify(counts)
 
 
-@app.get("/events")
+@app.get("/api/notifications")
 @login_required
-def sse_events():
+def api_notifications():
     user = session.get("user")
     if not user:
         return "Unauthorized", 401
     user_id = user.get("id")
-    roles = session.get("roles", [])
-    q = Queue()
-    client = {"user_id": user_id, "roles": roles, "queue": q}
-    sse_clients.append(client)
-
     db = get_session()
-    counts = _compute_counts(db, user_id, roles)
-    db.close()
-
-    def stream():
-        yield f"event: counts\ndata: {json.dumps(counts)}\n\n"
-        try:
-            while True:
-                try:
-                    data = q.get(timeout=30)
-                    yield f"event: counts\ndata: {data}\n\n"
-                except Empty:
-                    yield ":keepalive\n\n"
-        finally:
-            sse_clients.remove(client)
-
-    return Response(stream(), mimetype="text/event-stream")
-
-
-@app.get("/notifications/stream")
-@login_required
-def notifications_stream():
-    user = session.get("user")
-    if not user:
-        return "Unauthorized", 401
-    user_id = user.get("id")
-    q = subscribe(user_id)
-
-    db = get_session()
-    pending = db.query(Notification).filter_by(user_id=user_id, read=False).all()
-
-    def stream():
-        try:
-            try:
-                for n in pending:
-                    yield f"data: {json.dumps({'id': n.id, 'message': n.message})}\n\n"
-                    n.read = True
-                db.commit()
-            finally:
-                db.close()
-            while True:
-                try:
-                    data = q.get(timeout=30)
-                    yield f"data: {data}\n\n"
-                except Empty:
-                    yield ":keepalive\n\n"
-        finally:
-            unsubscribe(user_id, q)
-
-    return Response(stream(), mimetype="text/event-stream")
+    try:
+        notifs = (
+            db.query(Notification)
+            .filter_by(user_id=user_id, read=False)
+            .all()
+        )
+        data = [{"id": n.id, "message": n.message} for n in notifs]
+        for n in notifs:
+            n.read = True
+        db.commit()
+        return jsonify(data)
+    finally:
+        db.close()
 
 
 def _get_pending_approvals(
