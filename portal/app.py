@@ -63,7 +63,7 @@ from signing import create_signed_pdf
 from storage import generate_presigned_url, storage_client
 from permissions import permission_check
 from datetime import datetime
-from queue import Queue
+from queue import Queue, Empty
 
 # Automatically run database migrations in non-SQLite environments.
 def _run_migrations() -> None:
@@ -357,8 +357,11 @@ def sse_events():
         yield f"event: counts\ndata: {json.dumps(counts)}\n\n"
         try:
             while True:
-                data = q.get()
-                yield f"event: counts\ndata: {data}\n\n"
+                try:
+                    data = q.get(timeout=30)
+                    yield f"event: counts\ndata: {data}\n\n"
+                except Empty:
+                    yield ":keepalive\n\n"
         finally:
             sse_clients.remove(client)
 
@@ -387,8 +390,11 @@ def notifications_stream():
             finally:
                 db.close()
             while True:
-                data = q.get()
-                yield f"data: {data}\n\n"
+                try:
+                    data = q.get(timeout=30)
+                    yield f"data: {data}\n\n"
+                except Empty:
+                    yield ":keepalive\n\n"
         finally:
             unsubscribe(user_id, q)
 
