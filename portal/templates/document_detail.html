@@ -1,199 +1,30 @@
 {% extends "base.html" %}
-{% block title %}Document Detail{% endblock %}
-{% block page_actions %}
-<link rel="stylesheet" href="{{ url_for('static', filename='toolbar/toolbar.css') }}">
-<div class="toolbar" data-component="toolbar">
-  {% if has_role('CONTRIBUTOR') %}
-  <a class="btn btn-primary" href="{{ url_for('edit_document', doc_id=doc.id) }}">Edit</a>
-  {% if doc.status == 'Draft' %}
-  <button type="button" class="btn btn-secondary" data-bs-toggle="modal" data-bs-target="#reviewerModal">Gözden Geçirmeye Gönder</button>
-  {% elif doc.status == 'Published' %}
-  <button type="button" class="btn btn-warning" data-bs-toggle="modal" data-bs-target="#reviseModal">Revizyon Başlat</button>
-  {% endif %}
-  {% endif %}
-  {% if has_role('PUBLISHER') %}
-  <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#publishModal">Yayınla</button>
-  {% endif %}
-  <a class="btn btn-outline-secondary" href="{{ url_for('compare_document_versions', doc_id=doc.id) }}">Karşılaştır</a>
-  <a class="btn btn-outline-primary" href="{{ url_for('download_document', doc_id=doc.id) }}">Download</a>
-</div>
-<script type="module" src="{{ url_for('static', filename='toolbar/toolbar.js') }}"></script>
-{% endblock %}
+
+{% block title %}{{ doc.title }}{% endblock %}
+
 {% block content %}
-{% set status_classes = {
-  'Draft': 'bg-secondary',
-  'Review': 'bg-warning',
-  'Approved': 'bg-success',
-  'Published': 'bg-primary',
-  'Archived': 'bg-dark'
-} %}
-<header class="mb-4">
-  <h1>{{ doc.title }}</h1>
-  <div class="text-muted">
-    <span class="me-3"><strong>Code:</strong> {{ doc.code }}</span>
-    <span class="me-3"><strong>Status:</strong> <span class="badge {{ status_classes.get(doc.status, 'bg-secondary') }}">{{ doc.status }}</span></span>
-    <span class="me-3"><strong>Tags:</strong> {{ doc.tags }}</span>
-  </div>
-</header>
-<ul class="nav nav-tabs" id="document-tabs">
-  <li class="nav-item"><a class="nav-link {% if active_tab == 'summary' %}active{% endif %}" href="#" data-tab="summary">Summary</a></li>
-  <li class="nav-item"><a class="nav-link {% if active_tab == 'versions' %}active{% endif %}" href="#" data-tab="versions">Versions</a></li>
-  <li class="nav-item"><a class="nav-link {% if active_tab == 'notes' %}active{% endif %}" href="#" data-tab="notes">Revision Notes</a></li>
-  <li class="nav-item"><a class="nav-link {% if active_tab == 'relations' %}active{% endif %}" href="#" data-tab="relations">Relations</a></li>
+<h1>{{ doc.title }}</h1>
+<ul>
+  <li><strong>Code:</strong> {{ doc.code }}</li>
+  <li><strong>Status:</strong> {{ doc.status }}</li>
+  <li><strong>Tags:</strong> {{ doc.tags or "" }}</li>
 </ul>
-<div class="mt-3">
-  <div id="tab-summary" class="{% if active_tab != 'summary' %}d-none{% endif %}">
-    <p>{{ doc.revision_notes or 'No summary available.' }}</p>
-  </div>
-  <div id="tab-versions" class="{% if active_tab != 'versions' %}d-none{% endif %}">
-    {% include 'partials/documents/_versions.html' %}
-  </div>
-  <div id="tab-notes" class="{% if active_tab != 'notes' %}d-none{% endif %}">
-    <p>{{ revision.revision_notes if revision else doc.revision_notes or 'No revision notes.' }}</p>
-  </div>
-  <div id="tab-relations" class="{% if active_tab != 'relations' %}d-none{% endif %}">
-    <p>No related records.</p>
-  </div>
-</div>
 
-<div class="modal fade" id="reviseModal" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog">
-      <form id="revise-form" class="modal-content" method="post" action="{{ url_for('revise_document_api', id=doc.id) }}">
-      <div class="modal-header">
-        <h5 class="modal-title">Revizyon Başlat</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-      </div>
-      <div class="modal-body">
-        <div class="mb-3">
-          <label for="version_type" class="form-label">Versiyon Türü</label>
-          <select class="form-select" id="version_type" name="version_type">
-            <option value="minor">Minor {{ doc.major_version }}.{{ doc.minor_version + 1 }}</option>
-            <option value="major">Major {{ doc.major_version + 1 }}.0</option>
-          </select>
-        </div>
-        <div class="mb-3">
-          <label for="revision_notes" class="form-label">Revizyon Notları</label>
-          <textarea class="form-control" id="revision_notes" name="revision_notes"></textarea>
-        </div>
-      </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">İptal</button>
-          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-          <button type="submit" class="btn btn-primary" data-bs-dismiss="modal" id="confirm-revise-btn">Başlat</button>
-        </div>
-      </form>
-    </div>
-  </div>
+<h2>Revision History</h2>
+{% if revisions %}
+<ul>
+  {% for rev in revisions %}
+  <li>Version {{ rev.major_version }}.{{ rev.minor_version }} – {{ rev.created_at.strftime('%Y-%m-%d') }}</li>
+  {% endfor %}
+</ul>
+{% else %}
+<p>No revisions found.</p>
+{% endif %}
 
-  <div class="modal fade" id="reviewerModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog">
-        <form id="workflow-form" class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title">Reviewer ve Onaylayıcı Seç</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-      </div>
-      <div class="modal-body">
-        <div class="mb-3">
-          <label class="form-label d-block" for="reviewer-list">Reviewers</label>
-          <div id="reviewer-list">
-          {% for user in reviewers %}
-          <div class="form-check">
-            <input class="form-check-input" type="checkbox" name="reviewers[]" value="{{ user.id }}" id="rev-{{ user.id }}">
-            <label class="form-check-label" for="rev-{{ user.id }}">{{ user.username }}</label>
-          </div>
-          {% endfor %}
-          </div>
-        </div>
-        <div class="mb-3">
-          <label class="form-label d-block" for="approver-list">Approvers</label>
-          <div id="approver-list">
-          {% for user in approvers|default([]) %}
-          <div class="form-check">
-            <input class="form-check-input" type="checkbox" name="approvers[]" value="{{ user.id }}" id="app-{{ user.id }}">
-            <label class="form-check-label" for="app-{{ user.id }}">{{ user.username }}</label>
-          </div>
-          {% endfor %}
-          </div>
-        </div>
-      </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">İptal</button>
-          <input type="hidden" name="doc_id" value="{{ doc.id }}">
-          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-          <button type="submit" class="btn btn-primary" data-bs-dismiss="modal">Gönder</button>
-        </div>
-        </form>
-      </div>
-    </div>
+<p>
+  <a href="{{ url_for('list_documents') }}">Back to documents</a>
+  |
+  <a href="{{ url_for('download_document', doc_id=doc.id) }}">Download</a>
+</p>
+{% endblock %}
 
-  <div class="modal fade" id="publishModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog">
-      <form class="modal-content" hx-post="{{ url_for('publish_document', id=doc.id) }}" hx-target="closest .modal" hx-swap="none">
-        <div class="modal-header">
-          <h5 class="modal-title">Yayınla</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-        </div>
-        <div class="modal-body">
-          <div class="mb-3">
-            <label for="publish-users" class="form-label">Users</label>
-            <select id="publish-users" name="users" class="form-select" multiple>
-              {% for u in users %}
-              <option value="{{ u.id }}">{{ u.username }}</option>
-              {% endfor %}
-            </select>
-          </div>
-          <div class="mb-3">
-            <label for="publish-roles" class="form-label">Roles</label>
-            <select id="publish-roles" name="roles" class="form-select" multiple>
-              {% for r in roles %}
-              <option value="{{ r.name }}">{{ r.name }}</option>
-              {% endfor %}
-            </select>
-          </div>
-        </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">İptal</button>
-          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-          <button type="submit" class="btn btn-primary" data-bs-dismiss="modal">Yayınla</button>
-        </div>
-      </form>
-    </div>
-  </div>
-
-  <script type="module" src="{{ url_for('static', filename='document_detail.js') }}"></script>
-  <script type="module">
-    import { showToast } from '{{ url_for('static', filename='components/index.js') }}';
-
-    document.getElementById('revise-form').addEventListener('submit', async function (e) {
-      if (!confirm('Revizyonu başlatmak istediğinize emin misiniz?')) {
-        e.preventDefault();
-        e.stopPropagation();
-        return;
-      }
-      e.preventDefault();
-      const form = e.target;
-      const payload = {
-        version_type: form.querySelector('#version_type').value,
-        revision_notes: form.querySelector('#revision_notes').value
-      };
-      const csrf = form.querySelector('input[name="csrf_token"]').value;
-      const resp = await fetch(form.action, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-CSRFToken': csrf
-        },
-        body: JSON.stringify(payload)
-      });
-      if (!resp.ok) {
-        showToast('Revizyon başlatılamadı', { timeout: 6000 });
-        const detail = await resp.text();
-        if (detail) {
-          showToast(detail);
-        }
-        return;
-      }
-      window.location.href = '{{ url_for("edit_document", doc_id=doc.id) }}';
-    });
-  </script>
-  {% endblock %}
