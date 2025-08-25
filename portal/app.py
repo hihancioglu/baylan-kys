@@ -49,8 +49,6 @@ from notifications import (
     notify_mandatory_read,
     notify_approval_queue,
     notify_user,
-    subscribe,
-    unsubscribe,
 )
 from reports import (
     build_report,

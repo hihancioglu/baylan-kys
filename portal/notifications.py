@@ -1,9 +1,7 @@
 import os
 import smtplib
-import json
 import logging
 from email.message import EmailMessage
-from queue import Queue
 import requests
 from sqlalchemy.orm import sessionmaker
 from models import engine, User, UserSetting, Notification
@@ -15,23 +13,7 @@ SMTP_SENDER = os.environ.get("SMTP_SENDER", "noreply@example.com")
 # but has not configured a personal URL.
 WEBHOOK_URL_DEFAULT = os.environ.get("WEBHOOK_URL_DEFAULT")
 
-# --- In-memory channel management for SSE clients ---
-_channels = {}
-
 logger = logging.getLogger(__name__)
-
-
-def subscribe(user_id: int) -> Queue:
-    """Register an SSE client for the given user."""
-    q = Queue()
-    _channels.setdefault(user_id, []).append(q)
-    return q
-
-
-def unsubscribe(user_id: int, q: Queue) -> None:
-    """Remove an SSE client from the registry."""
-    if user_id in _channels and q in _channels[user_id]:
-        _channels[user_id].remove(q)
 
 def send_email(to: str, subject: str, body: str) -> None:
     msg = EmailMessage()
@@ -65,14 +47,6 @@ def notify_user(user_id: int, subject: str, body: str) -> None:
         note = Notification(user_id=user_id, message=body)
         session.add(note)
         session.commit()
-        payload = json.dumps({"id": note.id, "message": note.message})
-
-        channels = _channels.get(user_id, [])
-        for q in channels:
-            q.put(payload)
-        if channels:
-            note.read = True
-            session.commit()
     finally:
         session.close()
     if not user:
