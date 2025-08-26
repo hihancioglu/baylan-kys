@@ -28,24 +28,21 @@ def upgrade() -> None:
         "risk_committee",
     ]
 
-    roles_table = sa.table(
-        "roles",
-        sa.column("name", sa.String()),
-        sa.column("standard_scope", sa.String()),
-    )
-    op.bulk_insert(
-        roles_table,
-        [{"name": r, "standard_scope": "ALL"} for r in roles],
-    )
+    for role in roles:
+        op.execute(
+            sa.text(
+                "INSERT INTO roles (name, standard_scope) VALUES (:name, 'ALL') "
+                "ON CONFLICT (name) DO NOTHING"
+            ),
+            {"name": role},
+        )
 
-    users_table = sa.table(
-        "users",
-        sa.column("username", sa.String()),
-        sa.column("email", sa.String()),
-    )
-    op.bulk_insert(
-        users_table,
-        [{"username": "admin", "email": "admin@example.com"}],
+    op.execute(
+        sa.text(
+            "INSERT INTO users (username, email) VALUES (:username, :email) "
+            "ON CONFLICT (username) DO NOTHING"
+        ),
+        {"username": "admin", "email": "admin@example.com"},
     )
 
     op.execute(
@@ -53,6 +50,7 @@ def upgrade() -> None:
         INSERT INTO user_roles (user_id, role_id)
         SELECT u.id, r.id FROM users u, roles r
         WHERE u.username='admin' AND r.name='quality_admin'
+        ON CONFLICT DO NOTHING
         """
     )
 
