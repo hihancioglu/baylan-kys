@@ -312,6 +312,34 @@ class CAPAAction(Base):
     document = relationship("Document")
 
 
+class DifRequest(Base):
+    __tablename__ = "dif_requests"
+    id = Column(Integer, primary_key=True)
+    subject = Column(String, nullable=False)
+    description = Column(Text)
+    requester_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    impact = Column(String)
+    priority = Column(String)
+    status = Column(
+        Enum(
+            "new",
+            "in_review",
+            "approved",
+            "rejected",
+            "implemented",
+            name="dif_request_status",
+        ),
+        default="new",
+        nullable=False,
+    )
+    related_doc_id = Column(Integer, ForeignKey("documents.id"))
+    attachment_key = Column(String)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    requester = relationship("User", back_populates="dif_requests")
+    related_doc = relationship("Document", back_populates="dif_requests")
+
+
 class UserSetting(Base):
     __tablename__ = "user_settings"
     id = Column(Integer, primary_key=True)
@@ -380,6 +408,12 @@ Document.revisions = relationship(
 )
 Document.standards = relationship(
     DocumentStandard, back_populates="document", cascade="all, delete-orphan"
+)
+Document.dif_requests = relationship(
+    DifRequest, back_populates="related_doc", cascade="all, delete-orphan"
+)
+User.dif_requests = relationship(
+    DifRequest, back_populates="requester", cascade="all, delete-orphan"
 )
 
 
