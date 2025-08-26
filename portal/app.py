@@ -1963,6 +1963,11 @@ def api_approve_step(step_id: int):
         step = db.get(WorkflowStep, step_id)
         if not step:
             return "Not found", 404
+        user = session.get("user")
+        if not user or user.get("id") != step.user_id:
+            if user:
+                log_action(user.get("id"), step.doc_id, "approve_forbidden")
+            return "Forbidden", 403
         data = request.get_json(silent=True) or {}
         doc_id = step.doc_id
         step_order = step.step_order
@@ -2007,6 +2012,11 @@ def api_reject_step(step_id: int):
         step = db.get(WorkflowStep, step_id)
         if not step:
             return "Not found", 404
+        user = session.get("user")
+        if not user or user.get("id") != step.user_id:
+            if user:
+                log_action(user.get("id"), step.doc_id, "reject_forbidden")
+            return "Forbidden", 403
         data = request.get_json(silent=True) or {}
         document = step.document
         step.status = "Rejected"
@@ -2016,7 +2026,6 @@ def api_reject_step(step_id: int):
         if wf:
             wf.current_step = step.step_order
         db.commit()
-        user = session.get("user")
         if user:
             log_action(user["id"], step.doc_id, "rejected")
         owner_id = getattr(document, "owner_id", None)
@@ -2092,6 +2101,11 @@ def approve_step(step_id: int):
         step = db.get(WorkflowStep, step_id)
         if not step:
             return "Not found", 404
+        user = session.get("user")
+        if not user or user.get("id") != step.user_id:
+            if user:
+                log_action(user.get("id"), step.doc_id, "approve_forbidden")
+            return "Forbidden", 403
         step.status = "Approved"
         step.approved_at = datetime.utcnow()
         step.comment = request.form.get("comment")
@@ -2109,7 +2123,6 @@ def approve_step(step_id: int):
         if wf:
             wf.current_step = next_step.step_order if next_step else 0
         db.commit()
-        user = session.get("user")
         if user:
             log_action(user["id"], step.doc_id, "approved")
         if next_step and next_step.user_id:
@@ -2132,6 +2145,11 @@ def reject_step(step_id: int):
         step = db.get(WorkflowStep, step_id)
         if not step:
             return "Not found", 404
+        user = session.get("user")
+        if not user or user.get("id") != step.user_id:
+            if user:
+                log_action(user.get("id"), step.doc_id, "reject_forbidden")
+            return "Forbidden", 403
         step.status = "Rejected"
         step.approved_at = datetime.utcnow()
         step.comment = request.form.get("comment")
@@ -2139,7 +2157,6 @@ def reject_step(step_id: int):
         if wf:
             wf.current_step = step.step_order
         db.commit()
-        user = session.get("user")
         if user:
             log_action(user["id"], step.doc_id, "rejected")
         owner_id = getattr(step.document, "owner_id", None)
