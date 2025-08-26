@@ -96,6 +96,38 @@ def test_api_reject_step(client, setup_data):
     session.close()
 
 
+def test_api_approve_step_forbidden_for_other_user(client, setup_data):
+    m, ids = setup_data
+    _, step_id, _, new_user_id = ids
+    with client.session_transaction() as sess:
+        sess["user"] = {"id": new_user_id}
+        sess["roles"] = ["approver"]
+    resp = client.post(f"/api/approvals/{step_id}/approve", json={})
+    assert resp.status_code == 403
+    session = m.SessionLocal()
+    step = session.get(m.WorkflowStep, step_id)
+    assert step.status == "Pending"
+    logs = session.query(m.AuditLog).filter_by(action="approve_forbidden").all()
+    assert len(logs) == 1
+    session.close()
+
+
+def test_api_reject_step_forbidden_for_other_user(client, setup_data):
+    m, ids = setup_data
+    _, step_id, _, new_user_id = ids
+    with client.session_transaction() as sess:
+        sess["user"] = {"id": new_user_id}
+        sess["roles"] = ["approver"]
+    resp = client.post(f"/api/approvals/{step_id}/reject", json={})
+    assert resp.status_code == 403
+    session = m.SessionLocal()
+    step = session.get(m.WorkflowStep, step_id)
+    assert step.status == "Pending"
+    logs = session.query(m.AuditLog).filter_by(action="reject_forbidden").all()
+    assert len(logs) == 1
+    session.close()
+
+
 def test_api_reassign_step(client, setup_data):
     m, ids = setup_data
     approver_id, step_id, _, new_user_id = ids
@@ -132,3 +164,35 @@ def test_api_reassign_step_requires_role(client, setup_data):
         json={"user_id": new_user_id},
     )
     assert resp.status_code == 403
+
+
+def test_approve_step_forbidden_for_other_user(client, setup_data):
+    m, ids = setup_data
+    _, step_id, _, new_user_id = ids
+    with client.session_transaction() as sess:
+        sess["user"] = {"id": new_user_id}
+        sess["roles"] = ["approver"]
+    resp = client.post(f"/approvals/{step_id}/approve", data={"comment": ""})
+    assert resp.status_code == 403
+    session = m.SessionLocal()
+    step = session.get(m.WorkflowStep, step_id)
+    assert step.status == "Pending"
+    logs = session.query(m.AuditLog).filter_by(action="approve_forbidden").all()
+    assert len(logs) == 1
+    session.close()
+
+
+def test_reject_step_forbidden_for_other_user(client, setup_data):
+    m, ids = setup_data
+    _, step_id, _, new_user_id = ids
+    with client.session_transaction() as sess:
+        sess["user"] = {"id": new_user_id}
+        sess["roles"] = ["approver"]
+    resp = client.post(f"/approvals/{step_id}/reject", data={"comment": ""})
+    assert resp.status_code == 403
+    session = m.SessionLocal()
+    step = session.get(m.WorkflowStep, step_id)
+    assert step.status == "Pending"
+    logs = session.query(m.AuditLog).filter_by(action="reject_forbidden").all()
+    assert len(logs) == 1
+    session.close()
