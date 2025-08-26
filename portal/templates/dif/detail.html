@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block title %}DIF {{ dif.id }}{% endblock %}
+{% block content %}
+<h3>{{ dif.subject }}</h3>
+<p><strong>Status:</strong> {{ dif.status }}</p>
+<p><strong>Requester:</strong> {{ dif.requester.username if dif.requester else '' }}</p>
+<p><strong>Description:</strong> {{ dif.description }}</p>
+<p><strong>Impact:</strong> {{ dif.impact }}</p>
+{% if attachment_url %}
+<p><a href="{{ attachment_url }}">Download Attachment</a></p>
+{% endif %}
+{% endblock %}

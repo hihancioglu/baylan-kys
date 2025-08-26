@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block title %}DIF Requests{% endblock %}
+{% block content %}
+<h3>DIF Requests</h3>
+<form class="row g-2 mb-3" method="get">
+  <div class="col">
+    <input class="form-control" type="text" name="status" placeholder="Status" value="{{ filters.status }}">
+  </div>
+  <div class="col">
+    <input class="form-control" type="text" name="requester" placeholder="Requester" value="{{ filters.requester }}">
+  </div>
+  <div class="col">
+    <input class="form-control" type="date" name="start" value="{{ filters.start }}">
+  </div>
+  <div class="col">
+    <input class="form-control" type="date" name="end" value="{{ filters.end }}">
+  </div>
+  <div class="col-auto">
+    <button class="btn btn-secondary" type="submit">Filter</button>
+  </div>
+</form>
+<table class="table">
+  <thead>
+    <tr>
+      <th>ID</th>
+      <th>Subject</th>
+      <th>Status</th>
+      <th>Requester</th>
+      <th>Created</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for dif in difs %}
+    <tr>
+      <td><a href="{{ url_for('dif_detail', id=dif.id) }}">{{ dif.id }}</a></td>
+      <td>{{ dif.subject }}</td>
+      <td>{{ dif.status }}</td>
+      <td>{{ dif.requester.username if dif.requester else '' }}</td>
+      <td>{{ dif.created_at.strftime('%Y-%m-%d') }}</td>
+    </tr>
+    {% else %}
+    <tr><td colspan="5">No requests</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+<a class="btn btn-primary" href="{{ url_for('dif_new') }}">New DIF Request</a>
+{% endblock %}

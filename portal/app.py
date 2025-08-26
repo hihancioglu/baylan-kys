@@ -30,6 +30,7 @@ from models import (
     ChangeRequest,
     Deviation,
     CAPAAction,
+    DifRequest,
     AuditLog,
     UserSetting,
     PersonalAccessToken,
@@ -3672,6 +3673,131 @@ def audit_export():
             mimetype="text/csv",
             headers={"Content-Disposition": "attachment; filename=audit_logs.csv"},
         )
+
+
+@app.route("/dif/new", methods=["GET", "POST"])
+@login_required
+@roles_required(RoleEnum.CONTRIBUTOR.value)
+def dif_new():
+    form = request.form.to_dict()
+    errors = {}
+    if request.method == "POST":
+        subject = form.get("subject", "").strip()
+        description = form.get("description", "").strip()
+        impact = form.get("impact", "").strip()
+        if not subject:
+            errors["subject"] = "Subject is required"
+        if not description:
+            errors["description"] = "Description is required"
+        if not impact:
+            errors["impact"] = "Impact is required"
+        if not errors:
+            attachment_key = None
+            uploaded = request.files.get("attachment")
+            if uploaded and uploaded.filename:
+                _, ext = os.path.splitext(uploaded.filename)
+                file_key = f"{secrets.token_hex(16)}{ext}"
+                storage_client.put(Key=file_key, Body=uploaded.read())
+                attachment_key = file_key
+            db = get_session()
+            try:
+                dif = DifRequest(
+                    subject=subject,
+                    description=description,
+                    impact=impact,
+                    priority=form.get("priority", "").strip() or None,
+                    related_doc_id=int(form.get("related_doc_id")) if form.get("related_doc_id") else None,
+                    requester_id=session.get("user", {}).get("id"),
+                    attachment_key=attachment_key,
+                )
+                db.add(dif)
+                db.commit()
+                return redirect(url_for("dif_detail", id=dif.id))
+            finally:
+                db.close()
+    context = {
+        "form": form,
+        "errors": errors,
+        "breadcrumbs": [
+            {"title": "Home", "url": url_for("dashboard")},
+            {"title": "DIF Requests", "url": url_for("dif_list")},
+            {"title": "New"},
+        ],
+    }
+    status = 400 if errors else 200
+    return render_template("dif/new.html", **context), status
+
+
+@app.route("/dif/<int:id>")
+@login_required
+@roles_required(RoleEnum.READER.value)
+def dif_detail(id: int):
+    db = get_session()
+    try:
+        dif = (
+            db.query(DifRequest)
+            .options(joinedload(DifRequest.requester))
+            .filter_by(id=id)
+            .first()
+        )
+        if not dif:
+            return "DIF request not found", 404
+        attachment_url = None
+        if dif.attachment_key:
+            attachment_url = storage_client.generate_presigned_url(dif.attachment_key)
+        context = {
+            "dif": dif,
+            "attachment_url": attachment_url,
+            "breadcrumbs": [
+                {"title": "Home", "url": url_for("dashboard")},
+                {"title": "DIF Requests", "url": url_for("dif_list")},
+                {"title": dif.subject},
+            ],
+        }
+        return render_template("dif/detail.html", **context)
+    finally:
+        db.close()
+
+
+@app.route("/dif")
+@login_required
+@roles_required(RoleEnum.READER.value)
+def dif_list():
+    db = get_session()
+    try:
+        query = db.query(DifRequest).options(joinedload(DifRequest.requester))
+        status = request.args.get("status", "").strip()
+        start = request.args.get("start", "").strip()
+        end = request.args.get("end", "").strip()
+        requester = request.args.get("requester", "").strip()
+        if status:
+            query = query.filter(DifRequest.status == status)
+        if start:
+            try:
+                start_dt = datetime.strptime(start, "%Y-%m-%d")
+                query = query.filter(DifRequest.created_at >= start_dt)
+            except ValueError:
+                pass
+        if end:
+            try:
+                end_dt = datetime.strptime(end, "%Y-%m-%d")
+                query = query.filter(DifRequest.created_at <= end_dt)
+            except ValueError:
+                pass
+        if requester:
+            query = query.join(User).filter(User.username.ilike(f"%{requester}%"))
+        difs = query.order_by(DifRequest.created_at.desc()).all()
+        context = {
+            "difs": difs,
+            "filters": {"status": status, "start": start, "end": end, "requester": requester},
+            "breadcrumbs": [
+                {"title": "Home", "url": url_for("dashboard")},
+                {"title": "DIF Requests"},
+            ],
+        }
+        return render_template("dif/list.html", **context)
+    finally:
+        db.close()
 
 @app.post("/onlyoffice/callback/<path:doc_key>")
 @login_required

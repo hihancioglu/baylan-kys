@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}New DIF Request{% endblock %}
+{% block content %}
+<h3>New DIF Request</h3>
+<form method="post" enctype="multipart/form-data">
+  <div class="mb-3">
+    <label class="form-label">Subject</label>
+    <input class="form-control{% if errors.subject %} is-invalid{% endif %}" type="text" name="subject" value="{{ form.subject }}">
+    {% if errors.subject %}<div class="invalid-feedback">{{ errors.subject }}</div>{% endif %}
+  </div>
+  <div class="mb-3">
+    <label class="form-label">Description</label>
+    <textarea class="form-control{% if errors.description %} is-invalid{% endif %}" name="description">{{ form.description }}</textarea>
+    {% if errors.description %}<div class="invalid-feedback">{{ errors.description }}</div>{% endif %}
+  </div>
+  <div class="mb-3">
+    <label class="form-label">Impact</label>
+    <textarea class="form-control{% if errors.impact %} is-invalid{% endif %}" name="impact">{{ form.impact }}</textarea>
+    {% if errors.impact %}<div class="invalid-feedback">{{ errors.impact }}</div>{% endif %}
+  </div>
+  <div class="mb-3">
+    <label class="form-label">Priority</label>
+    <input class="form-control" type="text" name="priority" value="{{ form.priority }}">
+  </div>
+  <div class="mb-3">
+    <label class="form-label">Related Document ID</label>
+    <input class="form-control" type="text" name="related_doc_id" value="{{ form.related_doc_id }}">
+  </div>
+  <div class="mb-3">
+    <label class="form-label">Attachment</label>
+    <input class="form-control" type="file" name="attachment">
+  </div>
+  <button class="btn btn-primary" type="submit">Submit</button>
+</form>
+{% endblock %}
