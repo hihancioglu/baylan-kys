@@ -7,6 +7,7 @@ Create Date: 2025-02-18 00:00:00
 
 from alembic import op
 import sqlalchemy as sa
+from sqlalchemy.dialects import postgresql
 
 
 # revision identifiers, used by Alembic.
@@ -17,7 +18,18 @@ depends_on = None
 
 
 def upgrade() -> None:
-    state_enum = sa.Enum(
+    op.execute(
+        """
+        DO $$ BEGIN
+            IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'doc_workflow_state') THEN
+                CREATE TYPE doc_workflow_state AS ENUM (
+                    'draft', 'review', 'approve', 'published', 'obsolete'
+                );
+            END IF;
+        END$$;
+        """
+    )
+    state_enum = postgresql.ENUM(
         "draft",
         "review",
         "approve",
@@ -26,7 +38,6 @@ def upgrade() -> None:
         name="doc_workflow_state",
         create_type=False,
     )
-    state_enum.create(op.get_bind(), checkfirst=True)
     op.create_table(
         "doc_workflows",
         sa.Column("id", sa.Integer(), primary_key=True),
@@ -42,13 +53,4 @@ def downgrade() -> None:
     op.drop_constraint(None, "documents", type_="foreignkey")
     op.drop_column("documents", "workflow_id")
     op.drop_table("doc_workflows")
-    state_enum = sa.Enum(
-        "draft",
-        "review",
-        "approve",
-        "published",
-        "obsolete",
-        name="doc_workflow_state",
-        create_type=False,
-    )
-    state_enum.drop(op.get_bind(), checkfirst=True)
+    op.execute("DROP TYPE IF EXISTS doc_workflow_state")
