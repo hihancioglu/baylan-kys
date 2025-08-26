@@ -69,3 +69,27 @@ def test_files_route_returns_403_without_permission(app_modules, client):
     app_module.storage_client.generate_presigned_url = MagicMock(return_value="https://signed")
     resp = client.get("/files/foo/bar.txt")
     assert resp.status_code == 403
+
+
+def test_files_route_sets_cache_control_header(app_modules, client):
+    app_module, models = app_modules
+    _setup_document(models, allow_download=True)
+    app_module.storage_client.generate_presigned_url = MagicMock(return_value="https://signed")
+    resp = client.get("/files/foo/bar.txt")
+    assert resp.status_code == 302
+    assert resp.headers["Cache-Control"] == "public, max-age=86400"
+
+
+def test_files_route_respects_size_limit(app_modules, client):
+    app_module, models = app_modules
+    _setup_document(models, allow_download=True)
+    backend = app_module.storage_client
+    # Ensure the real method is used (it may be monkeypatched by previous tests)
+    backend.generate_presigned_url = type(backend).generate_presigned_url.__get__(
+        backend, type(backend)
+    )
+    backend.client.head_object = MagicMock(return_value={"ContentLength": 51 * 1024 * 1024})
+    backend.client.generate_presigned_url = MagicMock(return_value="https://signed")
+    resp = client.get("/files/foo/bar.txt")
+    assert resp.status_code == 404
+    backend.client.generate_presigned_url.assert_not_called()
