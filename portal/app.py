@@ -31,6 +31,7 @@ from models import (
     Deviation,
     CAPAAction,
     DifRequest,
+    DifWorkflowStep,
     AuditLog,
     UserSetting,
     PersonalAccessToken,
@@ -3801,6 +3802,181 @@ def dif_list():
             ],
         }
         return render_template("dif/list.html", **context)
+    finally:
+        db.close()
+
+
+@app.post("/api/dif/<int:id>/approve")
+@roles_required(RoleEnum.APPROVER.value, RoleEnum.REVIEWER.value)
+def api_dif_approve(id: int):
+    db = get_session()
+    try:
+        dif = db.get(DifRequest, id)
+        if not dif:
+            return "Not found", 404
+        step = (
+            db.query(DifWorkflowStep)
+            .filter(DifWorkflowStep.dif_id == id, DifWorkflowStep.status == "Pending")
+            .order_by(DifWorkflowStep.step_order)
+            .first()
+        )
+        next_step = None
+        if step:
+            step.status = "Approved"
+            step.acted_at = datetime.utcnow()
+            db.flush()
+            next_step = (
+                db.query(DifWorkflowStep)
+                .filter(DifWorkflowStep.dif_id == id, DifWorkflowStep.status == "Pending")
+                .order_by(DifWorkflowStep.step_order)
+                .first()
+            )
+        dif.status = "approved" if not next_step else "in_review"
+        db.commit()
+        user_id = session.get("user", {}).get("id")
+        log_action(
+            user_id,
+            dif.related_doc_id,
+            "approved",
+            entity_type="DifRequest",
+            entity_id=dif.id,
+        )
+        notify_user(
+            dif.requester_id,
+            f"DIF Request #{dif.id} approved",
+            dif.subject,
+        )
+        if next_step:
+            ids = (
+                db.query(User.id)
+                .join(User.roles)
+                .filter(Role.name == next_step.role)
+                .all()
+            )
+            for uid, in ids:
+                notify_user(
+                    uid,
+                    f"DIF Request #{dif.id} awaiting your review",
+                    dif.subject,
+                )
+        html = render_template("partials/dif/_status.html", dif=dif)
+        return html
+    finally:
+        db.close()
+
+
+@app.post("/api/dif/<int:id>/reject")
+@roles_required(RoleEnum.APPROVER.value, RoleEnum.REVIEWER.value)
+def api_dif_reject(id: int):
+    db = get_session()
+    try:
+        dif = db.get(DifRequest, id)
+        if not dif:
+            return "Not found", 404
+        step = (
+            db.query(DifWorkflowStep)
+            .filter(DifWorkflowStep.dif_id == id, DifWorkflowStep.status == "Pending")
+            .order_by(DifWorkflowStep.step_order)
+            .first()
+        )
+        if step:
+            step.status = "Rejected"
+            step.acted_at = datetime.utcnow()
+        dif.status = "rejected"
+        db.commit()
+        user_id = session.get("user", {}).get("id")
+        log_action(
+            user_id,
+            dif.related_doc_id,
+            "rejected",
+            entity_type="DifRequest",
+            entity_id=dif.id,
+        )
+        notify_user(
+            dif.requester_id,
+            f"DIF Request #{dif.id} rejected",
+            dif.subject,
+        )
+        next_step = (
+            db.query(DifWorkflowStep)
+            .filter(DifWorkflowStep.dif_id == id, DifWorkflowStep.status == "Pending")
+            .order_by(DifWorkflowStep.step_order)
+            .first()
+        )
+        if next_step:
+            ids = (
+                db.query(User.id)
+                .join(User.roles)
+                .filter(Role.name == next_step.role)
+                .all()
+            )
+            for uid, in ids:
+                notify_user(
+                    uid,
+                    f"DIF Request #{dif.id} awaiting your review",
+                    dif.subject,
+                )
+        html = render_template("partials/dif/_status.html", dif=dif)
+        return html
+    finally:
+        db.close()
+
+
+@app.post("/api/dif/<int:id>/request-changes")
+@roles_required(RoleEnum.APPROVER.value, RoleEnum.REVIEWER.value)
+def api_dif_request_changes(id: int):
+    db = get_session()
+    try:
+        dif = db.get(DifRequest, id)
+        if not dif:
+            return "Not found", 404
+        step = (
+            db.query(DifWorkflowStep)
+            .filter(DifWorkflowStep.dif_id == id, DifWorkflowStep.status == "Pending")
+            .order_by(DifWorkflowStep.step_order)
+            .first()
+        )
+        next_step = None
+        if step:
+            step.status = "Changes Requested"
+            step.acted_at = datetime.utcnow()
+            db.flush()
+            next_step = (
+                db.query(DifWorkflowStep)
+                .filter(DifWorkflowStep.dif_id == id, DifWorkflowStep.status == "Pending")
+                .order_by(DifWorkflowStep.step_order)
+                .first()
+            )
+        dif.status = "in_review"
+        db.commit()
+        user_id = session.get("user", {}).get("id")
+        log_action(
+            user_id,
+            dif.related_doc_id,
+            "changes_requested",
+            entity_type="DifRequest",
+            entity_id=dif.id,
+        )
+        notify_user(
+            dif.requester_id,
+            f"Changes requested for DIF #{dif.id}",
+            dif.subject,
+        )
+        if next_step:
+            ids = (
+                db.query(User.id)
+                .join(User.roles)
+                .filter(Role.name == next_step.role)
+                .all()
+            )
+            for uid, in ids:
+                notify_user(
+                    uid,
+                    f"DIF Request #{dif.id} awaiting your review",
+                    dif.subject,
+                )
+        html = render_template("partials/dif/_status.html", dif=dif)
+        return html
     finally:
         db.close()
 
