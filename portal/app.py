@@ -1139,11 +1139,17 @@ def document_workflow(doc_id: int):
         .order_by(WorkflowStep.step_order)
         .all()
     )
+    total_steps = len(steps)
+    completed_steps = sum(1 for s in steps if s.status != "Pending")
+    progress_percent = int(completed_steps / total_steps * 100) if total_steps else 0
     html = render_template(
         "document_workflow.html",
         doc=doc,
         workflow=doc.workflow,
         steps=steps,
+        total_steps=total_steps,
+        completed_steps=completed_steps,
+        progress_percent=progress_percent,
         breadcrumbs=[
             {"title": "Home", "url": url_for("dashboard")},
             {"title": "Documents", "url": url_for("list_documents")},
