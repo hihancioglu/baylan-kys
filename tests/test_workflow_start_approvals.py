@@ -4,6 +4,7 @@ import pytest
 import importlib
 from pathlib import Path
 import sys
+from datetime import datetime
 
 os.environ.setdefault("ONLYOFFICE_INTERNAL_URL", "http://oo")
 os.environ.setdefault("ONLYOFFICE_PUBLIC_URL", "http://oo-public")
@@ -67,8 +68,20 @@ def test_workflow_start_creates_steps_and_approvals(client, workflow_data):
         "/api/workflow/start",
         json={
             "doc_id": doc_id,
-            "reviewers": [reviewer_id],
-            "approvers": [approver_id],
+            "reviewers": [
+                {
+                    "user_id": reviewer_id,
+                    "required_role": "reviewer",
+                    "due_at": "2030-01-01T00:00:00",
+                }
+            ],
+            "approvers": [
+                {
+                    "user_id": approver_id,
+                    "required_role": "approver",
+                    "due_at": "2030-01-02T00:00:00",
+                }
+            ],
         },
     )
     assert resp.status_code == 200
@@ -89,7 +102,21 @@ def test_workflow_start_creates_steps_and_approvals(client, workflow_data):
     assert [s.user_id for s in steps] == [reviewer_id, approver_id]
     assert [s.step_order for s in steps] == [1, 2]
     assert [s.step_type for s in steps] == ["review", "approval"]
+    assert [s.required_role for s in steps] == ["reviewer", "approver"]
+    assert [s.due_at for s in steps] == [
+        datetime.fromisoformat("2030-01-01T00:00:00"),
+        datetime.fromisoformat("2030-01-02T00:00:00"),
+    ]
     session.close()
+
+    with client.session_transaction() as sess:
+        sess["user"] = {"id": reviewer_id}
+        sess["roles"] = ["reader"]
+    resp = client.get(f"/documents/{doc_id}/workflow")
+    assert resp.status_code == 200
+    html = resp.get_data(as_text=True)
+    assert "reviewer" in html
+    assert "2030-01-01" in html
 
     with client.session_transaction() as sess:
         sess["user"] = {"id": reviewer_id}
@@ -99,6 +126,8 @@ def test_workflow_start_creates_steps_and_approvals(client, workflow_data):
     html = resp.get_data(as_text=True)
     assert "Sample Doc" in html
     assert "Review" in html
+    assert "reviewer" in html
+    assert "2030-01-01" in html
 
     with client.session_transaction() as sess:
         sess["user"] = {"id": approver_id}
@@ -108,3 +137,5 @@ def test_workflow_start_creates_steps_and_approvals(client, workflow_data):
     html = resp.get_data(as_text=True)
     assert "Sample Doc" in html
     assert "Approval" in html
+    assert "approver" in html
+    assert "2030-01-02" in html

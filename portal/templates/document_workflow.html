@@ -10,8 +10,10 @@
   <thead>
     <tr>
       <th title="Workflow step order">Order</th>
-      <th title="Assigned user or role">User</th>
+      <th title="Assigned user">User</th>
+      <th title="Required role">Role</th>
       <th title="Review or approval type">Type</th>
+      <th title="Due date for step">Due</th>
       <th title="Current step status">Status</th>
     </tr>
   </thead>
@@ -20,7 +22,9 @@
     <tr{% if workflow and step.step_order == workflow.current_step %} class="table-primary"{% endif %}>
       <td>{{ step.step_order }}</td>
       <td>{{ step.user.username if step.user else '' }}</td>
+      <td>{{ step.required_role or '' }}</td>
       <td>{{ step.step_type }}</td>
+      <td>{{ step.due_at.strftime('%Y-%m-%d') if step.due_at else '' }}</td>
       <td>{{ step.status }}</td>
     </tr>
     {% endfor %}
