@@ -129,7 +129,8 @@ def pending_approvals_report(
                 User.username,
                 Document.created_at,
             )
-            .join(Document)
+            .select_from(WorkflowStep)
+            .join(Document, WorkflowStep.doc_id == Document.id)
             .outerjoin(User, WorkflowStep.user_id == User.id)
             .filter(WorkflowStep.status == "Pending")
             .order_by(None)
