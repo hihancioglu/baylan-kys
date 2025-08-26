@@ -597,6 +597,8 @@ def help_page():
     help_content = ""
     if docs_path.exists():
         help_content = docs_path.read_text(encoding="utf-8")
+    else:
+        return render_template("help.html", error="İçerik bulunamadı")
     return render_template("help.html", help_content=Markup(help_content))
 
 
@@ -606,6 +608,8 @@ def terminology_page():
     glossary_content = ""
     if docs_path.exists():
         glossary_content = docs_path.read_text(encoding="utf-8")
+    else:
+        return render_template("terminology.html", error="İçerik bulunamadı")
     return render_template(
         "terminology.html", terminology_content=Markup(glossary_content)
     )
