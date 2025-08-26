@@ -99,3 +99,33 @@ def test_dif_workflow_step_logs(models):
     logs = session.query(m.AuditLog).filter_by(entity_type="DifWorkflowStep", entity_id=step_id, action="delete").all()
     assert len(logs) == 1
     session.close()
+
+
+def test_dif_request_crud_logs(models):
+    m = models
+    session = m.SessionLocal()
+
+    user = m.User(username="req2", email="req2@example.com")
+    session.add(user)
+    session.commit()
+
+    dif = m.DifRequest(subject="Initial", requester_id=user.id)
+    session.add(dif)
+    session.commit()
+    dif_id = dif.id
+
+    logs = session.query(m.AuditLog).filter_by(entity_type="DifRequest", entity_id=dif_id, action="create").all()
+    assert len(logs) == 1
+
+    dif.subject = "Updated"
+    session.commit()
+    logs = session.query(m.AuditLog).filter_by(entity_type="DifRequest", entity_id=dif_id, action="update").all()
+    assert len(logs) == 1
+    assert logs[0].payload["changes"]["subject"]["old"] == "Initial"
+    assert logs[0].payload["changes"]["subject"]["new"] == "Updated"
+
+    session.delete(dif)
+    session.commit()
+    logs = session.query(m.AuditLog).filter_by(entity_type="DifRequest", entity_id=dif_id, action="delete").all()
+    assert len(logs) == 1
+    session.close()

@@ -498,6 +498,55 @@ def _log_document_delete(mapper, connection, target):
     )
 
 
+@event.listens_for(DifRequest, "after_insert")
+def _log_dif_request_insert(mapper, connection, target):
+    from app import log_action
+
+    payload = {"subject": target.subject, "status": target.status}
+    log_action(
+        user_id=None,
+        doc_id=target.related_doc_id,
+        action="create",
+        entity_type="DifRequest",
+        entity_id=target.id,
+        payload=payload,
+        connection=connection,
+    )
+
+
+@event.listens_for(DifRequest, "after_update")
+def _log_dif_request_update(mapper, connection, target):
+    from app import log_action
+
+    changes = _capture_changes(target)
+    if changes:
+        log_action(
+            user_id=None,
+            doc_id=target.related_doc_id,
+            action="update",
+            entity_type="DifRequest",
+            entity_id=target.id,
+            payload={"changes": changes},
+            connection=connection,
+        )
+
+
+@event.listens_for(DifRequest, "after_delete")
+def _log_dif_request_delete(mapper, connection, target):
+    from app import log_action
+
+    payload = {"subject": getattr(target, "subject", None)}
+    log_action(
+        user_id=None,
+        doc_id=getattr(target, "related_doc_id", None),
+        action="delete",
+        entity_type="DifRequest",
+        entity_id=getattr(target, "id", None),
+        payload=payload,
+        connection=connection,
+    )
+
+
 @event.listens_for(WorkflowStep, "after_insert")
 def _log_step_insert(mapper, connection, target):
     from app import log_action
