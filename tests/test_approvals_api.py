@@ -71,6 +71,9 @@ def test_api_approve_step(client, setup_data):
     assert step.status == "Approved"
     assert step.comment == "looks good"
     assert step.approved_at is not None
+    logs = session.query(m.AuditLog).filter_by(entity_type="WorkflowStep", entity_id=step_id, action="approved").all()
+    assert len(logs) == 1
+    assert logs[0].payload["comment"] == "looks good"
     session.close()
 
 
@@ -93,6 +96,9 @@ def test_api_reject_step(client, setup_data):
     assert step.status == "Rejected"
     assert step.comment == "needs work"
     assert step.approved_at is not None
+    logs = session.query(m.AuditLog).filter_by(entity_type="WorkflowStep", entity_id=step_id, action="rejected").all()
+    assert len(logs) == 1
+    assert logs[0].payload["comment"] == "needs work"
     session.close()
 
 
@@ -135,8 +141,8 @@ def test_api_reassign_step(client, setup_data):
         sess["user"] = {"id": approver_id}
         sess["roles"] = ["approver"]
     with patch("app.notify_approval_queue") as notify_mock, patch(
-        "app.log_action"
-    ) as log_mock, patch("app.broadcast_counts") as broadcast_mock:
+        "app.broadcast_counts"
+    ) as broadcast_mock:
         resp = client.post(
             f"/api/approvals/{step_id}/reassign",
             json={"user_id": new_user_id},
@@ -145,12 +151,15 @@ def test_api_reassign_step(client, setup_data):
         broadcast_mock.assert_called_once()
         notify_mock.assert_called_once()
         assert notify_mock.call_args[0][1] == [new_user_id]
-        log_mock.assert_called_once()
     session = m.SessionLocal()
     step = session.get(m.WorkflowStep, step_id)
     assert step.user_id == new_user_id
     assert step.required_role is None
+    logs = session.query(m.AuditLog).filter_by(entity_type="WorkflowStep", entity_id=step_id, action="reassigned").all()
+    assert len(logs) == 1
+    assert logs[0].payload["user_id"] == new_user_id
     session.close()
+
 
 
 def test_api_reassign_step_requires_role(client, setup_data):

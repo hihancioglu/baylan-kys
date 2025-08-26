@@ -195,15 +195,53 @@ def sign_payload(payload: dict) -> str:
     return b'.'.join(segs).decode()
 
 
-def log_action(user_id, doc_id, action, endpoint=None):
+def log_action(
+    user_id=None,
+    doc_id=None,
+    action=None,
+    endpoint=None,
+    *,
+    entity_type=None,
+    entity_id=None,
+    payload=None,
+    connection=None,
+):
     """Persist an audit log entry."""
-    Session = sessionmaker(bind=engine)
-    session = Session()
-    try:
-        session.add(AuditLog(user_id=user_id, doc_id=doc_id, action=action, endpoint=endpoint))
-        session.commit()
-    finally:
-        session.close()
+    if entity_type is None and entity_id is None and doc_id is not None:
+        entity_type = "Document"
+        entity_id = doc_id
+
+    if user_id is None:
+        try:
+            from flask import session as flask_session
+
+            user = flask_session.get("user")
+            if user:
+                user_id = user.get("id")
+        except Exception:
+            user_id = None
+
+    data = {
+        "user_id": user_id,
+        "doc_id": doc_id,
+        "action": action,
+        "endpoint": endpoint,
+        "entity_type": entity_type,
+        "entity_id": entity_id,
+        "payload": payload,
+        "at": datetime.utcnow(),
+    }
+
+    if connection is not None:
+        connection.execute(AuditLog.__table__.insert(), [data])
+    else:
+        Session = sessionmaker(bind=engine)
+        session = Session()
+        try:
+            session.execute(AuditLog.__table__.insert(), [data])
+            session.commit()
+        finally:
+            session.close()
 
 
 # Demo quiz questions
@@ -1996,9 +2034,6 @@ def api_approve_step(step_id: int):
         if remaining == 0:
             document.status = "Approved"
         db.commit()
-        user = session.get("user")
-        if user:
-            log_action(user["id"], doc_id, "approved")
         if next_step and next_step.user_id:
             notify_approval_queue(document, [next_step.user_id])
         broadcast_counts()
@@ -2033,8 +2068,6 @@ def api_reject_step(step_id: int):
         if wf:
             wf.current_step = step.step_order
         db.commit()
-        if user:
-            log_action(user["id"], step.doc_id, "rejected")
         owner_id = getattr(document, "owner_id", None)
         if owner_id:
             notify_user(
@@ -2085,9 +2118,6 @@ def api_reassign_step(step_id: int):
         else:
             return "Bad request", 400
         db.commit()
-        user = session.get("user")
-        if user:
-            log_action(user["id"], step.doc_id, "reassigned")
         if notify_ids:
             notify_approval_queue(document, notify_ids)
         broadcast_counts()
@@ -2138,8 +2168,6 @@ def approve_step(step_id: int):
         if remaining == 0:
             document.status = "Approved"
         db.commit()
-        if user:
-            log_action(user["id"], step.doc_id, "approved")
         if next_step and next_step.user_id:
             notify_approval_queue(step.document, [next_step.user_id])
         broadcast_counts()
@@ -2172,8 +2200,6 @@ def reject_step(step_id: int):
         if wf:
             wf.current_step = step.step_order
         db.commit()
-        if user:
-            log_action(user["id"], step.doc_id, "rejected")
         owner_id = getattr(step.document, "owner_id", None)
         if owner_id:
             notify_user(

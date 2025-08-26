@@ -15,6 +15,8 @@ from sqlalchemy import (
     Boolean,
     Float,
     Table,
+    event,
+    inspect,
 )
 from sqlalchemy.orm import (
     declarative_base,
@@ -337,12 +339,15 @@ class SignatureLog(Base):
 class AuditLog(Base):
     __tablename__ = "audit_logs"
     id = Column(Integer, primary_key=True)
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=True)
     doc_id = Column(Integer, ForeignKey("documents.id"))
+    entity_type = Column(String)
+    entity_id = Column(Integer)
     action = Column(String, nullable=False)
+    payload = Column(JSON)
     endpoint = Column(String)
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
-    timestamp = synonym("created_at")
+    at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    timestamp = synonym("at")
 
     user = relationship("User")
     document = relationship("Document")
@@ -376,6 +381,130 @@ Document.revisions = relationship(
 Document.standards = relationship(
     DocumentStandard, back_populates="document", cascade="all, delete-orphan"
 )
+
+
+def _capture_changes(target):
+    state = inspect(target)
+    changes: dict[str, dict[str, object]] = {}
+    for attr in state.mapper.column_attrs:
+        if attr.key in {"id", "created_at", "at"}:
+            continue
+        hist = state.get_history(attr.key, True)
+        if hist.has_changes():
+            old = hist.deleted[0] if hist.deleted else None
+            new = hist.added[0] if hist.added else None
+            changes[attr.key] = {"old": old, "new": new}
+    return changes
+
+
+@event.listens_for(Document, "after_insert")
+def _log_document_insert(mapper, connection, target):
+    from app import log_action
+
+    payload = {"title": target.title, "status": target.status}
+    log_action(
+        user_id=None,
+        doc_id=target.id,
+        action="create",
+        entity_type="Document",
+        entity_id=target.id,
+        payload=payload,
+        connection=connection,
+    )
+
+
+@event.listens_for(Document, "after_update")
+def _log_document_update(mapper, connection, target):
+    from app import log_action
+
+    changes = _capture_changes(target)
+    if changes:
+        log_action(
+            user_id=None,
+            doc_id=target.id,
+            action="update",
+            entity_type="Document",
+            entity_id=target.id,
+            payload={"changes": changes},
+            connection=connection,
+        )
+
+
+@event.listens_for(Document, "after_delete")
+def _log_document_delete(mapper, connection, target):
+    from app import log_action
+
+    payload = {"title": getattr(target, "title", None)}
+    log_action(
+        user_id=None,
+        doc_id=getattr(target, "id", None),
+        action="delete",
+        entity_type="Document",
+        entity_id=getattr(target, "id", None),
+        payload=payload,
+        connection=connection,
+    )
+
+
+@event.listens_for(WorkflowStep, "after_insert")
+def _log_step_insert(mapper, connection, target):
+    from app import log_action
+
+    payload = {"order": target.step_order, "status": target.status}
+    log_action(
+        user_id=None,
+        doc_id=target.doc_id,
+        action="create",
+        entity_type="WorkflowStep",
+        entity_id=target.id,
+        payload=payload,
+        connection=connection,
+    )
+
+
+@event.listens_for(WorkflowStep, "after_update")
+def _log_step_update(mapper, connection, target):
+    from app import log_action
+
+    state = inspect(target)
+    if state.attrs.status.history.has_changes():
+        action = target.status.lower()
+        payload = {"comment": target.comment}
+    elif state.attrs.comment.history.has_changes():
+        action = "comment"
+        payload = {"comment": target.comment}
+    elif state.attrs.user_id.history.has_changes() or state.attrs.required_role.history.has_changes():
+        action = "reassigned"
+        payload = {"user_id": target.user_id, "required_role": target.required_role}
+    else:
+        payload = {"changes": _capture_changes(target)}
+        action = "update"
+
+    log_action(
+        user_id=None,
+        doc_id=target.doc_id,
+        action=action,
+        entity_type="WorkflowStep",
+        entity_id=target.id,
+        payload=payload,
+        connection=connection,
+    )
+
+
+@event.listens_for(WorkflowStep, "after_delete")
+def _log_step_delete(mapper, connection, target):
+    from app import log_action
+
+    payload = {"order": target.step_order, "status": target.status}
+    log_action(
+        user_id=None,
+        doc_id=target.doc_id,
+        action="delete",
+        entity_type="WorkflowStep",
+        entity_id=target.id,
+        payload=payload,
+        connection=connection,
+    )
 
 # Database schema migrations are now managed via Alembic. Tables are created
 # through explicit migration scripts rather than automatic metadata creation.
