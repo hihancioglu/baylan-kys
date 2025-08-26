@@ -2,7 +2,20 @@
 {% block title %}DIF {{ dif.id }}{% endblock %}
 {% block content %}
 <h3>{{ dif.subject }}</h3>
-<p><strong>Status:</strong> {{ dif.status }}</p>
+{% include "partials/dif/_status.html" %}
+{% if has_role('approver') or has_role('reviewer') %}
+<div class="mb-2">
+  <form hx-post="{{ url_for('api_dif_approve', id=dif.id) }}" hx-target="#dif-status" hx-swap="outerHTML" class="d-inline">
+    <button type="submit" class="btn btn-success btn-sm">Approve</button>
+  </form>
+  <form hx-post="{{ url_for('api_dif_reject', id=dif.id) }}" hx-target="#dif-status" hx-swap="outerHTML" class="d-inline ms-1">
+    <button type="submit" class="btn btn-danger btn-sm">Reject</button>
+  </form>
+  <form hx-post="{{ url_for('api_dif_request_changes', id=dif.id) }}" hx-target="#dif-status" hx-swap="outerHTML" class="d-inline ms-1">
+    <button type="submit" class="btn btn-secondary btn-sm">Request Changes</button>
+  </form>
+</div>
+{% endif %}
 <p><strong>Requester:</strong> {{ dif.requester.username if dif.requester else '' }}</p>
 <p><strong>Description:</strong> {{ dif.description }}</p>
 <p><strong>Impact:</strong> {{ dif.impact }}</p>
