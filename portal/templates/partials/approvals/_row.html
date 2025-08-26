@@ -2,6 +2,8 @@
   <td><a href="{{ url_for('approval_detail', id=step.id) }}">{{ step.document.title }}</a></td>
   <td>{{ step.step_order }}</td>
   <td>{{ step.step_type.title() }}</td>
+  <td>{{ step.required_role or '' }}</td>
+  <td>{{ step.due_at.strftime('%Y-%m-%d') if step.due_at else '' }}</td>
   <td>{{ step.status }}</td>
   <td>{{ step.comment or '' }}</td>
   <td>

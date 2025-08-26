@@ -208,12 +208,14 @@ class WorkflowStep(Base):
     doc_id = Column(Integer, ForeignKey("documents.id"), nullable=False)
     step_order = Column(Integer, nullable=False)
     user_id = Column(Integer, ForeignKey("users.id"))
+    required_role = Column(String)
     step_type = Column(
         Enum("review", "approval", name="workflow_step_type"),
         default="review",
         nullable=False,
     )
     status = Column(String, default="Pending", nullable=False)
+    due_at = Column(DateTime)
     approved_at = Column(DateTime)
     comment = Column(Text)
 

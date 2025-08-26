@@ -1,4 +1,5 @@
 import os, json, time, base64, hmac, hashlib, csv, io, secrets, tempfile
+from datetime import datetime
 from pathlib import Path
 from flask import (
     Flask,
@@ -1186,19 +1187,33 @@ def start_workflow():
     if not user:
         return jsonify(error="user not logged in"), 401
     doc_id = request.form.get("doc_id", type=int)
-    reviewer_ids = [int(r) for r in request.form.getlist("reviewers") if r]
+    reviewer_raw = request.form.getlist("reviewers")
+    reviewer_roles = request.form.getlist("reviewer_roles")
+    reviewer_due = request.form.getlist("reviewer_due_at")
+    max_len = max(len(reviewer_raw), len(reviewer_roles), len(reviewer_due))
     db = get_session()
     try:
         doc = db.get(Document, doc_id)
         if not doc:
             return jsonify(error="document not found"), 404
         doc.status = "Review"
-        steps = [
-            WorkflowStep(
-                doc_id=doc_id, step_order=i, user_id=rid, step_type="review"
+        steps = []
+        for i in range(max_len):
+            uid_raw = reviewer_raw[i] if i < len(reviewer_raw) else None
+            uid = int(uid_raw) if uid_raw else None
+            role = reviewer_roles[i] if i < len(reviewer_roles) else None
+            due_str = reviewer_due[i] if i < len(reviewer_due) else None
+            due_dt = datetime.fromisoformat(due_str) if due_str else None
+            steps.append(
+                WorkflowStep(
+                    doc_id=doc_id,
+                    step_order=i + 1,
+                    user_id=uid,
+                    required_role=role,
+                    due_at=due_dt,
+                    step_type="review",
+                )
             )
-            for i, rid in enumerate(reviewer_ids, start=1)
-        ]
         db.add_all(steps)
         current_step = steps[0].step_order if steps else 0
         wf = doc.workflow
@@ -1211,7 +1226,7 @@ def start_workflow():
             wf.current_step = current_step
         db.commit()
         log_action(user["id"], doc_id, "start_workflow")
-        notify_revision_time(doc, reviewer_ids)
+        notify_revision_time(doc, [s.user_id for s in steps if s.user_id])
         return jsonify(ok=True)
     finally:
         db.close()
@@ -1232,37 +1247,45 @@ def api_start_workflow():
     approvers = data.get("approvers", [])
     if not isinstance(reviewers, list) or not isinstance(approvers, list):
         return jsonify(error="invalid payload"), 400
-    reviewer_ids = [int(r) for r in reviewers]
-    approver_ids = [int(a) for a in approvers]
     db = get_session()
     try:
         doc = db.get(Document, doc_id)
         if not doc:
             return jsonify(error="document not found"), 404
         doc.status = "Review"
-        all_ids = reviewer_ids + approver_ids
         steps = []
         order = 1
-        for uid in reviewer_ids:
-            steps.append(
-                WorkflowStep(
-                    doc_id=doc_id,
-                    step_order=order,
-                    user_id=uid,
-                    step_type="review",
+        def build_steps(items, step_type):
+            nonlocal order
+            for item in items:
+                uid = None
+                role = None
+                due_dt = None
+                if isinstance(item, dict):
+                    uid = item.get("user_id")
+                    role = item.get("required_role")
+                    due_str = item.get("due_at")
+                    if due_str:
+                        try:
+                            due_dt = datetime.fromisoformat(due_str)
+                        except ValueError:
+                            due_dt = None
+                else:
+                    uid = int(item)
+                steps.append(
+                    WorkflowStep(
+                        doc_id=doc_id,
+                        step_order=order,
+                        user_id=uid,
+                        required_role=role,
+                        due_at=due_dt,
+                        step_type=step_type,
+                    )
                 )
-            )
-            order += 1
-        for uid in approver_ids:
-            steps.append(
-                WorkflowStep(
-                    doc_id=doc_id,
-                    step_order=order,
-                    user_id=uid,
-                    step_type="approval",
-                )
-            )
-            order += 1
+                order += 1
+
+        build_steps(reviewers, "review")
+        build_steps(approvers, "approval")
         db.add_all(steps)
         current_step = steps[0].step_order if steps else 0
         wf = doc.workflow
@@ -1275,7 +1298,7 @@ def api_start_workflow():
             wf.current_step = current_step
         db.commit()
         log_action(user["id"], doc_id, "start_workflow")
-        notify_revision_time(doc, list(set(all_ids)))
+        notify_revision_time(doc, [s.user_id for s in steps if s.user_id])
         return jsonify(ok=True)
     finally:
         db.close()

@@ -4,6 +4,8 @@
       <th>Document</th>
       <th>Step</th>
       <th>Type</th>
+      <th>Role</th>
+      <th>Due</th>
       <th>Status</th>
       <th>Comment</th>
       <th>Actions</th>
@@ -13,7 +15,7 @@
     {% for step in steps %}
       {% include 'partials/approvals/_row.html' %}
     {% else %}
-    <tr><td colspan="6">No pending approvals.</td></tr>
+    <tr><td colspan="8">No pending approvals.</td></tr>
     {% endfor %}
   </tbody>
 </table>
