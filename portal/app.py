@@ -1067,9 +1067,18 @@ def document_detail(doc_id: int | None = None, id: int | None = None):
         .filter(Document.id == doc_id)
         .one_or_none()
     )
-    db.close()
     if not doc:
+        db.close()
         return "Document not found", 404
+
+    logs = (
+        db.query(AuditLog)
+        .options(joinedload(AuditLog.user))
+        .filter(AuditLog.entity_type == "Document", AuditLog.entity_id == doc.id)
+        .order_by(AuditLog.at.desc())
+        .all()
+    )
+    db.close()
 
     user = session.get("user")
     if user and user.get("id"):
@@ -1130,6 +1139,7 @@ def document_detail(doc_id: int | None = None, id: int | None = None):
         doc=doc,
         revisions=revisions,
         preview=preview,
+        logs=logs,
     )
 
 
@@ -3748,12 +3758,33 @@ def dif_detail(id: int):
         )
         if not dif:
             return "DIF request not found", 404
+
+        logs = (
+            db.query(AuditLog)
+            .options(joinedload(AuditLog.user))
+            .filter(AuditLog.entity_type == "DifRequest", AuditLog.entity_id == id)
+            .order_by(AuditLog.at.desc())
+            .all()
+        )
+
         attachment_url = None
         if dif.attachment_key:
             attachment_url = storage_client.generate_presigned_url(dif.attachment_key)
+
+        user = session.get("user")
+        if user and user.get("id"):
+            log_action(
+                user["id"],
+                dif.related_doc_id,
+                "view",
+                entity_type="DifRequest",
+                entity_id=dif.id,
+            )
+
         context = {
             "dif": dif,
             "attachment_url": attachment_url,
+            "logs": logs,
             "breadcrumbs": [
                 {"title": "Home", "url": url_for("dashboard")},
                 {"title": "DIF Requests", "url": url_for("dif_list")},

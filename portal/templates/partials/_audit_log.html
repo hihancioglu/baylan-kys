@@ -1,0 +1,13 @@
+{% if logs %}
+<h4>Audit History</h4>
+<ul class="list-unstyled">
+  {% for log in logs %}
+  <li>
+    {{ log.at.strftime('%Y-%m-%d %H:%M') }} - {{ log.action }}
+    {% if log.user %}by {{ log.user.username }}{% endif %}
+  </li>
+  {% endfor %}
+</ul>
+{% else %}
+<p>No audit records found.</p>
+{% endif %}
