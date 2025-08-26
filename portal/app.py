@@ -1,70 +1,45 @@
-import os, json, time, base64, hmac, hashlib, csv, io, secrets, tempfile
+import base64
+import csv
+import hashlib
+import hmac
+import io
+import json
+import os
+import secrets
+import tempfile
+import time
 from datetime import datetime
 from pathlib import Path
-from flask import (
-    Flask,
-    request,
-    jsonify,
-    redirect,
-    url_for,
-    render_template,
-    Response,
-    session,
-    make_response,
-)
-from markupsafe import Markup
+
+from flask import (Flask, Response, jsonify, make_response, redirect,
+                   render_template, request, session, url_for)
 from flask_wtf.csrf import CSRFProtect
-from auth import auth_bp, init_app as auth_init, login_required, roles_required
-from models import (
-    Document,
-    DocumentStandard,
-    DocumentRevision,
-    DocumentPermission,
-    User,
-    Role,
-    Standard,
-    Acknowledgement,
-    Notification,
-    TrainingResult,
-    FormSubmission,
-    ChangeRequest,
-    Deviation,
-    CAPAAction,
-    DifRequest,
-    DifWorkflowStep,
-    AuditLog,
-    UserSetting,
-    PersonalAccessToken,
-    DepartmentVisibility,
-    WorkflowStep,
-    DocWorkflow,
-    get_session,
-    RoleEnum,
-    engine,
-    STANDARD_MAP as MODEL_STANDARD_MAP,
-)
-from search import index_document, search_documents
-from sqlalchemy import func, or_, and_, inspect
-from sqlalchemy.orm import sessionmaker, joinedload
-from ocr import extract_text
+from markupsafe import Markup
+from sqlalchemy import and_, func, inspect, or_
+from sqlalchemy.orm import joinedload, sessionmaker
+
+from auth import auth_bp
+from auth import init_app as auth_init
+from auth import login_required, roles_required
 from docxf_render import render_form_and_store
-from notifications import (
-    notify_revision_time,
-    notify_mandatory_read,
-    notify_approval_queue,
-    notify_user,
-)
-from reports import (
-    build_report,
-    revision_report,
-    training_compliance_report,
-    pending_approvals_report,
-    standard_summary_report,
-)
+from models import STANDARD_MAP as MODEL_STANDARD_MAP
+from models import (Acknowledgement, AuditLog, CAPAAction, ChangeRequest,
+                    DepartmentVisibility, Deviation, DifRequest,
+                    DifWorkflowStep, Document, DocumentPermission,
+                    DocumentRevision, DocumentStandard, DocWorkflow,
+                    FormSubmission, Notification, PersonalAccessToken, Role,
+                    RoleEnum, Standard, TrainingResult, User, UserSetting,
+                    WorkflowStep, engine, get_session)
+from notifications import (notify_approval_queue, notify_mandatory_read,
+                           notify_revision_time, notify_user)
+from ocr import extract_text
+from permissions import permission_check
+from reports import (build_report, pending_approvals_report, revision_report,
+                     standard_summary_report, training_compliance_report)
+from search import index_document, search_documents
 from signing import create_signed_pdf
 from storage import generate_presigned_url, storage_client
-from permissions import permission_check
-from datetime import datetime
+
 
 # Automatically run database migrations in non-SQLite environments.
 def _run_migrations() -> None:
