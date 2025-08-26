@@ -2036,6 +2036,54 @@ def api_reject_step(step_id: int):
         db.close()
 
 
+@app.post("/api/approvals/<int:step_id>/reassign")
+@roles_required(RoleEnum.APPROVER.value, RoleEnum.REVIEWER.value)
+def api_reassign_step(step_id: int):
+    db = get_session()
+    try:
+        step = db.get(WorkflowStep, step_id)
+        if not step:
+            return "Not found", 404
+        data = request.get_json(silent=True) or {}
+        if not data:
+            data = request.form.to_dict()
+        user_id = data.get("user_id")
+        role = data.get("role")
+        document = step.document
+        notify_ids: list[int] = []
+        if user_id:
+            user_id = int(user_id)
+            step.user_id = user_id
+            step.required_role = None
+            notify_ids = [user_id]
+        elif role:
+            step.required_role = role
+            step.user_id = None
+            ids = (
+                db.query(User.id)
+                .join(User.roles)
+                .filter(Role.name == role)
+                .all()
+            )
+            notify_ids = [uid for (uid,) in ids]
+        else:
+            return "Bad request", 400
+        db.commit()
+        user = session.get("user")
+        if user:
+            log_action(user["id"], step.doc_id, "reassigned")
+        if notify_ids:
+            notify_approval_queue(document, notify_ids)
+        broadcast_counts()
+        db.refresh(step)
+        html = render_template("partials/approvals/_row.html", step=step)
+        resp = make_response(html)
+        resp.headers["HX-Trigger"] = json.dumps({"showToast": "Reassigned"})
+        return resp
+    finally:
+        db.close()
+
+
 @app.post("/approvals/<int:step_id>/approve")
 @roles_required(RoleEnum.APPROVER.value, RoleEnum.REVIEWER.value)
 def approve_step(step_id: int):

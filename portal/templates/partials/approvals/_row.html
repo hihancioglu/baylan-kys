@@ -10,10 +10,16 @@
     {% if step.status == 'Pending' %}
     <button id="approve-{{ step.id }}" class="btn btn-success btn-sm" hx-post="/api/approvals/{{ step.id }}/approve" hx-target="#step-{{ step.id }}" hx-swap="outerHTML" title="Approve this step">Approve</button>
     <button id="reject-{{ step.id }}" class="btn btn-danger btn-sm" hx-post="/api/approvals/{{ step.id }}/reject" hx-target="#step-{{ step.id }}" hx-swap="outerHTML" title="Reject this step">Reject</button>
+    <form id="reassign-form-{{ step.id }}" class="d-inline" hx-post="/api/approvals/{{ step.id }}/reassign" hx-target="#step-{{ step.id }}" hx-swap="outerHTML">
+      <input type="number" name="user_id" class="form-control form-control-sm d-inline" placeholder="User ID">
+      <input type="text" name="role" class="form-control form-control-sm d-inline" placeholder="Role">
+      <button id="reassign-{{ step.id }}" type="submit" class="btn btn-secondary btn-sm" title="Reassign this step">Reassign</button>
+    </form>
     <script type="module">
       import { attachTooltip } from '{{ url_for('static', filename='forms/index.js') }}';
       attachTooltip(document.getElementById('approve-{{ step.id }}'), 'Approve this step');
       attachTooltip(document.getElementById('reject-{{ step.id }}'), 'Reject this step');
+      attachTooltip(document.getElementById('reassign-{{ step.id }}'), 'Reassign this step');
     </script>
     {% else %}
     {{ step.status }}

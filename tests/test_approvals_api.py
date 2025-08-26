@@ -35,22 +35,23 @@ def setup_data(app_models):
     app, m = app_models
     session = m.SessionLocal()
     approver = m.User(username="approver")
+    new_user = m.User(username="new")
     doc1 = m.Document(doc_key="doc1.docx", title="Doc1", status="Review")
     doc2 = m.Document(doc_key="doc2.docx", title="Doc2", status="Review")
-    session.add_all([approver, doc1, doc2])
+    session.add_all([approver, new_user, doc1, doc2])
     session.commit()
     step1 = m.WorkflowStep(doc_id=doc1.id, step_order=1, user_id=approver.id, status="Pending", step_type="approval")
     step2 = m.WorkflowStep(doc_id=doc2.id, step_order=1, user_id=approver.id, status="Pending", step_type="approval")
     session.add_all([step1, step2])
     session.commit()
-    ids = (approver.id, step1.id, step2.id)
+    ids = (approver.id, step1.id, step2.id, new_user.id)
     session.close()
     return m, ids
 
 
 def test_api_approve_step(client, setup_data):
     m, ids = setup_data
-    approver_id, step_id, _ = ids
+    approver_id, step_id, _, _ = ids
     with client.session_transaction() as sess:
         sess["user"] = {"id": approver_id}
         sess["roles"] = ["approver"]
@@ -75,7 +76,7 @@ def test_api_approve_step(client, setup_data):
 
 def test_api_reject_step(client, setup_data):
     m, ids = setup_data
-    approver_id, _, step_id = ids
+    approver_id, _, step_id, _ = ids
     with client.session_transaction() as sess:
         sess["user"] = {"id": approver_id}
         sess["roles"] = ["approver"]
@@ -93,3 +94,41 @@ def test_api_reject_step(client, setup_data):
     assert step.comment == "needs work"
     assert step.approved_at is not None
     session.close()
+
+
+def test_api_reassign_step(client, setup_data):
+    m, ids = setup_data
+    approver_id, step_id, _, new_user_id = ids
+    with client.session_transaction() as sess:
+        sess["user"] = {"id": approver_id}
+        sess["roles"] = ["approver"]
+    with patch("app.notify_approval_queue") as notify_mock, patch(
+        "app.log_action"
+    ) as log_mock, patch("app.broadcast_counts") as broadcast_mock:
+        resp = client.post(
+            f"/api/approvals/{step_id}/reassign",
+            json={"user_id": new_user_id},
+        )
+        assert resp.status_code == 200
+        broadcast_mock.assert_called_once()
+        notify_mock.assert_called_once()
+        assert notify_mock.call_args[0][1] == [new_user_id]
+        log_mock.assert_called_once()
+    session = m.SessionLocal()
+    step = session.get(m.WorkflowStep, step_id)
+    assert step.user_id == new_user_id
+    assert step.required_role is None
+    session.close()
+
+
+def test_api_reassign_step_requires_role(client, setup_data):
+    m, ids = setup_data
+    approver_id, step_id, _, new_user_id = ids
+    with client.session_transaction() as sess:
+        sess["user"] = {"id": approver_id}
+        sess["roles"] = []
+    resp = client.post(
+        f"/api/approvals/{step_id}/reassign",
+        json={"user_id": new_user_id},
+    )
+    assert resp.status_code == 403
