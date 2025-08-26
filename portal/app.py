@@ -34,6 +34,7 @@ from models import (
     PersonalAccessToken,
     DepartmentVisibility,
     WorkflowStep,
+    DocWorkflow,
     get_session,
     RoleEnum,
     engine,
@@ -1111,6 +1112,7 @@ def document_workflow(doc_id: int):
     html = render_template(
         "document_workflow.html",
         doc=doc,
+        workflow=doc.workflow,
         steps=steps,
         breadcrumbs=[
             {"title": "Home", "url": url_for("dashboard")},
@@ -1198,6 +1200,15 @@ def start_workflow():
             for i, rid in enumerate(reviewer_ids, start=1)
         ]
         db.add_all(steps)
+        current_step = steps[0].step_order if steps else 0
+        wf = doc.workflow
+        if wf is None:
+            wf = DocWorkflow(document_id=doc_id, state="review", current_step=current_step)
+            db.add(wf)
+            doc.workflow = wf
+        else:
+            wf.state = "review"
+            wf.current_step = current_step
         db.commit()
         log_action(user["id"], doc_id, "start_workflow")
         notify_revision_time(doc, reviewer_ids)
@@ -1253,6 +1264,15 @@ def api_start_workflow():
             )
             order += 1
         db.add_all(steps)
+        current_step = steps[0].step_order if steps else 0
+        wf = doc.workflow
+        if wf is None:
+            wf = DocWorkflow(document_id=doc_id, state="review", current_step=current_step)
+            db.add(wf)
+            doc.workflow = wf
+        else:
+            wf.state = "review"
+            wf.current_step = current_step
         db.commit()
         log_action(user["id"], doc_id, "start_workflow")
         notify_revision_time(doc, list(set(all_ids)))
@@ -1927,10 +1947,6 @@ def api_approve_step(step_id: int):
         step.status = "Approved"
         step.approved_at = datetime.utcnow()
         step.comment = data.get("comment")
-        db.commit()
-        user = session.get("user")
-        if user:
-            log_action(user["id"], doc_id, "approved")
         next_step = (
             db.query(WorkflowStep)
             .filter(
@@ -1941,6 +1957,13 @@ def api_approve_step(step_id: int):
             .order_by(WorkflowStep.step_order)
             .first()
         )
+        wf = document.workflow
+        if wf:
+            wf.current_step = next_step.step_order if next_step else 0
+        db.commit()
+        user = session.get("user")
+        if user:
+            log_action(user["id"], doc_id, "approved")
         if next_step and next_step.user_id:
             notify_approval_queue(document, [next_step.user_id])
         broadcast_counts()
@@ -1966,6 +1989,9 @@ def api_reject_step(step_id: int):
         step.status = "Rejected"
         step.approved_at = datetime.utcnow()
         step.comment = data.get("comment")
+        wf = document.workflow
+        if wf:
+            wf.current_step = step.step_order
         db.commit()
         user = session.get("user")
         if user:
@@ -1998,10 +2024,6 @@ def approve_step(step_id: int):
         step.status = "Approved"
         step.approved_at = datetime.utcnow()
         step.comment = request.form.get("comment")
-        db.commit()
-        user = session.get("user")
-        if user:
-            log_action(user["id"], step.doc_id, "approved")
         next_step = (
             db.query(WorkflowStep)
             .filter(
@@ -2012,6 +2034,13 @@ def approve_step(step_id: int):
             .order_by(WorkflowStep.step_order)
             .first()
         )
+        wf = step.document.workflow
+        if wf:
+            wf.current_step = next_step.step_order if next_step else 0
+        db.commit()
+        user = session.get("user")
+        if user:
+            log_action(user["id"], step.doc_id, "approved")
         if next_step and next_step.user_id:
             notify_approval_queue(step.document, [next_step.user_id])
         broadcast_counts()
@@ -2035,6 +2064,9 @@ def reject_step(step_id: int):
         step.status = "Rejected"
         step.approved_at = datetime.utcnow()
         step.comment = request.form.get("comment")
+        wf = step.document.workflow
+        if wf:
+            wf.current_step = step.step_order
         db.commit()
         user = session.get("user")
         if user:

@@ -88,6 +88,7 @@ class Document(Base):
     owner_id = Column(Integer, ForeignKey("users.id"), nullable=True)
     retention_period = Column(Integer)
     archived_at = Column(DateTime)
+    workflow_id = Column(Integer, ForeignKey("doc_workflows.id"))
 
     status = Column(
         Enum("Draft", "Review", "Approved", "Published", "Archived", name="document_status"),
@@ -96,6 +97,11 @@ class Document(Base):
     )
 
     owner = relationship("User", foreign_keys=[owner_id])
+    workflow = relationship(
+        "DocWorkflow",
+        foreign_keys=[workflow_id],
+        uselist=False,
+    )
 
 
 class DocumentRevision(Base):
@@ -175,6 +181,25 @@ class User(Base):
     roles = relationship(
         Role, secondary=user_roles, back_populates="users"
     )
+
+
+class DocWorkflow(Base):
+    __tablename__ = "doc_workflows"
+    id = Column(Integer, primary_key=True)
+    document_id = Column(Integer, ForeignKey("documents.id"), nullable=False)
+    state = Column(
+        Enum(
+            "draft",
+            "review",
+            "approve",
+            "published",
+            "obsolete",
+            name="doc_workflow_state",
+        ),
+        default="draft",
+        nullable=False,
+    )
+    current_step = Column(Integer, default=0, nullable=False)
 
 
 class WorkflowStep(Base):

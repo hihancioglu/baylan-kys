@@ -76,6 +76,10 @@ def test_workflow_start_creates_steps_and_approvals(client, workflow_data):
     session = m.SessionLocal()
     doc = session.get(m.Document, doc_id)
     assert doc.status == "Review"
+    wf = doc.workflow
+    assert wf is not None
+    assert wf.current_step == 1
+    assert wf.state == "review"
     steps = (
         session.query(m.WorkflowStep)
         .filter_by(doc_id=doc_id)
