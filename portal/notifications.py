@@ -38,6 +38,14 @@ import requests
 from rq import Queue, Retry
 from sqlalchemy.orm import sessionmaker
 
+try:
+    from redis import Redis
+except ImportError:  # pragma: no cover - fallback stub for tests
+    class Redis:  # type: ignore
+        @classmethod
+        def from_url(cls, url: str):
+            return cls()
+
 from models import Notification, User, UserSetting, engine
 
 logger = logging.getLogger(__name__)
@@ -47,10 +55,10 @@ logger = logging.getLogger(__name__)
 # Queue configuration
 # ---------------------------------------------------------------------------
 
-# Public queue object used by tests to inspect enqueued jobs.  The lightweight
-# in-memory ``Queue`` implementation used for the tests does not require an
-# explicit connection object.
-queue: Queue = Queue("notifications")
+# Configure the notifications queue backed by Redis.  Tests may monkeypatch
+# this queue with an in-memory implementation.
+redis_conn = Redis.from_url(os.getenv("REDIS_URL", "redis://localhost:6379/0"))
+queue: Queue = Queue("notifications", connection=redis_conn)
 
 
 # ---------------------------------------------------------------------------
