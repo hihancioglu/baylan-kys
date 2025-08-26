@@ -2,6 +2,9 @@
 {% block title %}Workflow{% endblock %}
 {% block content %}
 <h1>{{ doc.title }} - Workflow</h1>
+{% if workflow %}
+<p>Current step: {{ workflow.current_step }}</p>
+{% endif %}
 {% if steps %}
 <table class="table table-striped">
   <thead>
@@ -14,7 +17,7 @@
   </thead>
   <tbody>
     {% for step in steps %}
-    <tr>
+    <tr{% if workflow and step.step_order == workflow.current_step %} class="table-primary"{% endif %}>
       <td>{{ step.step_order }}</td>
       <td>{{ step.user.username if step.user else '' }}</td>
       <td>{{ step.step_type }}</td>
