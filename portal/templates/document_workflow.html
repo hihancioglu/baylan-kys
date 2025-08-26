@@ -6,6 +6,11 @@
 <p>Current step: {{ workflow.current_step }}</p>
 {% endif %}
 {% if steps %}
+<div class="progress mb-3">
+  <div class="progress-bar" role="progressbar" style="width: {{ progress_percent }}%;" aria-valuenow="{{ completed_steps }}" aria-valuemin="0" aria-valuemax="{{ total_steps }}">
+    {{ completed_steps }}/{{ total_steps }}
+  </div>
+</div>
 <table class="table table-striped">
   <thead>
     <tr>
@@ -15,17 +20,25 @@
       <th title="Review or approval type">Type</th>
       <th title="Due date for step">Due</th>
       <th title="Current step status">Status</th>
+      <th title="Step comment">Comment</th>
     </tr>
   </thead>
   <tbody>
     {% for step in steps %}
-    <tr{% if workflow and step.step_order == workflow.current_step %} class="table-primary"{% endif %}>
+    {% set row_class = "" %}
+    {% if workflow and step.step_order == workflow.current_step %}
+      {% set row_class = "table-primary" %}
+    {% elif step.status != "Pending" %}
+      {% set row_class = "table-success" %}
+    {% endif %}
+    <tr class="{{ row_class }}">
       <td>{{ step.step_order }}</td>
       <td>{{ step.user.username if step.user else '' }}</td>
       <td>{{ step.required_role or '' }}</td>
       <td>{{ step.step_type }}</td>
       <td>{{ step.due_at.strftime('%Y-%m-%d') if step.due_at else '' }}</td>
       <td>{{ step.status }}</td>
+      <td>{{ step.comment or '' }}</td>
     </tr>
     {% endfor %}
   </tbody>
