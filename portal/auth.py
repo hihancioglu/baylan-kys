@@ -62,6 +62,25 @@ def roles_required(*required_roles):
     return decorator
 
 
+def require_roles(*required_roles):
+    """Ensure the user has *all* of the given roles."""
+
+    def decorator(view):
+        @wraps(view)
+        def wrapped(*args, **kwargs):
+            if not session.get('user'):
+                return redirect(url_for('auth.login'))
+            user_roles = session.get('roles', [])
+            role_names = [r.value if hasattr(r, 'value') else r for r in required_roles]
+            if any(r not in user_roles for r in role_names):
+                abort(403)
+            return view(*args, **kwargs)
+
+        return wrapped
+
+    return decorator
+
+
 def ldap_auth(username: str, password: str) -> bool:
     uri = current_app.config.get("LDAP_URL")
     domain = current_app.config.get("LDAP_DOMAIN")
