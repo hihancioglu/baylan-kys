@@ -1,17 +1,92 @@
-"""Utility helpers for S3/MinIO archival storage."""
+"""Pluggable storage backends.
+
+This module provides a small abstraction layer so the application can work
+with different storage providers (currently MinIO/S3 and the local
+filesystem).  Callers interact with a single ``storage_client`` instance which
+implements the :class:`StorageBackend` interface regardless of the underlying
+backend.
+"""
 
 from __future__ import annotations
 
 import os
+import shutil
 from datetime import datetime, timedelta
+from pathlib import Path
+from typing import Any
 
 import boto3
 from botocore.client import Config
 from botocore.exceptions import NoCredentialsError
 
 
-class StorageClient:
-    """Encapsulates interactions with S3/MinIO."""
+def _env(name: str, default: str | None = None) -> str | None:
+    """Fetch configuration values using ``storage.foo`` style names.
+
+    Environment variables use ``STORAGE__FOO`` to mirror nested configuration
+    (similar to how libraries like Dynaconf expose settings).
+    """
+
+    return os.getenv(name.replace(".", "__").upper(), default)
+
+
+class StorageBackend:
+    """Simple interface all storage backends must implement."""
+
+    bucket_main: str | None = None
+    bucket_archive: str | None = None
+    bucket_previews: str | None = None
+    archive_prefix: str = _env("archive.prefix", "archive/") or "archive/"
+    signed_url_expire_seconds: int = int(
+        _env("signed_url_expire_seconds", "3600") or "3600"
+    )
+
+    # -- basic primitives -------------------------------------------------
+    def put(self, *args, **kwargs):  # pragma: no cover - interface only
+        raise NotImplementedError
+
+    def get(self, *args, **kwargs):  # pragma: no cover - interface only
+        raise NotImplementedError
+
+    def copy(self, *args, **kwargs):  # pragma: no cover - interface only
+        raise NotImplementedError
+
+    def delete(self, *args, **kwargs):  # pragma: no cover - interface only
+        raise NotImplementedError
+
+    def head(self, *args, **kwargs):  # pragma: no cover - interface only
+        raise NotImplementedError
+
+    def list(self, *args, **kwargs):  # pragma: no cover - interface only
+        raise NotImplementedError
+
+    def generate_presigned_url(  # pragma: no cover - interface only
+        self, key: str, expires_in: int | None = None, bucket: str | None = None
+    ) -> str | None:
+        raise NotImplementedError
+
+    def move_to_archive(  # pragma: no cover - interface only
+        self, object_key: str, retention_days: int
+    ) -> str:
+        raise NotImplementedError
+
+    def list_archived(self) -> list[str]:  # pragma: no cover - interface only
+        raise NotImplementedError
+
+    # -- S3-style aliases -------------------------------------------------
+    def _add_aliases(self) -> None:
+        """Expose historical boto3-style method names."""
+
+        self.put_object = self.put
+        self.get_object = self.get
+        self.copy_object = self.copy
+        self.delete_object = self.delete
+        self.head_object = self.head
+        self.list_objects_v2 = self.list
+
+
+class MinIOBackend(StorageBackend):
+    """Storage backend backed by MinIO or any S3 compatible service."""
 
     def __init__(self) -> None:
         self.endpoint = os.getenv("S3_ENDPOINT")
@@ -24,11 +99,6 @@ class StorageClient:
         self.bucket_main = os.getenv("S3_BUCKET_MAIN") or os.getenv("S3_BUCKET")
         self.bucket_archive = os.getenv("S3_BUCKET_ARCHIVE") or self.bucket_main
         self.bucket_previews = os.getenv("S3_BUCKET_PREVIEWS") or self.bucket_main
-        self.archive_prefix = os.getenv("ARCHIVE_PREFIX", "archive/")
-        self.signed_url_expire_seconds = int(
-        
-            os.getenv("SIGNED_URL_EXPIRE_SECONDS", "3600")
-        )
 
         self.client = boto3.client(
             "s3",
@@ -38,23 +108,25 @@ class StorageClient:
             config=Config(signature_version="s3v4"),
         )
 
+        self._add_aliases()
+
     # -- basic wrappers -------------------------------------------------
-    def put_object(self, Bucket: str | None = None, **kwargs):
+    def put(self, Bucket: str | None = None, **kwargs):
         return self.client.put_object(Bucket=Bucket or self.bucket_main, **kwargs)
 
-    def get_object(self, Bucket: str | None = None, **kwargs):
+    def get(self, Bucket: str | None = None, **kwargs):
         return self.client.get_object(Bucket=Bucket or self.bucket_main, **kwargs)
 
-    def copy_object(self, Bucket: str | None = None, **kwargs):
+    def copy(self, Bucket: str | None = None, **kwargs):
         return self.client.copy_object(Bucket=Bucket or self.bucket_main, **kwargs)
 
-    def delete_object(self, Bucket: str | None = None, **kwargs):
+    def delete(self, Bucket: str | None = None, **kwargs):
         return self.client.delete_object(Bucket=Bucket or self.bucket_main, **kwargs)
 
-    def head_object(self, Bucket: str | None = None, **kwargs):
+    def head(self, Bucket: str | None = None, **kwargs):
         return self.client.head_object(Bucket=Bucket or self.bucket_main, **kwargs)
 
-    def list_objects_v2(self, Bucket: str | None = None, **kwargs):
+    def list(self, Bucket: str | None = None, **kwargs):
         return self.client.list_objects_v2(Bucket=Bucket or self.bucket_main, **kwargs)
 
     def generate_presigned_url(
@@ -74,26 +146,116 @@ class StorageClient:
 
     # -- higher level helpers ------------------------------------------
     def move_to_archive(self, object_key: str, retention_days: int) -> str:
-        """Copy an object to the archive prefix with a WORM lock and delete the original."""
+        """Copy an object to the archive prefix and delete the original."""
 
         dest_key = f"{self.archive_prefix}{object_key.split('/')[-1]}"
         retain_until = datetime.utcnow() + timedelta(days=retention_days)
-        self.copy_object(
+        self.copy(
             CopySource={"Bucket": self.bucket_main, "Key": object_key},
             Key=dest_key,
+            Bucket=self.bucket_archive,
             ObjectLockMode="COMPLIANCE",
             ObjectLockRetainUntilDate=retain_until,
         )
-        self.delete_object(Key=object_key)
+        self.delete(Key=object_key, Bucket=self.bucket_main)
         return dest_key
 
     def list_archived(self) -> list[str]:
-        resp = self.list_objects_v2(Prefix=self.archive_prefix)
+        resp = self.list(Prefix=self.archive_prefix, Bucket=self.bucket_archive)
         return [obj["Key"] for obj in resp.get("Contents", [])]
 
 
+class FSBackend(StorageBackend):
+    """Filesystem storage served via an Nginx alias."""
+
+    def __init__(self, base_path: str | None = None, public_url: str | None = None) -> None:
+        self.base_path = Path(base_path or _env("storage.fs_path", "/tmp/files")).resolve()
+        self.public_url = (public_url or _env("storage.fs_public_url", "/fs")).rstrip("/")
+        self.base_path.mkdir(parents=True, exist_ok=True)
+
+        self.bucket_main = None  # kept for interface compatibility
+        self.bucket_archive = None
+        self.bucket_previews = None
+
+        self._add_aliases()
+
+    # helper ------------------------------------------------------------
+    def _full_path(self, key: str) -> Path:
+        return self.base_path / key
+
+    # -- basic wrappers -------------------------------------------------
+    def put(self, Key: str, Body: bytes | Any, **kwargs):
+        path = self._full_path(Key)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        data = Body.read() if hasattr(Body, "read") else Body
+        with open(path, "wb") as f:
+            f.write(data)
+        return {}
+
+    def get(self, Key: str, **kwargs):
+        path = self._full_path(Key)
+        return {"Body": open(path, "rb")}
+
+    def copy(self, CopySource: dict | str, Key: str, **kwargs):
+        if isinstance(CopySource, dict):
+            src_key = CopySource.get("Key")
+        else:
+            src_key = str(CopySource)
+        src = self._full_path(src_key)
+        dest = self._full_path(Key)
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(src, dest)
+        return {}
+
+    def delete(self, Key: str, **kwargs):
+        path = self._full_path(Key)
+        if path.exists():
+            path.unlink()
+        return {}
+
+    def head(self, Key: str, **kwargs):
+        path = self._full_path(Key)
+        if not path.exists():
+            raise FileNotFoundError(Key)
+        return {"ContentLength": path.stat().st_size}
+
+    def list(self, Prefix: str = "", **kwargs):
+        prefix_path = self._full_path(Prefix)
+        contents = []
+        if prefix_path.exists():
+            for file in prefix_path.rglob("*"):
+                if file.is_file():
+                    rel = file.relative_to(self.base_path).as_posix()
+                    contents.append({"Key": rel})
+        return {"Contents": contents}
+
+    def generate_presigned_url(
+        self, key: str, expires_in: int | None = None, bucket: str | None = None
+    ) -> str:
+        return f"{self.public_url}/{key}"
+
+    # -- higher level helpers ------------------------------------------
+    def move_to_archive(self, object_key: str, retention_days: int) -> str:
+        dest_key = f"{self.archive_prefix}{Path(object_key).name}"
+        self.copy(object_key, dest_key)
+        self.delete(object_key)
+        return dest_key
+
+    def list_archived(self) -> list[str]:
+        resp = self.list(self.archive_prefix)
+        return [obj["Key"] for obj in resp.get("Contents", [])]
+
+
+# -- backend loader --------------------------------------------------------
+def _load_backend() -> StorageBackend:
+    backend_type = (_env("storage.type", "minio") or "minio").lower()
+    if backend_type == "fs":
+        return FSBackend()
+    return MinIOBackend()
+
+
 # Global instance used throughout the app
-storage_client = StorageClient()
+storage_client: StorageBackend = _load_backend()
 
 
 # Backwards compatible module-level helpers ---------------------------------
@@ -107,4 +269,15 @@ def list_archived() -> list[str]:
 
 def generate_presigned_url(key: str, expires_in: int | None = None) -> str | None:
     return storage_client.generate_presigned_url(key, expires_in)
+
+
+__all__ = [
+    "StorageBackend",
+    "MinIOBackend",
+    "FSBackend",
+    "storage_client",
+    "move_to_archive",
+    "list_archived",
+    "generate_presigned_url",
+]
 
