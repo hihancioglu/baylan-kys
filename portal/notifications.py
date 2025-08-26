@@ -220,6 +220,10 @@ _TEMPLATES = {
         "Document {title} requires your acknowledgement",
         "Please read and acknowledge document {title}.",
     ),
+    "dif_step_overdue": (
+        "DIF workflow step overdue",
+        "A workflow step for DIF request {dif_id} assigned to {role} is overdue.",
+    ),
 }
 
 
@@ -245,6 +249,14 @@ def notify_revision_time(doc, user_ids):
 
 def notify_mandatory_read(doc, user_ids):
     subject, body = _render("mandatory_read", title=doc.title)
+    for uid in user_ids:
+        notify_user(uid, subject, body)
+
+
+def notify_dif_step_overdue(step, user_ids):
+    subject, body = _render(
+        "dif_step_overdue", dif_id=step.dif_id, role=step.role
+    )
     for uid in user_ids:
         notify_user(uid, subject, body)
 

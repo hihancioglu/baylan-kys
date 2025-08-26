@@ -350,6 +350,7 @@ class DifWorkflowStep(Base):
     status = Column(String, default="Pending", nullable=False)
     acted_at = Column(DateTime)
     comment = Column(Text)
+    created_at = Column(DateTime, default=datetime.utcnow)
 
     dif_request = relationship("DifRequest", back_populates="workflow_steps")
 
