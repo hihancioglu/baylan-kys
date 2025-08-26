@@ -1988,6 +1988,13 @@ def api_approve_step(step_id: int):
         wf = document.workflow
         if wf:
             wf.current_step = next_step.step_order if next_step else 0
+        remaining = (
+            db.query(WorkflowStep)
+            .filter(WorkflowStep.doc_id == doc_id, WorkflowStep.status != "Approved")
+            .count()
+        )
+        if remaining == 0:
+            document.status = "Approved"
         db.commit()
         user = session.get("user")
         if user:
@@ -2119,9 +2126,17 @@ def approve_step(step_id: int):
             .order_by(WorkflowStep.step_order)
             .first()
         )
-        wf = step.document.workflow
+        document = step.document
+        wf = document.workflow
         if wf:
             wf.current_step = next_step.step_order if next_step else 0
+        remaining = (
+            db.query(WorkflowStep)
+            .filter(WorkflowStep.doc_id == step.doc_id, WorkflowStep.status != "Approved")
+            .count()
+        )
+        if remaining == 0:
+            document.status = "Approved"
         db.commit()
         if user:
             log_action(user["id"], step.doc_id, "approved")
@@ -2756,6 +2771,16 @@ def publish_document(id: int):
         if not doc:
             return "Not found", 404
         if doc.status != "Approved":
+            return "Document not approved", 400
+        pending = (
+            db.query(WorkflowStep)
+            .filter(
+                WorkflowStep.doc_id == doc.id,
+                WorkflowStep.status.in_(["Pending", "Rejected"]),
+            )
+            .count()
+        )
+        if pending > 0:
             return "Document not approved", 400
         doc.status = "Published"
         user_ids = set()

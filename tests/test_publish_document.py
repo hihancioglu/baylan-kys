@@ -94,3 +94,37 @@ def test_publish_rejects_unapproved_document(client, app_models):
     doc = session.get(m.Document, doc_id)
     assert doc.status == "Draft"
     session.close()
+
+
+@pytest.mark.parametrize("step_status", ["Pending", "Rejected"])
+def test_publish_rejects_incomplete_workflow(client, app_models, step_status):
+    app, m = app_models
+    session = m.SessionLocal()
+    publisher = m.User(username="publisher")
+    approver = m.User(username="approver")
+    doc = m.Document(doc_key="doc.docx", title="Doc", status="Approved")
+    session.add_all([publisher, approver, doc])
+    session.commit()
+    step = m.WorkflowStep(
+        doc_id=doc.id,
+        step_order=1,
+        user_id=approver.id,
+        status=step_status,
+        step_type="approval",
+    )
+    session.add(step)
+    session.commit()
+    doc_id = doc.id
+    publisher_id = publisher.id
+    session.close()
+
+    with client.session_transaction() as sess:
+        sess["user"] = {"id": publisher_id}
+        sess["roles"] = ["publisher"]
+
+    resp = client.post(f"/api/documents/{doc_id}/publish", data={})
+    assert resp.status_code == 400
+    session = m.SessionLocal()
+    doc = session.get(m.Document, doc_id)
+    assert doc.status == "Approved"
+    session.close()
