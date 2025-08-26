@@ -42,6 +42,9 @@ try:
     from redis import Redis
 except ImportError:  # pragma: no cover - fallback stub for tests
     class Redis:  # type: ignore
+        def __init__(self, *_, **__):
+            pass
+
         @classmethod
         def from_url(cls, url: str):
             return cls()
@@ -57,7 +60,12 @@ logger = logging.getLogger(__name__)
 
 # Configure the notifications queue backed by Redis.  Tests may monkeypatch
 # this queue with an in-memory implementation.
-redis_conn = Redis.from_url(os.getenv("REDIS_URL", "redis://localhost:6379/0"))
+redis_conn = Redis(
+    host=os.getenv("REDIS_HOST", "localhost"),
+    port=int(os.getenv("REDIS_PORT", "6379")),
+    db=int(os.getenv("REDIS_DB", "0")),
+    password=os.getenv("REDIS_PASSWORD"),
+)
 queue: Queue = Queue("notifications", connection=redis_conn)
 
 
