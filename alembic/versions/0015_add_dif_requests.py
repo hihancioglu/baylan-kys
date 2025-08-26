@@ -8,6 +8,7 @@ Create Date: 2025-09-07
 
 from alembic import op
 import sqlalchemy as sa
+from sqlalchemy.dialects import postgresql
 
 revision = "0015"
 down_revision = "0014"
@@ -34,7 +35,7 @@ def upgrade() -> None:
         END$$;
         """
     )
-    status = sa.Enum(
+    status = postgresql.ENUM(
         "new",
         "in_review",
         "approved",
