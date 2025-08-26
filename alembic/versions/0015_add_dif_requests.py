@@ -23,6 +23,7 @@ def upgrade() -> None:
         "rejected",
         "implemented",
         name="dif_request_status",
+        create_type=False,
     )
     status.create(op.get_bind(), checkfirst=True)
     op.create_table(
@@ -49,5 +50,6 @@ def downgrade() -> None:
         "rejected",
         "implemented",
         name="dif_request_status",
+        create_type=False,
     )
     status.drop(op.get_bind(), checkfirst=True)
