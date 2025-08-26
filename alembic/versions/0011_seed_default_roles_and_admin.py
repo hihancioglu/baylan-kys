@@ -28,8 +28,10 @@ def upgrade() -> None:
         "risk_committee",
     ]
 
+    conn = op.get_bind()
+
     for role in roles:
-        op.execute(
+        conn.execute(
             sa.text(
                 "INSERT INTO roles (name, standard_scope) VALUES (:name, 'ALL') "
                 "ON CONFLICT (name) DO NOTHING"
@@ -37,7 +39,7 @@ def upgrade() -> None:
             {"name": role},
         )
 
-    op.execute(
+    conn.execute(
         sa.text(
             "INSERT INTO users (username, email) VALUES (:username, :email) "
             "ON CONFLICT (username) DO NOTHING"
