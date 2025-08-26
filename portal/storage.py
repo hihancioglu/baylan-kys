@@ -40,6 +40,8 @@ class StorageBackend:
     signed_url_expire_seconds: int = int(
         _env("signed_url_expire_seconds", "3600") or "3600"
     )
+    # Maximum object size (in bytes) allowed for presigned downloads.
+    max_presign_size: int = 50 * 1024 * 1024  # 50MB
 
     # -- basic primitives -------------------------------------------------
     def put(self, *args, **kwargs):  # pragma: no cover - interface only
@@ -134,9 +136,22 @@ class MinIOBackend(StorageBackend):
     ) -> str | None:
         bucket_name = bucket or self.bucket_main or "local"
         try:
+            head = self.client.head_object(Bucket=bucket_name, Key=key)
+            if head.get("ContentLength", 0) > self.max_presign_size:
+                return None
+        except Exception:
+            # If the object cannot be inspected, continue and attempt to
+            # generate a URL. The call below may still fail depending on the
+            # underlying credentials, but this mirrors previous behavior.
+            pass
+        try:
             return self.client.generate_presigned_url(
                 "get_object",
-                Params={"Bucket": bucket_name, "Key": key},
+                Params={
+                    "Bucket": bucket_name,
+                    "Key": key,
+                    "ResponseCacheControl": "public, max-age=86400",
+                },
                 ExpiresIn=expires_in or self.signed_url_expire_seconds,
             )
         except NoCredentialsError:
@@ -231,7 +246,10 @@ class FSBackend(StorageBackend):
 
     def generate_presigned_url(
         self, key: str, expires_in: int | None = None, bucket: str | None = None
-    ) -> str:
+    ) -> str | None:
+        path = self._full_path(key)
+        if not path.exists() or path.stat().st_size > self.max_presign_size:
+            return None
         return f"{self.public_url}/{key}"
 
     # -- higher level helpers ------------------------------------------

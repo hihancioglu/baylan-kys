@@ -1141,7 +1141,9 @@ def download_document(doc_id: int):
         url = generate_presigned_url(doc.doc_key)
         if not url:
             return "File not available", 404
-        return redirect(url)
+        resp = redirect(url)
+        resp.headers["Cache-Control"] = "public, max-age=86400"
+        return resp
     finally:
         db.close()
 
@@ -1168,7 +1170,9 @@ def get_file(file_key: str):
         url = storage_client.generate_presigned_url(file_key, expires_in=ttl)
         if not url:
             return "File not available", 404
-        return redirect(url)
+        resp = redirect(url)
+        resp.headers["Cache-Control"] = "public, max-age=86400"
+        return resp
     finally:
         db.close()
 
