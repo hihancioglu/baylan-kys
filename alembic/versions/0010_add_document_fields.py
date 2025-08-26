@@ -1,7 +1,7 @@
 """Add file and ownership fields to documents
 
 Revision ID: 0010
-Revises: 0009_create_standards_table
+Revises: 0009
 Create Date: 2024-05-18 00:00:00
 """
 
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
 revision = "0010"
-down_revision = "0009_create_standards_table"
+down_revision = "0009"
 branch_labels = None
 depends_on = None
 
