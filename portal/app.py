@@ -3712,6 +3712,11 @@ def dif_new():
                 )
                 db.add(dif)
                 db.commit()
+                notify_user(
+                    dif.requester_id,
+                    "DİF Submitted",
+                    f"Request #{dif.id} created",
+                )
                 return redirect(url_for("dif_detail", id=dif.id))
             finally:
                 db.close()
