@@ -24,6 +24,7 @@ def upgrade() -> None:
         "published",
         "obsolete",
         name="doc_workflow_state",
+        create_type=False,
     )
     state_enum.create(op.get_bind(), checkfirst=True)
     op.create_table(
@@ -48,5 +49,6 @@ def downgrade() -> None:
         "published",
         "obsolete",
         name="doc_workflow_state",
+        create_type=False,
     )
     state_enum.drop(op.get_bind(), checkfirst=True)
