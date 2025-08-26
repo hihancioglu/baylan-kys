@@ -2,5 +2,9 @@
 {% block title %}Help{% endblock %}
 {% block content %}
 <h1>Help</h1>
+{% if error %}
+<p>{{ error }}</p>
+{% else %}
 {{ help_content | safe }}
+{% endif %}
 {% endblock %}

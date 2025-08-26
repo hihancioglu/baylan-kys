@@ -2,5 +2,9 @@
 {% block title %}Terminoloji{% endblock %}
 {% block content %}
 <h1>Terminoloji</h1>
+{% if error %}
+<p>{{ error }}</p>
+{% else %}
 {{ terminology_content | safe }}
+{% endif %}
 {% endblock %}
