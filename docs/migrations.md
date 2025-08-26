@@ -27,3 +27,13 @@ alembic upgrade head
 
 Migrations replace any implicit `Base.metadata.create_all` calls. Developers
 must run the commands above to create or update the database schema.
+
+## Seeding default data
+
+After applying migrations, populate default roles and an admin user:
+
+```bash
+python scripts/seed_data.py
+```
+
+The script can be re-run safely; existing entries are left untouched.
