@@ -63,6 +63,9 @@ class RoleEnum(PyEnum):
     PUBLISHER = "publisher"
     QUALITY_ADMIN = "quality_admin"
     AUDITOR = "auditor"
+    SURVEY_ADMIN = "survey_admin"
+    COMPLAINTS_OWNER = "complaints_owner"
+    RISK_COMMITTEE = "risk_committee"
 
 
 class Document(Base):
