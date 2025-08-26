@@ -65,3 +65,37 @@ def test_workflow_step_comment_log(models):
     assert len(logs) == 1
     assert logs[0].payload["comment"] == "Needs changes"
     session.close()
+
+
+def test_dif_workflow_step_logs(models):
+    m = models
+    session = m.SessionLocal()
+
+    user = m.User(username="req", email="req@example.com")
+    session.add(user)
+    session.commit()
+
+    dif = m.DifRequest(subject="Subject", requester_id=user.id)
+    session.add(dif)
+    session.commit()
+
+    step = m.DifWorkflowStep(dif_id=dif.id, role="reviewer", step_order=1, status="Pending")
+    session.add(step)
+    session.commit()
+
+    step_id = step.id
+
+    logs = session.query(m.AuditLog).filter_by(entity_type="DifWorkflowStep", entity_id=step_id, action="create").all()
+    assert len(logs) == 1
+
+    step.comment = "Looks good"
+    session.commit()
+    logs = session.query(m.AuditLog).filter_by(entity_type="DifWorkflowStep", entity_id=step_id, action="comment").all()
+    assert len(logs) == 1
+    assert logs[0].payload["comment"] == "Looks good"
+
+    session.delete(step)
+    session.commit()
+    logs = session.query(m.AuditLog).filter_by(entity_type="DifWorkflowStep", entity_id=step_id, action="delete").all()
+    assert len(logs) == 1
+    session.close()

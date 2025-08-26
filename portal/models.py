@@ -340,6 +340,20 @@ class DifRequest(Base):
     related_doc = relationship("Document", back_populates="dif_requests")
 
 
+class DifWorkflowStep(Base):
+    __tablename__ = "dif_workflow_steps"
+    id = Column(Integer, primary_key=True)
+    dif_id = Column(Integer, ForeignKey("dif_requests.id"), nullable=False)
+    role = Column(String, nullable=False)
+    step_order = Column(Integer, nullable=False)
+    sla_hours = Column(Integer)
+    status = Column(String, default="Pending", nullable=False)
+    acted_at = Column(DateTime)
+    comment = Column(Text)
+
+    dif_request = relationship("DifRequest", back_populates="workflow_steps")
+
+
 class UserSetting(Base):
     __tablename__ = "user_settings"
     id = Column(Integer, primary_key=True)
@@ -414,6 +428,9 @@ Document.dif_requests = relationship(
 )
 User.dif_requests = relationship(
     DifRequest, back_populates="requester", cascade="all, delete-orphan"
+)
+DifRequest.workflow_steps = relationship(
+    DifWorkflowStep, back_populates="dif_request", cascade="all, delete-orphan"
 )
 
 
@@ -535,6 +552,67 @@ def _log_step_delete(mapper, connection, target):
         doc_id=target.doc_id,
         action="delete",
         entity_type="WorkflowStep",
+        entity_id=target.id,
+        payload=payload,
+        connection=connection,
+    )
+
+
+@event.listens_for(DifWorkflowStep, "after_insert")
+def _log_dif_step_insert(mapper, connection, target):
+    from app import log_action
+
+    payload = {"order": target.step_order, "status": target.status}
+    log_action(
+        user_id=None,
+        doc_id=None,
+        action="create",
+        entity_type="DifWorkflowStep",
+        entity_id=target.id,
+        payload=payload,
+        connection=connection,
+    )
+
+
+@event.listens_for(DifWorkflowStep, "after_update")
+def _log_dif_step_update(mapper, connection, target):
+    from app import log_action
+
+    state = inspect(target)
+    if state.attrs.status.history.has_changes():
+        action = target.status.lower()
+        payload = {"comment": target.comment}
+    elif state.attrs.comment.history.has_changes():
+        action = "comment"
+        payload = {"comment": target.comment}
+    elif state.attrs.role.history.has_changes():
+        action = "reassigned"
+        payload = {"role": target.role}
+    else:
+        payload = {"changes": _capture_changes(target)}
+        action = "update"
+
+    log_action(
+        user_id=None,
+        doc_id=None,
+        action=action,
+        entity_type="DifWorkflowStep",
+        entity_id=target.id,
+        payload=payload,
+        connection=connection,
+    )
+
+
+@event.listens_for(DifWorkflowStep, "after_delete")
+def _log_dif_step_delete(mapper, connection, target):
+    from app import log_action
+
+    payload = {"order": target.step_order, "status": target.status}
+    log_action(
+        user_id=None,
+        doc_id=None,
+        action="delete",
+        entity_type="DifWorkflowStep",
         entity_id=target.id,
         payload=payload,
         connection=connection,
