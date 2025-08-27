@@ -2292,6 +2292,39 @@ def api_reassign_step(step_id: int):
         db.close()
 
 
+@app.post("/api/approvals/<int:step_id>/undo")
+@roles_required(RoleEnum.APPROVER.value, RoleEnum.REVIEWER.value)
+def api_undo_step(step_id: int):
+    db = get_session()
+    try:
+        step = db.get(WorkflowStep, step_id)
+        if not step:
+            return "Not found", 404
+        user = session.get("user")
+        if not user or user.get("id") != step.user_id:
+            if user:
+                log_action(user.get("id"), step.doc_id, "undo_forbidden")
+            return "Forbidden", 403
+        document = step.document
+        step.status = "Pending"
+        step.approved_at = None
+        step.comment = None
+        wf = document.workflow
+        if wf:
+            wf.current_step = step.step_order
+        if document.status == "Approved":
+            document.status = "Review"
+        db.commit()
+        broadcast_counts()
+        db.refresh(step)
+        html = render_template("partials/approvals/_row.html", step=step)
+        resp = make_response(html)
+        resp.headers["HX-Trigger"] = json.dumps({"showToast": "Reverted"})
+        return resp
+    finally:
+        db.close()
+
+
 @app.post("/approvals/<int:step_id>/approve")
 @roles_required(RoleEnum.APPROVER.value, RoleEnum.REVIEWER.value)
 def approve_step(step_id: int):
