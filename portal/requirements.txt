@@ -18,3 +18,4 @@ PyJWT==2.8.0
 passlib
 pycryptodome
 alembic==1.13.1
+moto
