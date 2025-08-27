@@ -19,3 +19,4 @@ passlib
 pycryptodome
 alembic==1.13.1
 moto
+rq
