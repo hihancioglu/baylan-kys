@@ -112,5 +112,11 @@ document.addEventListener('htmx:responseError', function (evt) {
   }
 });
 </script>
+{% if request.args.get('created') %}
+<script type="module">
+import { showToast } from '{{ url_for('static', filename='components/index.js') }}';
+showToast('Doküman başarıyla yüklendi ve onaya gönderildi');
+</script>
+{% endif %}
 {% endblock %}
 
