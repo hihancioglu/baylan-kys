@@ -1,9 +1,15 @@
 {% extends "base.html" %}
 {% block title %}Compare Versions{% endblock %}
+{% block page_actions %}
+<link rel="stylesheet" href="{{ url_for('static', filename='toolbar/toolbar.css') }}">
+<script type="module" src="{{ url_for('static', filename='toolbar/toolbar.js') }}"></script>
+{% endblock %}
 {% block content %}
 <h1>Version Comparison</h1>
 <div class="mb-3">
   {{ diff|safe }}
 </div>
-<a class="btn btn-secondary" href="{{ url_for('document_detail', doc_id=doc_id) }}">Back</a>
+<div class="toolbar" data-component="toolbar">
+  <a class="btn btn-secondary" href="{{ url_for('document_detail', doc_id=doc_id) }}">Back</a>
+</div>
 {% endblock %}

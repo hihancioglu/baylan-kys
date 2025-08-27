@@ -10,10 +10,16 @@
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <button type="submit" class="btn btn-primary">Publish</button>
   </form>
+  {% else %}
+  <button type="button" class="btn btn-primary" disabled>Publish</button>
   {% endif %}
   {% if doc.status == 'Published' %}
   <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#assignModal">
     Assign Mandatory Reading <span class="badge bg-secondary" id="assignment-count">{{ ack_count }}</span>
+  </button>
+  {% else %}
+  <button type="button" class="btn btn-outline-primary" disabled>
+    Assign Mandatory Reading <span class="badge bg-secondary" id="assignment-count">{{ ack_count | default(0) }}</span>
   </button>
   {% endif %}
 </div>
@@ -48,12 +54,12 @@
 
 {% include "partials/_audit_log.html" %}
 
-<p>
-  <a href="{{ url_for('list_documents') }}">Back to documents</a>
+<div class="toolbar" data-component="toolbar">
+  <a class="btn btn-secondary" href="{{ url_for('list_documents') }}">Back to documents</a>
   {% if download_url %}
-  | <a href="{{ download_url }}">Download</a>
+  <a class="btn btn-secondary" href="{{ download_url }}">Download</a>
   {% endif %}
-</p>
+</div>
 
 <div class="modal fade" id="assignModal" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog">

@@ -1,9 +1,13 @@
 {% extends "base.html" %}
 {% block title %}Edit Document{% endblock %}
 {% block page_actions %}
-<a class="btn btn-secondary" href="{{ url_for('document_detail', doc_id=doc_id) }}">Back</a>
-<a class="btn btn-secondary" href="{{ url_for('document_detail', doc_id=doc_id) }}#versions">Versions</a>
-<a class="btn btn-secondary" href="{{ url_for('compare_document_versions', doc_id=doc_id) }}">Compare</a>
+<link rel="stylesheet" href="{{ url_for('static', filename='toolbar/toolbar.css') }}">
+<div class="toolbar" data-component="toolbar">
+  <a class="btn btn-secondary" href="{{ url_for('document_detail', doc_id=doc_id) }}">Back</a>
+  <a class="btn btn-secondary" href="{{ url_for('document_detail', doc_id=doc_id) }}#versions">Versions</a>
+  <a class="btn btn-secondary" href="{{ url_for('compare_document_versions', doc_id=doc_id) }}">Compare</a>
+</div>
+<script type="module" src="{{ url_for('static', filename='toolbar/toolbar.js') }}"></script>
 {% endblock %}
 {% block content %}
 <div id="editor-container" class="vh-100 overflow-auto">
