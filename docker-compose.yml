@@ -110,7 +110,9 @@ services:
       - elasticsearch
     networks: [qdms]
     volumes:
-      # Shared volume for built static assets
+      # Shared volume for static assets built at image creation. The contents
+      # are copied from the image into this volume on first run so nginx can
+      # serve them.
       - portal_static:/app/portal/static-dist
 
   scheduler:
@@ -135,7 +137,7 @@ services:
       - onlyoffice
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
-      # Serve static assets from the build output directory
+      # Serve static assets built at image creation
       - portal_static:/app/portal/static-dist:ro
       - nginx_cache:/var/cache/nginx
       # SSL sertifikası kullanacaksanız aşağıyı açın ve dosyaları koyun

@@ -17,9 +17,8 @@ COPY alembic ./alembic
 
 RUN pip install libsass rcssmin jsmin
 
-# Build static assets after the volume is mounted so nginx can serve them
-# from the shared ``portal_static`` volume. The build step previously ran at
-# image build time, but the runtime volume mount would hide the generated
-# files. Running the build here ensures the output is written into the
-# mounted directory.
-CMD ["sh", "-c", "python portal/static_build.py && alembic upgrade head && python portal/app.py"]
+# Build static assets during the image build so they can be copied into the
+# shared ``portal_static`` volume when the container starts.
+RUN python portal/static_build.py
+
+CMD ["sh", "-c", "alembic upgrade head && python portal/app.py"]
