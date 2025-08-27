@@ -954,11 +954,23 @@ def documents_table():
 @roles_required(RoleEnum.CONTRIBUTOR.value)
 def new_document():
     step = request.args.get("step") or request.form.get("step") or "1"
+
+    def cleanup_uploaded_file():
+        uploaded_key = session.pop("uploaded_file_key", None)
+        if uploaded_key:
+            try:
+                storage_client.delete_object(Key=uploaded_key)
+            except Exception:
+                pass
+
     draft_id = session.get("new_doc_id")
     if not draft_id:
         draft_id = secrets.token_urlsafe(16)
         session["new_doc_id"] = draft_id
     data = DOCUMENT_DRAFTS.get(draft_id, {})
+
+    if request.method == "GET" and step == "1":
+        cleanup_uploaded_file()
 
     if request.method == "POST":
         errors: dict[str, str] = {}
@@ -1101,6 +1113,7 @@ def new_document():
                 )
                 data["uploaded_file_key"] = doc_key
                 data["uploaded_file_name"] = uploaded.filename
+                session["uploaded_file_key"] = doc_key
             except Exception as e:
                 data["upload_error"] = str(e)
             DOCUMENT_DRAFTS[draft_id] = data
@@ -1110,6 +1123,11 @@ def new_document():
         DOCUMENT_DRAFTS[draft_id] = data
 
         if step == "3":
+            if request.form.get("cancel"):
+                cleanup_uploaded_file()
+                DOCUMENT_DRAFTS.pop(draft_id, None)
+                session.pop("new_doc_id", None)
+                return redirect(url_for("list_documents"))
             form_data = DOCUMENT_DRAFTS.pop(draft_id, {})
             session.pop("new_doc_id", None)
             user = session.get("user")
@@ -1117,6 +1135,7 @@ def new_document():
             if form_data.get("generate_docxf"):
                 doc_id = form_data.get("doc_id")
                 if doc_id:
+                    session.pop("uploaded_file_key", None)
                     return redirect(url_for("document_detail", doc_id=doc_id, created=1))
                 context = {
                     "breadcrumbs": [
@@ -1163,6 +1182,7 @@ def new_document():
                 resp_json = response.get_json(silent=True) or {}
                 status = response.status_code
             if status == 201:
+                session.pop("uploaded_file_key", None)
                 doc_id = resp_json.get("id")
                 return redirect(url_for("document_detail", doc_id=doc_id, created=1))
             errors = resp_json.get("errors")
