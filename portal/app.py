@@ -57,6 +57,11 @@ def _run_migrations() -> None:
 
 _run_migrations()
 
+# Ensure search indices exist after migrations have been applied.
+from search import create_index
+
+create_index()
+
 # Serve static assets from the root ``static`` directory and load templates from the
 # project-level ``templates`` folder. Explicitly setting these paths ensures static
 # URLs such as ``/static/app.css`` resolve correctly in both the development server and
