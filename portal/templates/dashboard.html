@@ -21,7 +21,7 @@
       </div>
       <div id="pending-approvals-body" class="card-body"
            hx-get="/api/dashboard/cards/pending"
-           hx-trigger="load, every 10s"
+           hx-trigger="load, every {{ poll_interval }}s"
            hx-swap="innerHTML"
            hx-include="#pending-standard">
         {% set card = 'pending' %}
@@ -48,7 +48,7 @@
       </div>
       <div id="mandatory-reading-body" class="card-body"
            hx-get="/api/dashboard/cards/mandatory"
-           hx-trigger="load, every 10s"
+           hx-trigger="load, every {{ poll_interval }}s"
            hx-swap="innerHTML"
            hx-include="#mandatory-standard">
         {% set card = 'mandatory' %}
@@ -62,7 +62,7 @@
       <div class="card-header">Recent Changes</div>
       <div class="card-body"
            hx-get="/api/dashboard/cards/recent"
-           hx-trigger="load, every 10s"
+           hx-trigger="load, every {{ poll_interval }}s"
            hx-swap="innerHTML">
         {% set card = 'recent' %}
         {% include 'partials/dashboard/_cards.html' %}
@@ -75,7 +75,7 @@
       <div class="card-header">Recent Documents</div>
       <div class="card-body"
            hx-get="/api/dashboard/cards/recent-docs"
-           hx-trigger="load, every 10s"
+           hx-trigger="load, every {{ poll_interval }}s"
            hx-swap="innerHTML">
         {% set card = 'recent_docs' %}
         {% include 'partials/dashboard/_cards.html' %}
@@ -88,7 +88,7 @@
         <div class="card-header">Search Shortcuts</div>
         <div class="card-body"
              hx-get="/api/dashboard/cards/shortcuts"
-             hx-trigger="load, every 10s"
+             hx-trigger="load, every {{ poll_interval }}s"
              hx-swap="innerHTML">
           {% set card = 'shortcuts' %}
           {% include 'partials/dashboard/_cards.html' %}
