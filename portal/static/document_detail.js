@@ -1,5 +1,5 @@
 import { getToken } from './tokens.js';
-import { showToast } from './components/index.js';
+import { showToast } from './components/toast.js';
 getToken('color-primary');
 
 function initTabs() {

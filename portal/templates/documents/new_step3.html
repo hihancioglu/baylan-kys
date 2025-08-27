@@ -21,7 +21,7 @@
   </ul>
 </div>
 <script type="module">
-import { showToast } from '{{ url_for('static', filename='components/index.js') }}';
+import { showToast } from '{{ url_for('static', filename='components/toast.js') }}';
 const errors = {{ errors | tojson }};
 Object.values(errors).flat().forEach(msg => showToast(msg, { timeout: 6000 }));
 </script>
@@ -39,7 +39,7 @@ Object.values(errors).flat().forEach(msg => showToast(msg, { timeout: 6000 }));
 </form>
 {% if not form.generate_docxf %}
 <script type="module">
-import { showToast } from '{{ url_for('static', filename='components/index.js') }}';
+import { showToast } from '{{ url_for('static', filename='components/toast.js') }}';
 const messages = {
   fileNotUploaded: {{ t('file_not_uploaded') | tojson }},
   sessionEnded: {{ t('session_ended') | tojson }},
