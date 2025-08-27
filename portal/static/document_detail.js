@@ -104,26 +104,22 @@ function initWorkflowForm() {
 function initAssignForm() {
   const form = document.getElementById('assign-form');
   if (!form) return;
-  form.addEventListener('submit', async (evt) => {
-    evt.preventDefault();
-    const data = new FormData(form);
-    const docId = data.get('doc_id');
-    const targets = (data.get('targets') || '')
-      .split(',')
-      .map((t) => t.trim())
-      .filter(Boolean);
+  form.addEventListener('htmx:configRequest', (evt) => {
+    const docId = form.querySelector('input[name="doc_id"]').value;
+    const targets = Array.from(
+      form.querySelectorAll('input[name="targets"]:checked')
+    ).map((cb) => cb.value);
     const csrf = document
       .querySelector('meta[name="csrf-token"]')
       .getAttribute('content');
-    const resp = await fetch('/api/ack/assign', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-CSRFToken': csrf,
-      },
-      body: JSON.stringify({ doc_id: docId, targets }),
-    });
-    if (resp.ok) {
+    evt.detail.headers['Content-Type'] = 'application/json';
+    evt.detail.headers['X-CSRFToken'] = csrf;
+    evt.detail.parameters = {};
+    evt.detail.body = JSON.stringify({ doc_id: docId, targets });
+    form.dataset.lastCount = targets.length;
+  });
+  form.addEventListener('htmx:afterRequest', (evt) => {
+    if (evt.detail.successful) {
       showToast('Assignments saved');
       const modalEl = document.getElementById('assignModal');
       const modal =
@@ -131,9 +127,23 @@ function initAssignForm() {
         new bootstrap.Modal(modalEl);
       modal.hide();
       form.reset();
+      const badge = document.getElementById('assignment-count');
+      if (badge) {
+        const add = parseInt(form.dataset.lastCount || '0', 10);
+        const current = parseInt(badge.textContent || '0', 10);
+        badge.textContent = current + add;
+      }
     } else {
-      const result = await resp.json().catch(() => null);
-      showToast(result?.error || 'Assignment failed', { timeout: 6000 });
+      let message = 'Assignment failed';
+      try {
+        const data = JSON.parse(evt.detail.xhr.responseText);
+        if (data && data.error) {
+          message = data.error;
+        }
+      } catch (e) {
+        // ignore
+      }
+      showToast(message, { timeout: 6000 });
     }
   });
 }

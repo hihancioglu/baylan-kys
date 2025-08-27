@@ -1231,6 +1231,11 @@ def document_detail(doc_id: int | None = None, id: int | None = None):
         .order_by(AuditLog.at.desc())
         .all()
     )
+
+    roles = db.query(Role).order_by(Role.name).all()
+    users = db.query(User).order_by(User.username).all()
+    ack_count = db.query(Acknowledgement).filter_by(doc_id=doc.id).count()
+
     db.close()
 
     user = session.get("user")
@@ -1298,6 +1303,9 @@ def document_detail(doc_id: int | None = None, id: int | None = None):
         preview=preview,
         logs=logs,
         download_url=download_url,
+        roles=roles,
+        users=users,
+        ack_count=ack_count,
     )
 
 
