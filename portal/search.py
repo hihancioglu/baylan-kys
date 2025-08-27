@@ -148,6 +148,3 @@ def search_documents(keyword: str, filters: dict, page: int = 1, per_page: int =
     total = resp.get("hits", {}).get("total", {}).get("value", 0)
 
     return results, aggs, total
-
-
-create_index()
