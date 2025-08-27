@@ -58,14 +58,19 @@ document.getElementById('save-draft').addEventListener('click', async () => {
     showToast('Dosya yüklenemedi', { timeout: 6000 });
     return;
   }
+  const csrf = document.querySelector('input[name=csrf_token]').value;
   const response = await fetch('/api/documents', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'X-CSRFToken': '{{ csrf_token() }}'
+      'X-CSRFToken': csrf
     },
     body: JSON.stringify(data)
   });
+  if (response.status === 403) {
+    showToast('Oturumunuz sonlandı. Lütfen sayfayı yenileyin.', { timeout: 6000 });
+    return;
+  }
   const result = await response.json();
   if (result.id) {
     showToast('Doküman başarıyla yüklendi ve onaya gönderildi');
