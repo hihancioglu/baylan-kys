@@ -2948,9 +2948,9 @@ def publish_document(id: int):
     try:
         doc = db.get(Document, id)
         if not doc:
-            return "Not found", 404
+            return jsonify({"error": "Not found"}), 404
         if doc.status != "Approved":
-            return "Document not approved", 400
+            return jsonify({"error": "Document not approved"}), 400
         pending = (
             db.query(WorkflowStep)
             .filter(
@@ -2960,7 +2960,7 @@ def publish_document(id: int):
             .count()
         )
         if pending > 0:
-            return "Document not approved", 400
+            return jsonify({"error": "Document has pending steps"}), 400
         doc.status = "Published"
         user_ids = set()
         for uid in request.form.getlist("users"):
