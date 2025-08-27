@@ -120,7 +120,6 @@ function initAssignForm() {
   });
   form.addEventListener('htmx:afterRequest', (evt) => {
     if (evt.detail.successful) {
-      showToast('Assignments saved');
       const modalEl = document.getElementById('assignModal');
       const modal =
         bootstrap.Modal.getInstance(modalEl) ||
