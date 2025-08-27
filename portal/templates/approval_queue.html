@@ -38,8 +38,10 @@
       <td class="status">{{ step.status }}</td>
       <td>
         {% if step.status == 'Pending' %}
-        <button class="btn btn-success btn-sm" hx-post="{{ url_for('approve_step', step_id=step.id) }}" hx-target="#step-{{ step.id }}" hx-swap="outerHTML">Approve</button>
-        <button class="btn btn-danger btn-sm" hx-post="{{ url_for('reject_step', step_id=step.id) }}" hx-target="#step-{{ step.id }}" hx-swap="outerHTML">Reject</button>
+        <button class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#approveModal-{{ step.id }}">Approve</button>
+        <button class="btn btn-danger btn-sm" data-bs-toggle="modal" data-bs-target="#rejectModal-{{ step.id }}">Reject</button>
+        {% with action='approve' %}{% include 'partials/approvals/_modal.html' %}{% endwith %}
+        {% with action='reject' %}{% include 'partials/approvals/_modal.html' %}{% endwith %}
         {% else %}
         {{ step.status }}
         {% endif %}
@@ -101,13 +103,10 @@
   document.body.addEventListener('htmx:afterSwap', (evt) => {
     const row = evt.detail.target;
     if (row.matches('tr[data-step-id]')) {
-      row.classList.add('table-info');
-      setTimeout(()=>row.classList.remove('table-info'), 1000);
-      const id = row.dataset.stepId;
-      const toastEl = document.getElementById('action-toast');
-      toastEl.querySelector('.toast-body').innerHTML = `Action applied. <button class="btn btn-link btn-sm p-0 ms-2" hx-post="/approvals/${id}/undo" hx-target="#step-${id}" hx-swap="outerHTML">Undo</button>`;
-      const toast = bootstrap.Toast.getOrCreateInstance(toastEl, {delay:5000});
-      toast.show();
+      const status = row.querySelector('.status')?.textContent.trim();
+      if (status) {
+        document.dispatchEvent(new CustomEvent('showToast', { detail: status }));
+      }
     }
   });
 })();
