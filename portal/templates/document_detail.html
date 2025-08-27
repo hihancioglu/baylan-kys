@@ -2,6 +2,24 @@
 
 {% block title %}{{ doc.title }}{% endblock %}
 
+{% block page_actions %}
+<link rel="stylesheet" href="{{ url_for('static', filename='toolbar/toolbar.css') }}">
+<div class="toolbar" data-component="toolbar" data-variant="icon-text">
+  {% if doc.status == 'Approved' %}
+  <form id="publish-form" hx-post="/api/documents/{{ doc.id }}/publish" hx-swap="none" class="d-inline">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <button type="submit" class="btn btn-primary">Publish</button>
+  </form>
+  {% endif %}
+  {% if doc.status == 'Published' %}
+  <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#assignModal">
+    Assign Mandatory Reading
+  </button>
+  {% endif %}
+</div>
+<script type="module" src="{{ url_for('static', filename='toolbar/toolbar.js') }}"></script>
+{% endblock %}
+
 {% block content %}
 <h1>{{ doc.title }}</h1>
 {% if preview.type %}
@@ -36,5 +54,31 @@
   | <a href="{{ download_url }}">Download</a>
   {% endif %}
 </p>
+
+<div class="modal fade" id="assignModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <form id="assign-form">
+        <div class="modal-header">
+          <h5 class="modal-title">Assign Mandatory Reading</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <input type="hidden" name="doc_id" value="{{ doc.id }}">
+          <div class="mb-3">
+            <label class="form-label" for="assign-targets">Targets (roles or user IDs, comma separated)</label>
+            <input type="text" class="form-control" id="assign-targets" name="targets">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-primary">Assign</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script type="module" src="{{ url_for('static', filename='document_detail.js') }}"></script>
 {% endblock %}
 

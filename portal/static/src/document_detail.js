@@ -101,10 +101,48 @@ function initWorkflowForm() {
   });
 }
 
+function initAssignForm() {
+  const form = document.getElementById('assign-form');
+  if (!form) return;
+  form.addEventListener('submit', async (evt) => {
+    evt.preventDefault();
+    const data = new FormData(form);
+    const docId = data.get('doc_id');
+    const targets = (data.get('targets') || '')
+      .split(',')
+      .map((t) => t.trim())
+      .filter(Boolean);
+    const csrf = document
+      .querySelector('meta[name="csrf-token"]')
+      .getAttribute('content');
+    const resp = await fetch('/api/ack/assign', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': csrf,
+      },
+      body: JSON.stringify({ doc_id: docId, targets }),
+    });
+    if (resp.ok) {
+      showToast('Assignments saved');
+      const modalEl = document.getElementById('assignModal');
+      const modal =
+        bootstrap.Modal.getInstance(modalEl) ||
+        new bootstrap.Modal(modalEl);
+      modal.hide();
+      form.reset();
+    } else {
+      const result = await resp.json().catch(() => null);
+      showToast(result?.error || 'Assignment failed', { timeout: 6000 });
+    }
+  });
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   initTabs();
   initVersionSelection();
   initWorkflowForm();
+  initAssignForm();
 
   const params = new URLSearchParams(window.location.search);
   if (params.get('created') === '1') {
