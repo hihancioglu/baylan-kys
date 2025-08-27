@@ -556,6 +556,7 @@ def dashboard():
             "search_shortcuts": _get_search_shortcuts(),
             "standards": sorted(get_standard_map().keys()),
             "standard_map": get_standard_map(),
+            "poll_interval": app.config["POLL_INTERVAL_MS"] // 1000,
         }
         return render_template("dashboard.html", **context)
     finally:
