@@ -35,6 +35,7 @@ Object.values(errors).flat().forEach(msg => showToast(msg, { timeout: 6000 }));
   <p><strong>Standard:</strong> {{ standard_map.get(form.standard, form.standard) }}</p>
   <button type="submit" class="btn btn-primary">{% if form.generate_docxf %}View Document{% else %}Create{% endif %}</button>
   {% if not form.generate_docxf %}<button type="button" id="save-draft" class="btn btn-secondary ms-2">Taslak olarak kaydet</button>{% endif %}
+  <button type="submit" name="cancel" value="1" class="btn btn-secondary ms-2">Cancel</button>
 </form>
 {% if not form.generate_docxf %}
 <script type="module">

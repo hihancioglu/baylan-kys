@@ -1,6 +1,7 @@
 import io
 import os
 import importlib
+from unittest.mock import MagicMock
 
 
 # Provide required environment variables before importing the app
@@ -47,6 +48,7 @@ def test_final_payload_includes_department_and_type():
     app_module = importlib.reload(importlib.import_module("app"))
     app_module.app.config.update(WTF_CSRF_ENABLED=False)
     client = app_module.app.test_client()
+    app_module.storage_client.put_object = MagicMock()
 
     with client.session_transaction() as sess:
         sess["user"] = {"id": 1, "username": "tester"}
@@ -83,3 +85,44 @@ def test_final_payload_includes_department_and_type():
     assert resp.status_code == 302
     assert captured["department"] == step1_data["department"]
     assert captured["type"] == step1_data["type"]
+
+
+def test_cancel_cleans_up_upload():
+    app_module = importlib.reload(importlib.import_module("app"))
+    app_module.app.config.update(WTF_CSRF_ENABLED=False)
+    client = app_module.app.test_client()
+
+    with client.session_transaction() as sess:
+        sess["user"] = {"id": 1, "username": "tester"}
+        sess["roles"] = [app_module.RoleEnum.CONTRIBUTOR.value]
+
+    step1_data = {
+        "code": "DOC-3",
+        "title": "Cancel Doc",
+        "type": "T",
+        "department": "Dept",
+        "standard": "ISO9001",
+        "tags": "",
+    }
+    resp = client.post("/documents/new?step=1", data=step1_data)
+    assert resp.status_code == 302
+
+    file = (io.BytesIO(b"content"), "file.txt")
+    app_module.storage_client.put_object = MagicMock()
+    app_module.storage_client.delete_object = MagicMock()
+    resp = client.post(
+        "/documents/new?step=2",
+        data={"upload_file": file},
+        content_type="multipart/form-data",
+    )
+    assert resp.status_code == 302
+
+    with client.session_transaction() as sess:
+        key = sess.get("uploaded_file_key")
+        assert key
+
+    resp = client.post("/documents/new?step=3", data={"cancel": "1"})
+    assert resp.status_code == 302
+    app_module.storage_client.delete_object.assert_called_once_with(Key=key)
+    with client.session_transaction() as sess:
+        assert "uploaded_file_key" not in sess
