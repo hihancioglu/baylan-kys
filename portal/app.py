@@ -973,6 +973,64 @@ def new_document():
 
         if step == "2":
             data.update(request.form.to_dict())
+            data["generate_docxf"] = bool(request.form.get("generate_docxf"))
+            if data["generate_docxf"]:
+                user = session.get("user")
+                roles = session.get("roles", [])
+                payload = {
+                    "title": data.get("title"),
+                    "code": data.get("code"),
+                    "department": data.get("department"),
+                    "process": data.get("type"),
+                    "tags": data.get("tags"),
+                    "retention_period": data.get("retention_period"),
+                }
+                with app.test_request_context(
+                    "/api/documents/from-docxf",
+                    method="POST",
+                    json={"form_id": data.get("template"), "payload": payload},
+                ):
+                    session["user"] = user
+                    session["roles"] = roles
+                    response = create_document_from_docxf()
+                if isinstance(response, tuple):
+                    resp, status = response
+                else:
+                    resp, status = response, response.status_code
+                if status == 201:
+                    result = resp.get_json()
+                    data["doc_id"] = result.get("id")
+                    data["preview_url"] = result.get("preview_url")
+                    DOCUMENT_DRAFTS[draft_id] = data
+                    return redirect(url_for("new_document", step=3))
+                data["docxf_error"] = (resp.get_json() or {}).get(
+                    "error", "Failed to generate document."
+                )
+                DOCUMENT_DRAFTS[draft_id] = data
+                base_templates = os.path.abspath(
+                    os.path.join(os.path.dirname(__file__), "..", "templates")
+                )
+                template_options = {}
+                for folder in ("forms", "procedures"):
+                    path = os.path.join(base_templates, folder)
+                    if os.path.isdir(path):
+                        template_options[folder] = [
+                            f
+                            for f in os.listdir(path)
+                            if os.path.isfile(os.path.join(path, f))
+                        ]
+                context = {
+                    "breadcrumbs": [
+                        {"title": "Home", "url": url_for("dashboard")},
+                        {"title": "Documents", "url": url_for("list_documents")},
+                        {"title": "New"},
+                    ],
+                    "errors": {},
+                    "form": data,
+                    "step": 2,
+                    "template_options": template_options,
+                }
+                return render_template("documents/new_step2.html", **context), status
             uploaded = request.files.get("upload_file")
             if uploaded and uploaded.filename:
                 _, ext = os.path.splitext(uploaded.filename)
@@ -986,7 +1044,6 @@ def new_document():
                     data["uploaded_file_name"] = uploaded.filename
                 except Exception as e:
                     data["upload_error"] = str(e)
-            data["generate_docxf"] = bool(request.form.get("generate_docxf"))
             DOCUMENT_DRAFTS[draft_id] = data
             return redirect(url_for("new_document", step=3))
 
@@ -998,6 +1055,22 @@ def new_document():
             session.pop("new_doc_id", None)
             user = session.get("user")
             roles = session.get("roles", [])
+            if form_data.get("generate_docxf"):
+                doc_id = form_data.get("doc_id")
+                if doc_id:
+                    return redirect(url_for("document_detail", doc_id=doc_id, created=1))
+                context = {
+                    "breadcrumbs": [
+                        {"title": "Home", "url": url_for("dashboard")},
+                        {"title": "Documents", "url": url_for("list_documents")},
+                        {"title": "New"},
+                    ],
+                    "errors": {"docxf": form_data.get("docxf_error") or "Generation failed"},
+                    "form": form_data,
+                    "step": 3,
+                    "standard_map": get_standard_map(),
+                }
+                return render_template("documents/new_step3.html", **context), 400
             with app.test_request_context("/api/documents", method="POST", json=form_data):
                 session["user"] = user
                 session["roles"] = roles
@@ -1008,7 +1081,7 @@ def new_document():
                 resp, status = response, response.status_code
             if status == 201:
                 doc_id = resp.get_json().get("id")
-                return redirect(url_for("document_detail", doc_id=doc_id))
+                return redirect(url_for("document_detail", doc_id=doc_id, created=1))
             return resp, status
 
     template = f"documents/new_step{step}.html"

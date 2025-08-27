@@ -2,7 +2,12 @@
 {% block title %}New Document - Step 3{% endblock %}
 {% block content %}
 <h1 class="fw-bold" style="font-size: var(--font-size-lg); margin-bottom: var(--spacing-md);">New Document - Step 3</h1>
-{% if form.upload_error %}
+{% if form.docxf_error %}
+<div class="alert alert-danger">Generation failed: {{ form.docxf_error }}</div>
+{% elif form.preview_url %}
+<div class="alert alert-success">Document generated successfully.</div>
+<div class="mb-3"><iframe src="{{ form.preview_url }}" class="w-100" style="height:600px;"></iframe></div>
+{% elif form.upload_error %}
 <div class="alert alert-danger">Upload failed: {{ form.upload_error }}</div>
 {% elif form.uploaded_file_key %}
 <div class="alert alert-success">File uploaded successfully.</div>
@@ -14,9 +19,10 @@
   <p><strong>Department:</strong> {{ form.department }}</p>
   <p><strong>Type:</strong> {{ form.type }}</p>
   <p><strong>Standard:</strong> {{ standard_map.get(form.standard, form.standard) }}</p>
-  <button type="submit" class="btn btn-primary">Create</button>
-  <button type="button" id="save-draft" class="btn btn-secondary ms-2">Taslak olarak kaydet</button>
+  <button type="submit" class="btn btn-primary">{% if form.generate_docxf %}View Document{% else %}Create{% endif %}</button>
+  {% if not form.generate_docxf %}<button type="button" id="save-draft" class="btn btn-secondary ms-2">Taslak olarak kaydet</button>{% endif %}
 </form>
+{% if not form.generate_docxf %}
 <script type="module">
 import { showToast } from '{{ url_for('static', filename='components/index.js') }}';
 
@@ -56,4 +62,5 @@ document.getElementById('save-draft').addEventListener('click', async () => {
   }
 });
 </script>
+{% endif %}
 {% endblock %}

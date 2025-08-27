@@ -2,6 +2,11 @@
 {% block title %}New Document - Step 2{% endblock %}
 {% block content %}
 <h1 class="fw-bold" style="font-size: var(--font-size-lg); margin-bottom: var(--spacing-md);">New Document - Step 2</h1>
+{% if form.docxf_error %}
+<div class="alert alert-danger">Generation failed: {{ form.docxf_error }}</div>
+{% elif form.preview_url %}
+<div class="alert alert-success">Preview ready. <a href="{{ form.preview_url }}" target="_blank">View preview</a></div>
+{% endif %}
 <form method="post" action="{{ url_for('new_document', step=2) }}" enctype="multipart/form-data">
   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
   <div class="mb-3">
