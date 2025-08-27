@@ -12,6 +12,15 @@
 {% elif form.uploaded_file_key %}
 <div class="alert alert-success">File uploaded successfully.</div>
 {% endif %}
+{% if errors %}
+<div class="alert alert-danger">
+  <ul class="mb-0">
+    {% for msg in errors.values() %}
+    <li>{{ msg }}</li>
+    {% endfor %}
+  </ul>
+</div>
+{% endif %}
 <form method="post" action="{{ url_for('new_document', step=3) }}">
   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
   <p><strong>Code:</strong> {{ form.code }}</p>

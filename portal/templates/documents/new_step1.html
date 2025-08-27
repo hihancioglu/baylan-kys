@@ -2,6 +2,9 @@
 {% block title %}New Document - Step 1{% endblock %}
 {% block content %}
 <h1 class="fw-bold" style="font-size: var(--font-size-lg); margin-bottom: var(--spacing-md);">New Document - Step 1</h1>
+{% if errors %}
+<div class="alert alert-danger">Please correct the errors below.</div>
+{% endif %}
 <form method="post" action="{{ url_for('new_document', step=1) }}">
   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
   <div class="mb-3">
