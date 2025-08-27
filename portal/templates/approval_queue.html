@@ -29,7 +29,27 @@
     </tr>
   </thead>
   <tbody>
-    {% include 'partials/approvals/_queue_body.html' %}
+    {% for step in steps %}
+    <tr id="step-{{ step.id }}" data-step-id="{{ step.id }}">
+      <td><input type="checkbox" class="form-check-input step-checkbox" name="step_ids" value="{{ step.id }}"></td>
+      <td>{{ step.document.title }}</td>
+      <td>{{ step.step_order }}</td>
+      <td>{{ step.step_type.title() }}</td>
+      <td class="status">{{ step.status }}</td>
+      <td>
+        {% if step.status == 'Pending' %}
+        <button class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#approveModal-{{ step.id }}">Approve</button>
+        <button class="btn btn-danger btn-sm" data-bs-toggle="modal" data-bs-target="#rejectModal-{{ step.id }}">Reject</button>
+        {% with action='approve' %}{% include 'partials/approvals/_modal.html' %}{% endwith %}
+        {% with action='reject' %}{% include 'partials/approvals/_modal.html' %}{% endwith %}
+        {% else %}
+        {{ step.status }}
+        {% endif %}
+      </td>
+    </tr>
+    {% else %}
+    <tr><td colspan="6" class="text-center">No approvals in this filter.</td></tr>
+    {% endfor %}
   </tbody>
 </table>
 
@@ -87,12 +107,20 @@
   });
 
   document.body.addEventListener('htmx:afterSwap', (evt) => {
-    const row = evt.detail.target;
-    if (row.matches('tr[data-step-id]')) {
-      const status = row.querySelector('.status')?.textContent.trim();
+    const target = evt.detail.target;
+    if (target.matches('tr[data-step-id]')) {
+      const status = target.querySelector('.status')?.textContent.trim();
       if (status) {
         document.dispatchEvent(new CustomEvent('showToast', { detail: status }));
       }
+    }
+    if (target.closest('#queue-table')) {
+      selectAll.checked = false;
+      document.querySelectorAll('.step-checkbox').forEach(cb => {
+        cb.removeEventListener('change', updateBulkButtons);
+        cb.addEventListener('change', updateBulkButtons);
+      });
+      updateBulkButtons();
     }
   });
 })();
