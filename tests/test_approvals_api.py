@@ -102,6 +102,33 @@ def test_api_reject_step(client, setup_data):
     session.close()
 
 
+def test_api_undo_step(client, setup_data):
+    m, ids = setup_data
+    approver_id, step_id, _, _ = ids
+    with client.session_transaction() as sess:
+        sess["user"] = {"id": approver_id}
+        sess["roles"] = ["approver"]
+    # Approve first to change state
+    client.post(f"/api/approvals/{step_id}/approve", json={"comment": "ok"})
+    with patch("app.broadcast_counts") as broadcast_mock:
+        resp = client.post(f"/api/approvals/{step_id}/undo")
+        broadcast_mock.assert_called_once()
+    assert resp.status_code == 200
+    assert "Reverted" in resp.headers.get("HX-Trigger", "")
+    html = resp.get_data(as_text=True)
+    assert f'hx-post="/api/approvals/{step_id}/approve"' in html
+    session = m.SessionLocal()
+    step = session.get(m.WorkflowStep, step_id)
+    assert step.status == "Pending"
+    assert step.comment is None
+    assert step.approved_at is None
+    doc = session.get(m.Document, step.doc_id)
+    assert doc.status == "Review"
+    logs = session.query(m.AuditLog).filter_by(entity_type="WorkflowStep", entity_id=step_id, action="pending").all()
+    assert len(logs) == 1
+    session.close()
+
+
 def test_api_approve_step_forbidden_for_other_user(client, setup_data):
     m, ids = setup_data
     _, step_id, _, new_user_id = ids
