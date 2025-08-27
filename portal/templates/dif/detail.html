@@ -1,5 +1,9 @@
 {% extends "base.html" %}
 {% block title %}DIF {{ dif.id }}{% endblock %}
+{% block page_actions %}
+<link rel="stylesheet" href="{{ url_for('static', filename='toolbar/toolbar.css') }}">
+<script type="module" src="{{ url_for('static', filename='toolbar/toolbar.js') }}"></script>
+{% endblock %}
 {% block content %}
 <h3>{{ dif.subject }}</h3>
 {% include "partials/dif/_status.html" %}
@@ -20,7 +24,9 @@
 <p><strong>Description:</strong> {{ dif.description }}</p>
 <p><strong>Impact:</strong> {{ dif.impact }}</p>
 {% if attachment_url %}
-<p><a href="{{ attachment_url }}">Download Attachment</a></p>
+<div class="toolbar" data-component="toolbar">
+  <a class="btn btn-secondary" href="{{ attachment_url }}">Download Attachment</a>
+</div>
 {% endif %}
 {% include "partials/_audit_log.html" %}
 {% endblock %}

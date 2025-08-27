@@ -1,1 +1,5 @@
-[data-component="toolbar"] {display: flex;gap: 0.5rem;}
+[data-component="toolbar"] {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
