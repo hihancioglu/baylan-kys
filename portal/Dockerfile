@@ -19,6 +19,6 @@ RUN pip install libsass rcssmin jsmin
 
 # Build static assets during the image build so they can be copied into the
 # shared ``portal_static`` volume when the container starts.
-RUN python portal/static_build.py
+RUN test -d portal/static/src && python portal/static_build.py || true
 
 CMD ["sh", "-c", "alembic upgrade head && python portal/app.py"]
