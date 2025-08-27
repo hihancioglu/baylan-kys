@@ -1,0 +1,69 @@
+from __future__ import annotations
+
+from flask import has_request_context, request
+
+TRANSLATIONS = {
+    "en": {
+        "new_document_step3_title": "New Document - Step 3",
+        "generation_failed": "Generation failed: {error}",
+        "document_generated_success": "Document generated successfully.",
+        "upload_failed": "Upload failed: {error}",
+        "file_uploaded_success": "File uploaded successfully.",
+        "view_document": "View Document",
+        "create": "Create",
+        "save_draft": "Save as Draft",
+        "cancel": "Cancel",
+        "file_not_uploaded": "File could not be uploaded",
+        "session_ended": "Your session has ended. Please refresh the page.",
+        "document_uploaded_for_approval": (
+            "Document uploaded successfully and sent for approval"
+        ),
+        "document_create_error": (
+            "An error occurred while creating the document"
+        ),
+        "code_label": "Code",
+        "title_label": "Title",
+        "department_label": "Department",
+        "type_label": "Type",
+        "standard_label": "Standard",
+    },
+    "tr": {
+        "new_document_step3_title": "Yeni Doküman - Adım 3",
+        "generation_failed": "Oluşturma başarısız: {error}",
+        "document_generated_success": "Doküman başarıyla oluşturuldu.",
+        "upload_failed": "Yükleme başarısız: {error}",
+        "file_uploaded_success": "Dosya başarıyla yüklendi.",
+        "view_document": "Dokümanı Görüntüle",
+        "create": "Oluştur",
+        "save_draft": "Taslak olarak kaydet",
+        "cancel": "İptal",
+        "file_not_uploaded": "Dosya yüklenemedi",
+        "session_ended": "Oturumunuz sonlandı. Lütfen sayfayı yenileyin.",
+        "document_uploaded_for_approval": (
+            "Doküman başarıyla yüklendi ve onaya gönderildi"
+        ),
+        "document_create_error": (
+            "Doküman oluşturulurken bir hata oluştu"
+        ),
+        "code_label": "Kod",
+        "title_label": "Başlık",
+        "department_label": "Departman",
+        "type_label": "Tür",
+        "standard_label": "Standart",
+    },
+}
+
+
+def get_locale() -> str:
+    if has_request_context():
+        return request.cookies.get("pref-language", "en")
+    return "en"
+
+
+def t(key: str, **kwargs: str) -> str:
+    locale = get_locale()
+    text = TRANSLATIONS.get(locale, TRANSLATIONS["en"]).get(key, key)
+    try:
+        return text.format(**kwargs)
+    except Exception:
+        return text
