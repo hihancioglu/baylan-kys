@@ -80,5 +80,21 @@
 </div>
 
 <script type="module" src="{{ url_for('static', filename='document_detail.js') }}"></script>
+<script>
+document.addEventListener('htmx:responseError', function (evt) {
+  if (evt.target.id === 'publish-form') {
+    let message = 'Failed to publish document';
+    try {
+      const data = JSON.parse(evt.detail.xhr.responseText);
+      if (data && data.error) {
+        message = data.error;
+      }
+    } catch (e) {
+      // ignore JSON parse errors
+    }
+    alert(message);
+  }
+});
+</script>
 {% endblock %}
 
