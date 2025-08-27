@@ -45,7 +45,16 @@ def build_file(src_path, rel_path):
     with open(out_full, 'w') as f:
         f.write(minified)
 
-if __name__ == '__main__':
+
+def build_all() -> None:
+    """Rebuild all static assets into ``static-dist``.
+
+    The function mirrors the script's command line behaviour so it can be
+    reused programmatically. It skips execution if the source directory does
+    not exist, allowing environments without the optional static volume to
+    start without failing.
+    """
+
     os.makedirs(DEST_DIR, exist_ok=True)
     if not os.path.isdir(SRC_DIR):
         raise FileNotFoundError(
@@ -55,6 +64,11 @@ if __name__ == '__main__':
     for root, _, files in os.walk(SRC_DIR):
         rel_dir = os.path.relpath(root, SRC_DIR)
         for fname in files:
-            if fname.endswith(('.css', '.js')):
-                rel_path = fname if rel_dir == '.' else os.path.join(rel_dir, fname)
+            if fname.endswith((".css", ".js")):
+                rel_path = (
+                    fname if rel_dir == "." else os.path.join(rel_dir, fname)
+                )
                 build_file(os.path.join(root, fname), rel_path)
+
+if __name__ == "__main__":
+    build_all()

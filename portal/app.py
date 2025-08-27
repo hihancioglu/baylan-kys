@@ -40,6 +40,7 @@ from search import index_document, search_documents
 from signing import create_signed_pdf
 from storage import generate_presigned_url, storage_client
 from translations import t
+from static_build import build_all
 
 
 # Automatically run database migrations in non-SQLite environments.
@@ -62,6 +63,15 @@ _run_migrations()
 from search import create_index
 
 create_index()
+
+# Rebuild static assets on each application start.
+def _build_static_assets() -> None:
+    try:
+        build_all()
+    except FileNotFoundError:
+        pass
+
+_build_static_assets()
 
 # Serve static assets from the root ``static`` directory and load templates from the
 # project-level ``templates`` folder. Explicitly setting these paths ensures static
