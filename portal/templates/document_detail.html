@@ -32,8 +32,9 @@
 
 <p>
   <a href="{{ url_for('list_documents') }}">Back to documents</a>
-  |
-  <a href="{{ url_for('download_document', doc_id=doc.id) }}">Download</a>
+  {% if download_url %}
+  | <a href="{{ download_url }}">Download</a>
+  {% endif %}
 </p>
 {% endblock %}
 
