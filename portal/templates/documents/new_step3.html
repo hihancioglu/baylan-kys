@@ -20,6 +20,11 @@
     {% endfor %}
   </ul>
 </div>
+<script type="module">
+import { showToast } from '{{ url_for('static', filename='components/index.js') }}';
+const errors = {{ errors | tojson }};
+Object.values(errors).flat().forEach(msg => showToast(msg, { timeout: 6000 }));
+</script>
 {% endif %}
 <form method="post" action="{{ url_for('new_document', step=3) }}">
   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
