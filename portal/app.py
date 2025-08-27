@@ -39,6 +39,7 @@ from reports import (build_report, pending_approvals_report, revision_report,
 from search import index_document, search_documents
 from signing import create_signed_pdf
 from storage import generate_presigned_url, storage_client
+from translations import t
 
 
 # Automatically run database migrations in non-SQLite environments.
@@ -129,7 +130,12 @@ def inject_user():
     user = session.get("user")
     def has_role(role):
         return role in roles
-    return {"current_user": user, "user_roles": roles, "has_role": has_role}
+    return {
+        "current_user": user,
+        "user_roles": roles,
+        "has_role": has_role,
+        "t": t,
+    }
 
 # -- Preview configuration -------------------------------------------------
 #
