@@ -7,6 +7,9 @@
 {% elif form.preview_url %}
 <div class="alert alert-success">Preview ready. <a href="{{ form.preview_url }}" target="_blank">View preview</a></div>
 {% endif %}
+{% if errors %}
+<div class="alert alert-danger">Please correct the errors below.</div>
+{% endif %}
 <form method="post" action="{{ url_for('new_document', step=2) }}" enctype="multipart/form-data">
   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
   <div class="mb-3">
@@ -22,7 +25,7 @@
 
   <div class="mb-3">
     <label for="template" class="form-label">Template</label>
-    <select class="form-select" id="template" name="template" title="Select a template">
+    <select class="form-select{% if errors.template %} is-invalid{% endif %}" id="template" name="template" title="Select a template">
       <option value="">-- Select Template --</option>
       {% for group, files in template_options.items() %}
         <optgroup label="{{ group|capitalize }}">
@@ -32,11 +35,13 @@
         </optgroup>
       {% endfor %}
     </select>
+    {% if errors.template %}<div class="invalid-feedback">{{ errors.template }}</div>{% endif %}
   </div>
 
   <div class="mb-3">
     <label for="upload_file" class="form-label">Upload File</label>
-    <input type="file" class="form-control" id="upload_file" name="upload_file" title="Upload document file">
+    <input type="file" class="form-control{% if errors.upload_file %} is-invalid{% endif %}" id="upload_file" name="upload_file" title="Upload document file">
+    {% if errors.upload_file %}<div class="invalid-feedback">{{ errors.upload_file }}</div>{% endif %}
   </div>
 
   <div class="mb-3 form-check">

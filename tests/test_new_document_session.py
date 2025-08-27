@@ -26,6 +26,7 @@ def test_upload_does_not_bloat_cookie():
         "title": "My Doc",
         "type": "T",
         "department": "Dept",
+        "standard": "ISO9001",
         "tags": "",
     }
     resp = client.post("/documents/new?step=1", data=step1_data)

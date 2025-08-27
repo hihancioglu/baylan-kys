@@ -960,20 +960,86 @@ def new_document():
     data = DOCUMENT_DRAFTS.get(draft_id, {})
 
     if request.method == "POST":
+        errors: dict[str, str] = {}
         if step == "1":
             data["code"] = request.form.get("code", "").strip()
+            if not data["code"]:
+                errors["code"] = "Code is required"
             data["title"] = request.form.get("title", "").strip()
+            if not data["title"]:
+                errors["title"] = "Title is required"
             data["type"] = request.form.get("type", "").strip()
+            if not data["type"]:
+                errors["type"] = "Type is required"
             data["department"] = request.form.get("department", "").strip()
+            if not data["department"]:
+                errors["department"] = "Department is required"
             data["standard"] = request.form.get("standard", "").strip()
+            if not data["standard"]:
+                errors["standard"] = "Standard is required"
             tags = request.form.get("tags", "")
             data["tags"] = ",".join([t.strip() for t in tags.split(",") if t.strip()])
             DOCUMENT_DRAFTS[draft_id] = data
+            if errors:
+                standard_map = get_standard_map()
+                context = {
+                    "breadcrumbs": [
+                        {"title": "Home", "url": url_for("dashboard")},
+                        {"title": "Documents", "url": url_for("list_documents")},
+                        {"title": "New"},
+                    ],
+                    "errors": errors,
+                    "form": data,
+                    "step": 1,
+                    "standards": sorted(standard_map.keys()),
+                    "standard_map": standard_map,
+                }
+                return render_template("documents/new_step1.html", **context), 400
             return redirect(url_for("new_document", step=2))
 
         if step == "2":
             data.update(request.form.to_dict())
+            data["department"] = data.get("department", "").strip()
+            if not data["department"]:
+                errors["department"] = "Department is required"
+            data["type"] = data.get("type", "").strip()
+            if not data["type"]:
+                errors["type"] = "Type is required"
+            data["template"] = request.form.get("template", "").strip()
             data["generate_docxf"] = bool(request.form.get("generate_docxf"))
+            uploaded = request.files.get("upload_file")
+            if data["generate_docxf"]:
+                if not data["template"]:
+                    errors["template"] = "Template is required"
+            else:
+                if not (uploaded and uploaded.filename):
+                    errors["upload_file"] = "File is required"
+            if errors:
+                DOCUMENT_DRAFTS[draft_id] = data
+                base_templates = os.path.abspath(
+                    os.path.join(os.path.dirname(__file__), "..", "templates")
+                )
+                template_options = {}
+                for folder in ("forms", "procedures"):
+                    path = os.path.join(base_templates, folder)
+                    if os.path.isdir(path):
+                        template_options[folder] = [
+                            f
+                            for f in os.listdir(path)
+                            if os.path.isfile(os.path.join(path, f))
+                        ]
+                context = {
+                    "breadcrumbs": [
+                        {"title": "Home", "url": url_for("dashboard")},
+                        {"title": "Documents", "url": url_for("list_documents")},
+                        {"title": "New"},
+                    ],
+                    "errors": errors,
+                    "form": data,
+                    "step": 2,
+                    "template_options": template_options,
+                }
+                return render_template("documents/new_step2.html", **context), 400
             if data["generate_docxf"]:
                 user = session.get("user")
                 roles = session.get("roles", [])
@@ -1031,19 +1097,17 @@ def new_document():
                     "template_options": template_options,
                 }
                 return render_template("documents/new_step2.html", **context), status
-            uploaded = request.files.get("upload_file")
-            if uploaded and uploaded.filename:
-                _, ext = os.path.splitext(uploaded.filename)
-                doc_key = f"{secrets.token_hex(16)}{ext}"
-                try:
-                    storage_client.put_object(
-                        Key=doc_key,
-                        Body=uploaded.read(),
-                    )
-                    data["uploaded_file_key"] = doc_key
-                    data["uploaded_file_name"] = uploaded.filename
-                except Exception as e:
-                    data["upload_error"] = str(e)
+            _, ext = os.path.splitext(uploaded.filename)
+            doc_key = f"{secrets.token_hex(16)}{ext}"
+            try:
+                storage_client.put_object(
+                    Key=doc_key,
+                    Body=uploaded.read(),
+                )
+                data["uploaded_file_key"] = doc_key
+                data["uploaded_file_name"] = uploaded.filename
+            except Exception as e:
+                data["upload_error"] = str(e)
             DOCUMENT_DRAFTS[draft_id] = data
             return redirect(url_for("new_document", step=3))
 
@@ -1071,6 +1135,19 @@ def new_document():
                     "standard_map": get_standard_map(),
                 }
                 return render_template("documents/new_step3.html", **context), 400
+            if not form_data.get("uploaded_file_key"):
+                context = {
+                    "breadcrumbs": [
+                        {"title": "Home", "url": url_for("dashboard")},
+                        {"title": "Documents", "url": url_for("list_documents")},
+                        {"title": "New"},
+                    ],
+                    "errors": {"upload_file": "File upload is missing"},
+                    "form": form_data,
+                    "step": 3,
+                    "standard_map": get_standard_map(),
+                }
+                return render_template("documents/new_step3.html", **context), 400
             with app.test_request_context("/api/documents", method="POST", json=form_data):
                 session["user"] = user
                 session["roles"] = roles
@@ -1082,6 +1159,20 @@ def new_document():
             if status == 201:
                 doc_id = resp.get_json().get("id")
                 return redirect(url_for("document_detail", doc_id=doc_id, created=1))
+            errors = (resp.get_json() or {}).get("errors")
+            if errors:
+                context = {
+                    "breadcrumbs": [
+                        {"title": "Home", "url": url_for("dashboard")},
+                        {"title": "Documents", "url": url_for("list_documents")},
+                        {"title": "New"},
+                    ],
+                    "errors": errors,
+                    "form": form_data,
+                    "step": 3,
+                    "standard_map": get_standard_map(),
+                }
+                return render_template("documents/new_step3.html", **context), status
             return resp, status
 
     template = f"documents/new_step{step}.html"
