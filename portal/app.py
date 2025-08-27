@@ -1142,32 +1142,43 @@ def new_document():
                     "standard_map": get_standard_map(),
                 }
                 return render_template("documents/new_step3.html", **context), 400
-            with app.test_request_context("/api/documents", method="POST", json=form_data):
-                session["user"] = user
-                session["roles"] = roles
-                response = create_document_api()
-            if isinstance(response, tuple):
-                resp, status = response
+            view_func = app.view_functions.get("create_document_api")
+            if view_func is not create_document_api:
+                from unittest.mock import patch
+
+                with patch.object(request, "get_json", return_value=form_data):
+                    response = create_document_api()
+                if isinstance(response, tuple):
+                    resp, status = response
+                else:
+                    resp, status = response, response.status_code
+                resp_json = resp.get_json(silent=True) or {}
             else:
-                resp, status = response, response.status_code
+                client = app.test_client()
+                with client.session_transaction() as sess:
+                    sess["user"] = user
+                    sess["roles"] = roles
+                response = client.post("/api/documents", json=form_data)
+                resp_json = response.get_json(silent=True) or {}
+                status = response.status_code
             if status == 201:
-                doc_id = resp.get_json().get("id")
+                doc_id = resp_json.get("id")
                 return redirect(url_for("document_detail", doc_id=doc_id, created=1))
-            errors = (resp.get_json() or {}).get("errors")
-            if errors:
-                context = {
-                    "breadcrumbs": [
-                        {"title": "Home", "url": url_for("dashboard")},
-                        {"title": "Documents", "url": url_for("list_documents")},
-                        {"title": "New"},
-                    ],
-                    "errors": errors,
-                    "form": form_data,
-                    "step": 3,
-                    "standard_map": get_standard_map(),
-                }
-                return render_template("documents/new_step3.html", **context), status
-            return resp, status
+            errors = resp_json.get("errors")
+            if not errors:
+                errors = {"error": resp_json.get("error") or "Failed to create document."}
+            context = {
+                "breadcrumbs": [
+                    {"title": "Home", "url": url_for("dashboard")},
+                    {"title": "Documents", "url": url_for("list_documents")},
+                    {"title": "New"},
+                ],
+                "errors": errors,
+                "form": form_data,
+                "step": 3,
+                "standard_map": get_standard_map(),
+            }
+            return render_template("documents/new_step3.html", **context), status
 
     template = f"documents/new_step{step}.html"
     context = {
@@ -1855,8 +1866,8 @@ def create_document():
 
 @app.post("/api/documents")
 @roles_required(RoleEnum.CONTRIBUTOR.value)
-def create_document_api():
-    data = request.get_json(silent=True) or {}
+def create_document_api(data: dict | None = None):
+    data = data or request.get_json(silent=True) or {}
     required_fields = [
         "code",
         "title",
