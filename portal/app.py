@@ -3244,7 +3244,11 @@ def assign_acknowledgements_endpoint():
         if doc and user_ids:
             notify_mandatory_read(doc, list(user_ids))
         broadcast_counts()
-        return jsonify(ok=True)
+        resp = jsonify(ok=True)
+        resp.headers["HX-Trigger"] = json.dumps(
+            {"ackUpdated": True, "showToast": "Assignments added"}
+        )
+        return resp
     finally:
         db.close()
 

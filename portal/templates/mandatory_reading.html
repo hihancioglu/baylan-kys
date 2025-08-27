@@ -23,7 +23,13 @@
       <th scope="col">Confirm</th>
     </tr>
   </thead>
-  <tbody>
+  <tbody
+    hx-get="{{ url_for('mandatory_reading', filter=filter) }}"
+    hx-trigger="ackUpdated from:body"
+    hx-target="this"
+    hx-swap="outerHTML"
+    hx-select="#reading-table tbody"
+  >
     {% include 'partials/_mandatory_body.html' %}
   </tbody>
 </table>

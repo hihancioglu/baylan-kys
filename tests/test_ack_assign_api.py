@@ -3,6 +3,7 @@ import importlib
 from pathlib import Path
 import sys
 import uuid
+import json
 
 import pytest
 from unittest.mock import patch
@@ -74,8 +75,10 @@ def test_assign_acknowledgements_role_targets(client, app_models):
             json={"doc_id": doc_id, "targets": [f"ack_reader_{uid}"]},
         )
         broadcast_mock.assert_called_once()
-
     assert resp.status_code == 200
+    trigger = json.loads(resp.headers.get("HX-Trigger"))
+    assert trigger.get("ackUpdated") is True
+    assert trigger.get("showToast") == "Assignments added"
     session = m.SessionLocal()
     acks = session.query(m.Acknowledgement).filter_by(doc_id=doc_id).all()
     ack_user_ids = {a.user_id for a in acks}
