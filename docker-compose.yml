@@ -115,19 +115,99 @@ services:
       # serve them.
       - portal_static:/app/portal/static-dist
 
+  worker:
+    build:
+      context: .
+      dockerfile: portal/Dockerfile
+    environment:
+      FLASK_ENV: production
+      SECRET_KEY: ${PORTAL_SECRET_KEY}
+      DEBUG: ${PORTAL_DEBUG}
+      PORTAL_BIND: ${PORTAL_BIND}
+      BIND: ${PORTAL_BIND}
+      DATABASE_URL: postgresql+psycopg2://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_DB: 0
+      ONLYOFFICE_INTERNAL_URL: ${ONLYOFFICE_INTERNAL_URL}
+      ONLYOFFICE_PUBLIC_URL: ${ONLYOFFICE_PUBLIC_URL}
+      ONLYOFFICE_JWT_SECRET: ${ONLYOFFICE_JWT_SECRET}
+      ONLYOFFICE_JWT_HEADER: ${ONLYOFFICE_JWT_HEADER}
+      S3_ENDPOINT: ${S3_ENDPOINT}
+      S3_REGION: ${S3_REGION}
+      S3_ACCESS_KEY_ID: ${S3_ACCESS_KEY_ID}
+      S3_SECRET_ACCESS_KEY: ${S3_SECRET_ACCESS_KEY}
+      S3_BUCKET_MAIN: ${S3_BUCKET_MAIN}
+      S3_BUCKET_ARCHIVE: ${S3_BUCKET_ARCHIVE}
+      S3_BUCKET_PREVIEWS: ${S3_BUCKET_PREVIEWS}
+      SESSION_COOKIE_SECURE: ${SESSION_COOKIE_SECURE}
+      LDAP_ENABLED: ${LDAP_ENABLED}
+      LDAP_URL: ${LDAP_URL}
+      LDAP_DOMAIN: ${LDAP_DOMAIN}
+      LDAP_USER: ${LDAP_USER}
+      LDAP_PASSWORD: ${LDAP_PASSWORD}
+      LDAP_SEARCH_FILTER: ${LDAP_SEARCH_FILTER}
+      PORTAL_JWT_SECRET: ${PORTAL_JWT_SECRET}
+      ELASTIC_URL: ${ELASTIC_URL}
+    command: python -m rq.worker
+    depends_on:
+      - postgres
+      - redis
+      - minio
+      - minio-setup
+      - onlyoffice
+      - elasticsearch
+    networks: [qdms]
+
   scheduler:
     image: python:3.12-slim
     working_dir: /app
     volumes:
       - "./portal:/app"
+    environment:
+      FLASK_ENV: production
+      SECRET_KEY: ${PORTAL_SECRET_KEY}
+      DEBUG: ${PORTAL_DEBUG}
+      PORTAL_BIND: ${PORTAL_BIND}
+      BIND: ${PORTAL_BIND}
+      DATABASE_URL: postgresql+psycopg2://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_DB: 0
+      ONLYOFFICE_INTERNAL_URL: ${ONLYOFFICE_INTERNAL_URL}
+      ONLYOFFICE_PUBLIC_URL: ${ONLYOFFICE_PUBLIC_URL}
+      ONLYOFFICE_JWT_SECRET: ${ONLYOFFICE_JWT_SECRET}
+      ONLYOFFICE_JWT_HEADER: ${ONLYOFFICE_JWT_HEADER}
+      S3_ENDPOINT: ${S3_ENDPOINT}
+      S3_REGION: ${S3_REGION}
+      S3_ACCESS_KEY_ID: ${S3_ACCESS_KEY_ID}
+      S3_SECRET_ACCESS_KEY: ${S3_SECRET_ACCESS_KEY}
+      S3_BUCKET_MAIN: ${S3_BUCKET_MAIN}
+      S3_BUCKET_ARCHIVE: ${S3_BUCKET_ARCHIVE}
+      S3_BUCKET_PREVIEWS: ${S3_BUCKET_PREVIEWS}
+      SESSION_COOKIE_SECURE: ${SESSION_COOKIE_SECURE}
+      LDAP_ENABLED: ${LDAP_ENABLED}
+      LDAP_URL: ${LDAP_URL}
+      LDAP_DOMAIN: ${LDAP_DOMAIN}
+      LDAP_USER: ${LDAP_USER}
+      LDAP_PASSWORD: ${LDAP_PASSWORD}
+      LDAP_SEARCH_FILTER: ${LDAP_SEARCH_FILTER}
+      PORTAL_JWT_SECRET: ${PORTAL_JWT_SECRET}
+      ELASTIC_URL: ${ELASTIC_URL}
     command: >
       sh -c "pip install -r requirements.txt &&
              ( while :; do python archive_job.py; sleep 86400; done ) &
              ( while :; do python dif_overdue_job.py; sleep 3600; done ) &
              ( while :; do python periodic_review.py; sleep 31536000; done ) &
              wait"
-    depends_on: [ portal ]
-    networks: [ qdms ]
+    depends_on:
+      - postgres
+      - redis
+      - minio
+      - minio-setup
+      - onlyoffice
+      - elasticsearch
+    networks: [qdms]
 
   nginx:
     image: nginx:1.27-alpine
