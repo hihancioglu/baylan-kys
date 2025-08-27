@@ -12,16 +12,6 @@
 {% endif %}
 <form method="post" action="{{ url_for('new_document', step=2) }}" enctype="multipart/form-data">
   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-  <div class="mb-3">
-    <label for="department" class="form-label">Department</label>
-    <input type="text" class="form-control{% if errors.department %} is-invalid{% endif %}" id="department" name="department" value="{{ form.department or '' }}" title="Responsible department">
-    {% if errors.department %}<div class="invalid-feedback">{{ errors.department }}</div>{% endif %}
-  </div>
-  <div class="mb-3">
-    <label for="type" class="form-label">Type</label>
-    <input type="text" class="form-control{% if errors.type %} is-invalid{% endif %}" id="type" name="type" value="{{ form.type or '' }}" title="Document type">
-    {% if errors.type %}<div class="invalid-feedback">{{ errors.type }}</div>{% endif %}
-  </div>
 
   <div class="mb-3">
     <label for="template" class="form-label">Template</label>
@@ -53,14 +43,6 @@
 
 <script type="module">
   import { attachHelpText, attachTooltip } from '{{ url_for('static', filename='forms/index.js') }}';
-
-  const departmentInput = document.getElementById('department');
-  attachHelpText(departmentInput, 'Department responsible for the document.');
-  attachTooltip(departmentInput, 'Responsible department');
-
-  const typeInput = document.getElementById('type');
-  attachHelpText(typeInput, 'Type of document.');
-  attachTooltip(typeInput, 'Document type');
 
   const templateSelect = document.getElementById('template');
   attachHelpText(templateSelect, 'Select a template to start from.');

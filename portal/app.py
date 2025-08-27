@@ -999,12 +999,6 @@ def new_document():
 
         if step == "2":
             data.update(request.form.to_dict())
-            data["department"] = data.get("department", "").strip()
-            if not data["department"]:
-                errors["department"] = "Department is required"
-            data["type"] = data.get("type", "").strip()
-            if not data["type"]:
-                errors["type"] = "Type is required"
             data["template"] = request.form.get("template", "").strip()
             data["generate_docxf"] = bool(request.form.get("generate_docxf"))
             uploaded = request.files.get("upload_file")
