@@ -1,0 +1,1 @@
+export default function initSelectFilter(select) {return {getValues() {return select.value? [{ label: select.dataset.label || select.name, value: select.options[select.selectedIndex].text, name: select.name }]: [];},clear() {select.value = '';},clearValue() {select.value = '';}};}

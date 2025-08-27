@@ -1,0 +1,1 @@
+export default function initTextFilter(input) {return {getValues() {return input.value? [{ label: input.dataset.label || input.placeholder || input.name, value: input.value, name: input.name }]: [];},clear() {input.value = '';},clearValue() {input.value = '';}};}
