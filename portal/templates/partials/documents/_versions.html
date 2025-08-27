@@ -25,7 +25,9 @@
           <button type="button" id="compare-to-button" class="btn btn-outline-primary mt-2"
             data-url="{{ url_for('compare_document_versions', doc_id=doc.id) }}"
             data-rev-id="{{ revision.id }}">Compare to…</button>
-          <a class="btn btn-outline-secondary mt-2" href="{{ url_for('download_document', doc_id=doc.id) }}">Download</a>
+          {% if download_url %}
+          <a class="btn btn-outline-secondary mt-2" href="{{ download_url }}">Download</a>
+          {% endif %}
         </div>
         {% else %}
         <div id="revision-note">

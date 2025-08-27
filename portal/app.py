@@ -1118,12 +1118,17 @@ def document_detail(doc_id: int | None = None, id: int | None = None):
                 }
             )
 
+    download_url = None
+    if user and permission_check(user["id"], doc, download=True):
+        download_url = generate_presigned_url(doc.doc_key)
+
     return render_template(
         "document_detail.html",
         doc=doc,
         revisions=revisions,
         preview=preview,
         logs=logs,
+        download_url=download_url,
     )
 
 
@@ -1167,29 +1172,6 @@ def document_workflow(doc_id: int):
     )
     db.close()
     return html
-
-
-@app.get("/documents/<int:doc_id>/download")
-@roles_required(RoleEnum.READER.value)
-def download_document(doc_id: int):
-    """Provide a presigned download URL for a document."""
-    db = get_session()
-    try:
-        doc = db.get(Document, doc_id)
-        if not doc:
-            return "Document not found", 404
-        user = session.get("user")
-        if not user or not permission_check(user["id"], doc, download=True):
-            return "Forbidden", 403
-        url = generate_presigned_url(doc.doc_key)
-        if not url:
-            return "File not available", 404
-        resp = redirect(url)
-        resp.headers["Cache-Control"] = "public, max-age=86400"
-        return resp
-    finally:
-        db.close()
-
 
 @app.get("/files/<path:file_key>")
 @roles_required(RoleEnum.READER.value)
