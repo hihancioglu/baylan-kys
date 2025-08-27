@@ -2379,6 +2379,91 @@ def reject_step(step_id: int):
         db.close()
 
 
+@app.post("/approvals/bulk_approve")
+@roles_required(RoleEnum.APPROVER.value, RoleEnum.REVIEWER.value)
+def bulk_approve_steps():
+    db = get_session()
+    try:
+        ids = request.form.getlist("step_ids") or request.form.getlist("")
+        ids = [int(i) for i in ids]
+        comment = request.form.get("comment")
+        user = session.get("user") or {}
+        user_id = user.get("id")
+        if ids:
+            steps = (
+                db.query(WorkflowStep)
+                .filter(WorkflowStep.id.in_(ids), WorkflowStep.user_id == user_id)
+                .all()
+            )
+            for step in steps:
+                step.status = "Approved"
+                step.approved_at = datetime.utcnow()
+                step.comment = comment
+                log_action(
+                    user_id,
+                    step.doc_id,
+                    "bulk_approve",
+                    payload={"comment": comment, "step_id": step.id},
+                )
+            db.commit()
+            broadcast_counts()
+        steps = (
+            db.query(WorkflowStep)
+            .join(Document)
+            .filter(WorkflowStep.status == "Pending", WorkflowStep.user_id == user_id)
+            .all()
+        )
+        return render_template("partials/approvals/_queue_body.html", steps=steps)
+    finally:
+        db.close()
+
+
+@app.post("/approvals/bulk_reject")
+@roles_required(RoleEnum.APPROVER.value, RoleEnum.REVIEWER.value)
+def bulk_reject_steps():
+    db = get_session()
+    try:
+        ids = request.form.getlist("step_ids") or request.form.getlist("")
+        ids = [int(i) for i in ids]
+        comment = request.form.get("comment")
+        user = session.get("user") or {}
+        user_id = user.get("id")
+        if ids:
+            steps = (
+                db.query(WorkflowStep)
+                .filter(WorkflowStep.id.in_(ids), WorkflowStep.user_id == user_id)
+                .all()
+            )
+            for step in steps:
+                step.status = "Rejected"
+                step.approved_at = datetime.utcnow()
+                step.comment = comment
+                log_action(
+                    user_id,
+                    step.doc_id,
+                    "bulk_reject",
+                    payload={"comment": comment, "step_id": step.id},
+                )
+                owner_id = getattr(step.document, "owner_id", None)
+                if owner_id:
+                    notify_user(
+                        owner_id,
+                        f"Document {step.document.title} rejected",
+                        comment or f"Document {step.document.title} was rejected.",
+                    )
+            db.commit()
+            broadcast_counts()
+        steps = (
+            db.query(WorkflowStep)
+            .join(Document)
+            .filter(WorkflowStep.status == "Pending", WorkflowStep.user_id == user_id)
+            .all()
+        )
+        return render_template("partials/approvals/_queue_body.html", steps=steps)
+    finally:
+        db.close()
+
+
 @app.get("/search")
 @roles_required(RoleEnum.READER.value)
 def search_view():

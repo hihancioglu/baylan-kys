@@ -29,27 +29,7 @@
     </tr>
   </thead>
   <tbody>
-    {% for step in steps %}
-    <tr id="step-{{ step.id }}" data-step-id="{{ step.id }}">
-      <td><input type="checkbox" class="form-check-input step-checkbox" value="{{ step.id }}"></td>
-      <td>{{ step.document.title }}</td>
-      <td>{{ step.step_order }}</td>
-      <td>{{ step.step_type.title() }}</td>
-      <td class="status">{{ step.status }}</td>
-      <td>
-        {% if step.status == 'Pending' %}
-        <button class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#approveModal-{{ step.id }}">Approve</button>
-        <button class="btn btn-danger btn-sm" data-bs-toggle="modal" data-bs-target="#rejectModal-{{ step.id }}">Reject</button>
-        {% with action='approve' %}{% include 'partials/approvals/_modal.html' %}{% endwith %}
-        {% with action='reject' %}{% include 'partials/approvals/_modal.html' %}{% endwith %}
-        {% else %}
-        {{ step.status }}
-        {% endif %}
-      </td>
-    </tr>
-    {% else %}
-    <tr><td colspan="5" class="text-center">No pending approvals.</td></tr>
-    {% endfor %}
+    {% include 'partials/approvals/_queue_body.html' %}
   </tbody>
 </table>
 
@@ -61,7 +41,13 @@
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
       <form id="bulk-action-form" hx-post="" hx-include=".step-checkbox:checked" hx-target="#queue-table tbody" hx-swap="innerHTML">
-        <div class="modal-body">Are you sure you want to proceed?</div>
+        <div class="modal-body">
+          <p>Are you sure you want to proceed?</p>
+          <div class="mb-3">
+            <label class="form-label">Comment</label>
+            <textarea class="form-control" name="comment" rows="3"></textarea>
+          </div>
+        </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
           <button type="submit" class="btn btn-primary">Confirm</button>
