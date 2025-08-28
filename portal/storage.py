@@ -111,6 +111,44 @@ class MinIOBackend(StorageBackend):
         )
 
         self._add_aliases()
+        self._ensure_buckets()
+
+    def _ensure_buckets(self) -> None:
+        """Create required buckets on startup if they do not exist.
+
+        This mirrors the bucket setup performed by the Docker ``minio-setup``
+        service so that running the application outside Docker still works
+        without manual bucket creation.
+        """
+
+        try:
+            existing = {
+                b["Name"] for b in self.client.list_buckets().get("Buckets", [])
+            }
+        except Exception:
+            existing = set()
+
+        required = {
+            self.bucket_main,
+            self.bucket_archive,
+            self.bucket_previews,
+        }
+
+        for bucket in filter(None, required):
+            if bucket in existing:
+                continue
+            try:
+                create_kwargs: dict[str, Any] = {}
+                if bucket in {self.bucket_main, self.bucket_archive}:
+                    create_kwargs["ObjectLockEnabledForBucket"] = True
+                self.client.create_bucket(Bucket=bucket, **create_kwargs)
+                self.client.put_bucket_versioning(
+                    Bucket=bucket,
+                    VersioningConfiguration={"Status": "Enabled"},
+                )
+            except Exception:
+                # Ignore failures so a missing permission doesn't break the app
+                pass
 
     # -- basic wrappers -------------------------------------------------
     def put(self, Bucket: str | None = None, **kwargs):
