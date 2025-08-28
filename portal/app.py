@@ -1008,6 +1008,8 @@ def new_document():
                 errors["standard"] = "Standard is required"
             tags = request.form.get("tags", "")
             data["tags"] = ",".join([t.strip() for t in tags.split(",") if t.strip()])
+            if not data["tags"]:
+                errors["tags"] = "Tags are required"
             DOCUMENT_DRAFTS[draft_id] = data
             if errors:
                 standard_map = get_standard_map()
