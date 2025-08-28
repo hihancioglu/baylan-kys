@@ -37,6 +37,7 @@ def test_api_appends_extension_to_key():
     portal_app.extract_text = lambda key: "dummy"
     portal_app.notify_mandatory_read = lambda doc, users: None
 
+    first_standard = next(iter(portal_app.STANDARD_MAP.keys()))
     payload = {
         "code": "DOC1",
         "title": "My Doc",
@@ -45,6 +46,7 @@ def test_api_appends_extension_to_key():
         "tags": "tag1,tag2",
         "uploaded_file_key": "abc123",
         "uploaded_file_name": "file.txt",
+        "standard": first_standard,
     }
 
     resp = client.post("/api/documents", json=payload)

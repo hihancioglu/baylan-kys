@@ -333,13 +333,11 @@ STANDARD_MAP = get_standard_map()
 def get_allowed_standards() -> set[str]:
     """Return a set of allowed standard codes.
 
-    Standards are only enforced when the ``ISO_STANDARDS`` environment variable is
-    defined.  This mirrors previous behaviour where the absence of this
-    variable meant standards were optional.
+    Validation now relies solely on the standards stored in the database. This
+    ensures the application honours configured standards even when the
+    ``ISO_STANDARDS`` environment variable is unset or unavailable.
     """
 
-    if not os.environ.get("ISO_STANDARDS"):
-        return set()
     return set(get_standard_map().keys())
 
 
