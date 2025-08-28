@@ -8,6 +8,7 @@ Create Date: 2024-08-17 00:00:00
 
 from alembic import op
 import sqlalchemy as sa
+from sqlalchemy import inspect
 
 # revision identifiers, used by Alembic.
 revision = "0003"
@@ -17,13 +18,23 @@ depends_on = None
 
 
 def upgrade() -> None:
-    op.add_column(
-        "workflow_steps",
-        sa.Column("user_id", sa.Integer(), nullable=True),
-    )
-    op.create_foreign_key(None, "workflow_steps", "users", ["user_id"], ["id"])
+    bind = op.get_bind()
+    inspector = inspect(bind)
+    columns = [c["name"] for c in inspector.get_columns("workflow_steps")]
+    if "user_id" not in columns:
+        op.add_column(
+            "workflow_steps",
+            sa.Column("user_id", sa.Integer(), nullable=True),
+        )
+        op.create_foreign_key(
+            None, "workflow_steps", "users", ["user_id"], ["id"]
+        )
 
 
 def downgrade() -> None:
-    op.drop_constraint(None, "workflow_steps", type_="foreignkey")
-    op.drop_column("workflow_steps", "user_id")
+    bind = op.get_bind()
+    inspector = inspect(bind)
+    columns = [c["name"] for c in inspector.get_columns("workflow_steps")]
+    if "user_id" in columns:
+        op.drop_constraint(None, "workflow_steps", type_="foreignkey")
+        op.drop_column("workflow_steps", "user_id")
