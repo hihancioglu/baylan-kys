@@ -37,7 +37,7 @@ def upgrade() -> None:
         {"code": "ISO14001", "description": "ISO 14001"},
     ]
     for row in seed_rows:
-        op.execute(
+        bind.execute(
             sa.text(
                 "INSERT INTO standards (code, description) "
                 "VALUES (:code, :description) "
