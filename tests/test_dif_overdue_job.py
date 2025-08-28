@@ -1,9 +1,11 @@
 import importlib
+import sys
 from datetime import datetime, timedelta
 from sqlalchemy.orm import sessionmaker
 
 def test_dif_overdue_job_notifies_and_marks(monkeypatch):
-    rq = importlib.import_module("rq")
+    rq = importlib.import_module("rq_stub")
+    sys.modules["rq"] = rq
     notifications = importlib.reload(importlib.import_module("notifications"))
     q = rq.Queue("notifications")
     monkeypatch.setattr(notifications, "queue", q)

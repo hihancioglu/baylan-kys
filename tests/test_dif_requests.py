@@ -1,6 +1,7 @@
 import os
 import io
 import importlib
+import sys
 from datetime import datetime, timedelta
 from sqlalchemy.orm import sessionmaker
 
@@ -199,6 +200,8 @@ def test_workflow_actions_and_notifications(monkeypatch):
 
 
 def test_sla_escalation(monkeypatch):
+    rq = importlib.import_module("rq_stub")
+    sys.modules["rq"] = rq
     notifications = importlib.reload(importlib.import_module("notifications"))
     calls = []
 
