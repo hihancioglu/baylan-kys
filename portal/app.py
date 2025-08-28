@@ -1334,7 +1334,7 @@ def document_detail(doc_id: int | None = None, id: int | None = None):
                 "documentType": doc_type,
                 "editorConfig": {
                     "mode": "view",
-                    "user": {"id": user["id"], "name": user_name},
+                    "user": {"id": str(user["id"]), "name": user_name},
                 },
             }
             token = sign_payload(config) if ONLYOFFICE_JWT_SECRET else ""
@@ -1657,10 +1657,12 @@ def api_compare_documents():
     if not from_doc or not to_doc:
         return jsonify(error="version not found"), 404
 
-    user = session.get("user")
-    user_name = ""
-    if user:
-        user_name = user.get("name") or user.get("username") or user.get("email", "")
+    user = session.get("user") or {"id": "", "name": ""}
+    user_name = (
+        user.get("name")
+        or user.get("username")
+        or user.get("email", "")
+    )
     ext, doc_type = _onlyoffice_types(doc.file_key)
     config = {
         "document": {
@@ -1673,7 +1675,7 @@ def api_compare_documents():
         "documentType": doc_type,
         "editorConfig": {
             "mode": "view",
-            "user": {"id": user["id"], "name": user_name} if user else {},
+            "user": {"id": str(user["id"]), "name": user_name},
             "compareFile": {
                 "fileType": ext,
                 "key": to_doc["key"],
@@ -2169,10 +2171,13 @@ def approval_detail(id: int):
         if not step:
             return "Not found", 404
         doc = step.document
-        user = session.get("user")
-        user_name = ""
-        if user:
-            user_name = user.get("name") or user.get("username") or user.get("email", "")
+        real_user = session.get("user")
+        user = real_user or {"id": "", "name": ""}
+        user_name = (
+            user.get("name")
+            or user.get("username")
+            or user.get("email", "")
+        )
         ext, doc_type = _onlyoffice_types(doc.file_key)
         config = {
             "document": {
@@ -2184,12 +2189,12 @@ def approval_detail(id: int):
             },
             "documentType": doc_type,
             "editorConfig": {
-                "user": {"id": user["id"], "name": user_name} if user else {},
+                "user": {"id": str(user["id"]), "name": user_name},
                 "mode": "view",
             },
         }
         token = sign_payload(config)
-        if user:
+        if real_user:
             log_action(user["id"], doc.id, "view_approval")
         breadcrumbs = [
             {"title": "Home", "url": url_for("dashboard")},
@@ -3070,7 +3075,7 @@ def edit_document(doc_id):
         "documentType": doc_type,
         "editorConfig": {
             "callbackUrl": f"{public_base_url}/onlyoffice/callback/{doc.doc_key}",
-            "user": {"id": user["id"], "name": user_name},
+            "user": {"id": str(user["id"]), "name": user_name},
             "mode": "edit",
         },
     }
