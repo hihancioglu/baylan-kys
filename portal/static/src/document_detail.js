@@ -89,7 +89,9 @@ function initWorkflowForm() {
       reviewers: data.getAll('reviewers[]'),
       approvers: data.getAll('approvers[]'),
     };
-    const csrf = data.get('csrf_token');
+    const csrf = document
+      .querySelector('meta[name="csrf-token"]')
+      .getAttribute('content');
     await fetch('/api/workflow/start', {
       method: 'POST',
       headers: {
