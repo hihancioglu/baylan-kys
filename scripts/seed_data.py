@@ -1,6 +1,14 @@
-"""Seed default roles and admin user."""
+"""Seed default roles and create an initial admin user.
 
-from portal.models import Role, RoleEnum, User, SessionLocal
+The default admin user's username and email can be configured via the
+``INITIAL_ADMIN_USERNAME`` and ``INITIAL_ADMIN_EMAIL`` environment
+variables.  If the user already exists it will simply be granted the
+``quality_admin`` role.
+"""
+
+import os
+
+from portal.models import Role, RoleEnum, SessionLocal, User
 
 
 def seed_roles(session) -> None:
@@ -11,14 +19,19 @@ def seed_roles(session) -> None:
 
 
 def seed_admin_user(session) -> None:
-    """Create default admin user with quality_admin role."""
-    admin = session.query(User).filter_by(username="admin").first()
+    """Create initial admin user and ensure it has ``quality_admin`` role."""
+
+    username = os.getenv("INITIAL_ADMIN_USERNAME", "admin")
+    email = os.getenv("INITIAL_ADMIN_EMAIL", f"{username}@example.com")
+
+    admin = session.query(User).filter_by(username=username).first()
     if not admin:
-        admin = User(username="admin", email="admin@example.com")
-        qa_role = session.query(Role).filter_by(name=RoleEnum.QUALITY_ADMIN.value).first()
-        if qa_role:
-            admin.roles.append(qa_role)
+        admin = User(username=username, email=email)
         session.add(admin)
+
+    qa_role = session.query(Role).filter_by(name=RoleEnum.QUALITY_ADMIN.value).first()
+    if qa_role and qa_role not in admin.roles:
+        admin.roles.append(qa_role)
 
 
 def seed() -> None:
