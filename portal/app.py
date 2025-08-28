@@ -1180,23 +1180,11 @@ def new_document():
                     "standard_map": get_standard_map(),
                 }
                 return render_template("documents/new_step3.html", **context), 400
-            view_func = app.view_functions.get("create_document_api")
-            if view_func is not create_document_api:
-                from unittest.mock import patch
-
-                with patch.object(request, "get_json", return_value=form_data):
-                    response = create_document_api()
-                if isinstance(response, tuple):
-                    resp, status = response
-                else:
-                    resp, status = response, response.status_code
+            response = create_document_api(form_data)
+            if isinstance(response, tuple):
+                resp, status = response
             else:
-                client = app.test_client()
-                with client.session_transaction() as sess:
-                    sess["user"] = user
-                    sess["roles"] = roles
-                resp = client.post("/api/documents", json=form_data)
-                status = resp.status_code
+                resp, status = response, response.status_code
             resp_json = resp.get_json(silent=True)
             if status == 201 and resp_json:
                 session.pop("uploaded_file_key", None)
