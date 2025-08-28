@@ -230,7 +230,7 @@ def log_action(
         "at": datetime.utcnow(),
     }
 
-    if connection is not None and not connection.closed:
+    if connection is not None:
         connection.execute(AuditLog.__table__.insert(), [data])
     else:
         Session = sessionmaker(bind=engine)
