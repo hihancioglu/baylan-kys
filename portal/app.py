@@ -1188,22 +1188,24 @@ def new_document():
                     resp, status = response
                 else:
                     resp, status = response, response.status_code
-                resp_json = resp.get_json(silent=True) or {}
             else:
                 client = app.test_client()
                 with client.session_transaction() as sess:
                     sess["user"] = user
                     sess["roles"] = roles
-                response = client.post("/api/documents", json=form_data)
-                resp_json = response.get_json(silent=True) or {}
-                status = response.status_code
-            if status == 201:
+                resp = client.post("/api/documents", json=form_data)
+                status = resp.status_code
+            resp_json = resp.get_json(silent=True)
+            if status == 201 and resp_json:
                 session.pop("uploaded_file_key", None)
                 doc_id = resp_json.get("id")
                 return redirect(url_for("document_detail", doc_id=doc_id, created=1))
-            errors = resp_json.get("errors")
-            if not errors:
-                errors = {"error": resp_json.get("error") or "Failed to create document."}
+            if not resp_json:
+                errors = {"error": resp.get_data(as_text=True)}
+            else:
+                errors = resp_json.get("errors")
+                if not errors:
+                    errors = {"error": resp_json.get("error") or "Failed to create document."}
             context = {
                 "breadcrumbs": [
                     {"title": "Home", "url": url_for("dashboard")},
