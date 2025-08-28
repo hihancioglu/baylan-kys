@@ -204,6 +204,7 @@ def log_action(
     entity_id=None,
     payload=None,
     connection=None,
+    session=None,
 ):
     """Persist an audit log entry."""
     if entity_type is None and entity_id is None and doc_id is not None:
@@ -238,13 +239,17 @@ def log_action(
         except ResourceClosedError:
             pass
 
-    Session = sessionmaker(bind=engine)
-    session = Session()
-    try:
+    if session is not None:
         session.execute(AuditLog.__table__.insert(), [data])
-        session.commit()
+        return
+
+    Session = sessionmaker(bind=engine)
+    _session = Session()
+    try:
+        _session.execute(AuditLog.__table__.insert(), [data])
+        _session.commit()
     finally:
-        session.close()
+        _session.close()
 
 
 # Demo quiz questions

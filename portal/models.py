@@ -25,6 +25,7 @@ from sqlalchemy.orm import (
     scoped_session,
     joinedload,
     synonym,
+    object_session,
 )
 import sys
 
@@ -452,6 +453,7 @@ def _capture_changes(target):
 @event.listens_for(Document, "after_insert")
 def _log_document_insert(mapper, connection, target):
     from app import log_action
+    session = object_session(target)
 
     payload = {"title": target.title, "status": target.status}
     log_action(
@@ -462,12 +464,14 @@ def _log_document_insert(mapper, connection, target):
         entity_id=target.id,
         payload=payload,
         connection=connection,
+        session=session,
     )
 
 
 @event.listens_for(Document, "after_update")
 def _log_document_update(mapper, connection, target):
     from app import log_action
+    session = object_session(target)
 
     changes = _capture_changes(target)
     if changes:
@@ -479,6 +483,7 @@ def _log_document_update(mapper, connection, target):
             entity_id=target.id,
             payload={"changes": changes},
             connection=connection,
+            session=session,
         )
 
 
