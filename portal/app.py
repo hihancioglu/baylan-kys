@@ -17,6 +17,7 @@ from flask_wtf.csrf import CSRFProtect
 from markupsafe import Markup
 from sqlalchemy import and_, func, inspect, or_
 from sqlalchemy.orm import joinedload, sessionmaker
+from sqlalchemy.exc import ResourceClosedError
 
 from auth import auth_bp
 from auth import init_app as auth_init
@@ -231,15 +232,19 @@ def log_action(
     }
 
     if connection is not None:
-        connection.execute(AuditLog.__table__.insert(), [data])
-    else:
-        Session = sessionmaker(bind=engine)
-        session = Session()
         try:
-            session.execute(AuditLog.__table__.insert(), [data])
-            session.commit()
-        finally:
-            session.close()
+            connection.execute(AuditLog.__table__.insert(), [data])
+            return
+        except ResourceClosedError:
+            pass
+
+    Session = sessionmaker(bind=engine)
+    session = Session()
+    try:
+        session.execute(AuditLog.__table__.insert(), [data])
+        session.commit()
+    finally:
+        session.close()
 
 
 # Demo quiz questions
