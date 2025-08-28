@@ -1894,7 +1894,6 @@ def create_document():
         session_db.close()
         return "user_id required", 400
     session_db.commit()
-    log_action(user_id, doc.id, "create_document")
     session_db.close()
     return redirect(url_for("document_detail", doc_id=doc.id))
 
@@ -1963,7 +1962,6 @@ def create_document_api(data: dict | None = None):
     if standard:
         session_db.add(DocumentStandard(doc_id=doc.id, standard_code=standard))
     session_db.commit()
-    log_action(user_id, doc.id, "create_document")
     content = extract_text(doc_key)
     index_document(doc, content)
     user_ids = [u.id for u in session_db.query(User).all()]
