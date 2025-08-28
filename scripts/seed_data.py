@@ -8,7 +8,7 @@ variables.  If the user already exists it will simply be granted the
 
 import os
 
-from portal.models import Role, RoleEnum, SessionLocal, User
+from portal.models import Base, Role, RoleEnum, SessionLocal, User, engine
 
 
 def seed_roles(session) -> None:
@@ -35,6 +35,11 @@ def seed_admin_user(session) -> None:
 
 
 def seed() -> None:
+    """Create tables if needed and seed default data."""
+
+    # Ensure all tables exist before attempting to seed data.
+    Base.metadata.create_all(bind=engine)
+
     session = SessionLocal()
     try:
         seed_roles(session)
