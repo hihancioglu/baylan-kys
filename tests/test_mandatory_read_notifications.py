@@ -29,6 +29,7 @@ def test_mandatory_read_notification_does_not_detach():
         sess["user"] = {"id": 1}
         sess["roles"] = [app_module.RoleEnum.CONTRIBUTOR.value]
 
+    first_standard = next(iter(app_module.STANDARD_MAP.keys()))
     payload = {
         "code": "DOC1",
         "title": "My Doc",
@@ -37,6 +38,7 @@ def test_mandatory_read_notification_does_not_detach():
         "tags": "tag1,tag2",
         "uploaded_file_key": "abc123",
         "uploaded_file_name": "file.txt",
+        "standard": first_standard,
     }
 
     resp = client.post("/api/documents", json=payload)
