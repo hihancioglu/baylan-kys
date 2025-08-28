@@ -101,7 +101,7 @@ def test_compare_config_returns_expected_fields(client, app_models):
         f"http://s3/local/{doc_key}"
     )
     assert data["token"]
-    assert data["token_header"] == "AuthorizationJwt"
+    assert data["token_header"] == "Authorization"
 
 
 def test_revert_document_preserves_history(client, app_models):
