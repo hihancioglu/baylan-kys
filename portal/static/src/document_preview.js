@@ -28,7 +28,10 @@ export function initPreview() {
       script.onload = () => {
         if (data.token && window.DocsAPI && window.DocsAPI.setRequestHeaders) {
           window.DocsAPI.setRequestHeaders([
-            { header: data.tokenHeader || 'Authorization', value: data.token },
+            {
+              header: data.tokenHeader || 'Authorization',
+              value: `Bearer ${data.token}`,
+            },
           ]);
         }
         window.docEditor = new DocsAPI.DocEditor('docEditor', data.config);
