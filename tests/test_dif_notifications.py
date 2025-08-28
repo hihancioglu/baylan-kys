@@ -1,5 +1,6 @@
 import os
 import importlib
+import sys
 from sqlalchemy.orm import sessionmaker
 
 
@@ -10,7 +11,8 @@ def test_dif_creation_enqueues_email(monkeypatch):
     os.environ.setdefault("ONLYOFFICE_JWT_SECRET", "secret")
     os.environ.setdefault("S3_ENDPOINT", "http://s3")
 
-    rq = importlib.import_module("rq")
+    rq = importlib.import_module("rq_stub")
+    sys.modules["rq"] = rq
     notifications = importlib.reload(importlib.import_module("notifications"))
     q = rq.Queue("notifications")
     monkeypatch.setattr(notifications, "queue", q)

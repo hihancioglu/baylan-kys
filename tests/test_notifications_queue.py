@@ -1,11 +1,13 @@
 import importlib
+import sys
 from unittest.mock import patch
 
 from sqlalchemy.orm import sessionmaker
 
 
 def _setup_queue(monkeypatch):
-    rq = importlib.import_module("rq")
+    rq = importlib.import_module("rq_stub")
+    sys.modules["rq"] = rq
     notifications = importlib.reload(importlib.import_module("notifications"))
     q = rq.Queue("notifications")
     monkeypatch.setattr(notifications, "queue", q)
