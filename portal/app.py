@@ -166,7 +166,7 @@ if USE_ONLYOFFICE:
     ONLYOFFICE_PUBLIC_URL = os.environ.get("ONLYOFFICE_PUBLIC_URL")
     ONLYOFFICE_JWT_SECRET = os.environ.get("ONLYOFFICE_JWT_SECRET", "")
     ONLYOFFICE_JWT_HEADER = os.environ.get(
-        "ONLYOFFICE_JWT_HEADER", "AuthorizationJwt"
+        "ONLYOFFICE_JWT_HEADER", "Authorization"
     )
 else:
     ONLYOFFICE_INTERNAL_URL = None
