@@ -246,6 +246,8 @@ def log_action(
     Session = sessionmaker(bind=engine)
     _session = Session()
     try:
+        if doc_id is not None and _session.get(Document, doc_id) is None:
+            data["doc_id"] = None
         _session.execute(AuditLog.__table__.insert(), [data])
         _session.commit()
     finally:
