@@ -183,6 +183,22 @@ OFFICE_MIMETYPES = {
     "application/vnd.openxmlformats-officedocument.presentationml.presentation",
 }
 
+# Map file extensions to OnlyOffice document types
+ONLYOFFICE_DOCUMENT_TYPES = {
+    "docx": "word",
+    "docxf": "word",
+    "xlsx": "cell",
+    "pptx": "slide",
+    "pdf": "pdf",
+}
+
+
+def _onlyoffice_types(file_key: str) -> tuple[str, str]:
+    """Return ``(extension, documentType)`` for a given file key."""
+    ext = file_key.rsplit(".", 1)[-1].lower()
+    doc_type = ONLYOFFICE_DOCUMENT_TYPES.get(ext, "word")
+    return ext, doc_type
+
 # Demo: örnek bir dokümanı MinIO'ya kaydettiğinizi varsayın ve anahtarını (storage key) biliyorsunuz:
 def sign_payload(payload: dict) -> str:
     # OnlyOffice JWT payload (HS256)
@@ -1301,7 +1317,7 @@ def document_detail(doc_id: int | None = None, id: int | None = None):
                 or user.get("username")
                 or user.get("email", "")
             )
-            ext = doc.file_key.split(".")[-1]
+            ext, doc_type = _onlyoffice_types(doc.file_key)
             config = {
                 "document": {
                     "fileType": ext,
@@ -1315,7 +1331,7 @@ def document_detail(doc_id: int | None = None, id: int | None = None):
                         "comment": False,
                     },
                 },
-                "documentType": "text",
+                "documentType": doc_type,
                 "editorConfig": {
                     "mode": "view",
                     "user": {"id": user["id"], "name": user_name},
@@ -1645,20 +1661,21 @@ def api_compare_documents():
     user_name = ""
     if user:
         user_name = user.get("name") or user.get("username") or user.get("email", "")
+    ext, doc_type = _onlyoffice_types(doc.file_key)
     config = {
         "document": {
-            "fileType": "docx",
+            "fileType": ext,
             "key": from_doc["key"],
             "title": from_doc["title"],
             "url": from_doc["url"],
             "permissions": {"download": True},
         },
-        "documentType": "text",
+        "documentType": doc_type,
         "editorConfig": {
             "mode": "view",
             "user": {"id": user["id"], "name": user_name} if user else {},
             "compareFile": {
-                "fileType": "docx",
+                "fileType": ext,
                 "key": to_doc["key"],
                 "title": to_doc["title"],
                 "url": to_doc["url"],
@@ -2156,15 +2173,16 @@ def approval_detail(id: int):
         user_name = ""
         if user:
             user_name = user.get("name") or user.get("username") or user.get("email", "")
+        ext, doc_type = _onlyoffice_types(doc.file_key)
         config = {
             "document": {
-                "fileType": "docx",
+                "fileType": ext,
                 "key": f"{doc.doc_key}",
                 "title": doc.title or doc.doc_key.split("/")[-1],
                 "url": storage_client.generate_presigned_url(doc.doc_key),
                 "permissions": {"download": True},
             },
-            "documentType": "text",
+            "documentType": doc_type,
             "editorConfig": {
                 "user": {"id": user["id"], "name": user_name} if user else {},
                 "mode": "view",
@@ -3035,9 +3053,10 @@ def edit_document(doc_id):
         "PORTAL_PUBLIC_BASE_URL", request.host_url.rstrip("/")
     )
     # Defaults to the incoming request's host when PORTAL_PUBLIC_BASE_URL is unset
+    ext, doc_type = _onlyoffice_types(doc.file_key)
     config = {
         "document": {
-            "fileType": "docx",
+            "fileType": ext,
             "key": f"{doc.doc_key}",
             "title": doc.title or doc.doc_key.split('/')[-1],
             "url": storage_client.generate_presigned_url(doc.doc_key),
@@ -3048,7 +3067,7 @@ def edit_document(doc_id):
                 "comment": True,
             },
         },
-        "documentType": "text",
+        "documentType": doc_type,
         "editorConfig": {
             "callbackUrl": f"{public_base_url}/onlyoffice/callback/{doc.doc_key}",
             "user": {"id": user["id"], "name": user_name},
