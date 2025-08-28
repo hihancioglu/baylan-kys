@@ -35,7 +35,9 @@ if (saveDraftBtn) {
       showToast(messages.fileNotUploaded, { timeout: 6000 });
       return;
     }
-    const csrf = document.querySelector('input[name=csrf_token]').value;
+    const csrf = document
+      .querySelector('meta[name="csrf-token"]')
+      .getAttribute('content');
     const response = await fetch('/api/documents', {
       method: 'POST',
       headers: {
