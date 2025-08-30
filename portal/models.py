@@ -92,6 +92,8 @@ class Document(Base):
     retention_period = Column(Integer)
     archived_at = Column(DateTime)
     workflow_id = Column(Integer, ForeignKey("doc_workflows.id"))
+    locked_by = Column(Integer, ForeignKey("users.id"), nullable=True)
+    lock_expires_at = Column(DateTime)
 
     status = Column(
         Enum("Draft", "Review", "Approved", "Published", "Archived", name="document_status"),
@@ -100,6 +102,7 @@ class Document(Base):
     )
 
     owner = relationship("User", foreign_keys=[owner_id])
+    lock_owner = relationship("User", foreign_keys=[locked_by])
     workflow = relationship(
         "DocWorkflow",
         foreign_keys=[workflow_id],
@@ -447,6 +450,10 @@ def _capture_changes(target):
         if hist.has_changes():
             old = hist.deleted[0] if hist.deleted else None
             new = hist.added[0] if hist.added else None
+            if isinstance(old, datetime):
+                old = old.isoformat()
+            if isinstance(new, datetime):
+                new = new.isoformat()
             changes[attr.key] = {"old": old, "new": new}
     return changes
 

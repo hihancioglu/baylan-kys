@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from models import (
     get_session,
     Document,
@@ -57,3 +59,21 @@ def submit_for_approval(doc_id: int, user_ids: list[int]) -> Document:
 
     notify_approval_queue(doc, user_ids)
     return doc
+
+
+def clear_expired_locks() -> None:
+    """Release document locks that have passed their expiry."""
+    session = get_session()
+    now = datetime.utcnow()
+    docs = (
+        session.query(Document)
+        .filter(Document.locked_by != None)
+        .filter(Document.lock_expires_at != None)
+        .filter(Document.lock_expires_at <= now)
+        .all()
+    )
+    for doc in docs:
+        doc.locked_by = None
+        doc.lock_expires_at = None
+    session.commit()
+    session.close()

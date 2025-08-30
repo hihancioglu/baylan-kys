@@ -28,6 +28,28 @@
 
 {% block content %}
 <h1>{{ doc.title }}</h1>
+{% if doc.locked_by and doc.lock_expires_at and doc.lock_expires_at > now %}
+  {% if current_user and current_user.id == doc.locked_by %}
+  <div class="alert alert-info">Checked out by you until {{ doc.lock_expires_at }}.</div>
+  <form class="mb-3" hx-post="/api/documents/{{ doc.id }}/checkin" hx-swap="none">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <button type="submit" class="btn btn-warning">Check in</button>
+  </form>
+  {% else %}
+  <div class="alert alert-warning">Locked by {{ doc.lock_owner.username if doc.lock_owner else 'another user' }} until {{ doc.lock_expires_at }}.</div>
+  {% if 'quality_admin' in user_roles %}
+  <form class="mb-3" hx-post="/api/documents/{{ doc.id }}/checkin" hx-swap="none">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <button type="submit" class="btn btn-danger">Force Check in</button>
+  </form>
+  {% endif %}
+  {% endif %}
+{% else %}
+  <form class="mb-3" hx-post="/api/documents/{{ doc.id }}/checkout" hx-swap="none">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <button type="submit" class="btn btn-outline-primary">Check out</button>
+  </form>
+{% endif %}
 {% if preview.type %}
 <div id="preview-container" class="mb-4"></div>
 <script>
