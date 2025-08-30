@@ -15,36 +15,12 @@ export function initPreview() {
   }
 
   if (data.type === 'office') {
-    if (data.useOnlyOffice && data.editorJs && data.config) {
-      const iframe = document.createElement('iframe');
-      iframe.id = 'docEditor';
-      iframe.title = 'Document viewer';
-      iframe.className = 'w-100 border-0';
-      iframe.style.height = '600px';
-      container.appendChild(iframe);
-
-      const script = document.createElement('script');
-      script.src = data.editorJs;
-      script.onload = () => {
-        if (data.token && window.DocsAPI && window.DocsAPI.setRequestHeaders) {
-          window.DocsAPI.setRequestHeaders([
-            {
-              header: data.tokenHeader || 'Authorization',
-              value: `Bearer ${data.token}`,
-            },
-          ]);
-        }
-        window.docEditor = new DocsAPI.DocEditor('docEditor', data.config);
-      };
-      document.body.appendChild(script);
-    } else {
-      const iframe = document.createElement('iframe');
-      iframe.src = `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(data.url)}`;
-      iframe.width = '100%';
-      iframe.height = '600';
-      iframe.frameBorder = '0';
-      container.appendChild(iframe);
-    }
+    const iframe = document.createElement('iframe');
+    iframe.src = `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(data.url)}`;
+    iframe.width = '100%';
+    iframe.height = '600';
+    iframe.frameBorder = '0';
+    container.appendChild(iframe);
   }
 }
 

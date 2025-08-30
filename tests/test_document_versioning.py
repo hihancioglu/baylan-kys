@@ -67,43 +67,6 @@ def test_start_revision_increments_version_and_logs(app_models):
     assert len(logs) == 1
 
 
-def test_compare_config_returns_expected_fields(client, app_models):
-    app, m = app_models
-    session = m.SessionLocal()
-    uid = uuid.uuid4().hex
-    doc_key = f"doc_{uid}.docx"
-    doc = m.Document(doc_key=doc_key, title="Doc", status="Published", major_version=2, minor_version=0)
-    session.add(doc)
-    session.commit()
-    rev = m.DocumentRevision(
-        doc_id=doc.id,
-        major_version=1,
-        minor_version=0,
-        track_changes={"url": "http://s3/old.docx"},
-    )
-    session.add(rev)
-    session.commit()
-    doc_id = doc.id
-    session.close()
-
-    with client.session_transaction() as sess:
-        sess["user"] = {"id": 1, "name": "Tester"}
-        sess["roles"] = ["reader"]
-
-    resp = client.get(f"/api/documents/compare?doc_id={doc_id}&from=1.0&to=2.0")
-    assert resp.status_code == 200
-    data = resp.get_json()
-    config = data["config"]
-    assert config["document"]["key"] == f"{doc_key}:1.0"
-    assert config["document"]["url"] == "http://s3/old.docx"
-    assert config["editorConfig"]["compareFile"]["key"] == f"{doc_key}:2.0"
-    assert config["editorConfig"]["compareFile"]["url"].startswith(
-        f"http://s3/local/{doc_key}"
-    )
-    assert data["token"]
-    assert data["token_header"] == "Authorization"
-
-
 def test_revert_document_preserves_history(client, app_models):
     app, m = app_models
     session = m.SessionLocal()
