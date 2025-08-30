@@ -16,7 +16,7 @@ document.addEventListener('DOMContentLoaded', () => {
   };
   if (window.editorToken && window.DocsAPI && window.DocsAPI.setRequestHeaders) {
     window.DocsAPI.setRequestHeaders([
-      { header: window.editorTokenHeader, value: window.editorToken }
+      { header: window.editorTokenHeader, value: 'Bearer ' + window.editorToken }
     ]);
   }
   window.docEditor = new DocsAPI.DocEditor('editor', cfg);
