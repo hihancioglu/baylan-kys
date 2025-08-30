@@ -56,8 +56,8 @@
 
 <div class="toolbar" data-component="toolbar">
   <a class="btn btn-secondary" href="{{ url_for('list_documents') }}">Back to documents</a>
-  {% if download_url %}
-  <a class="btn btn-secondary" href="{{ download_url }}">Download</a>
+  {% if can_download %}
+  <a class="btn btn-secondary" href="{{ url_for('document_download', doc_id=doc.id) }}">Download</a>
   {% endif %}
 </div>
 

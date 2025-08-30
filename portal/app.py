@@ -899,9 +899,13 @@ def list_documents():
     if request.args.get("status", "").lower() == "archived":
         template = "documents/archived.html"
 
-    session = get_session()
-    departments = [d[0] for d in session.query(Document.department).distinct().all()]
-    session.close()
+    user = session.get("user")
+    for d in docs:
+        d.can_download = bool(user) and permission_check(user["id"], d, download=True)
+
+    db_session = get_session()
+    departments = [d[0] for d in db_session.query(Document.department).distinct().all()]
+    db_session.close()
 
     context = {
         "documents": docs,
@@ -927,6 +931,9 @@ def list_documents():
 @roles_required(RoleEnum.READER.value)
 def documents_table():
     docs, page, pages, filters, params, facets = _get_documents()
+    user = session.get("user")
+    for d in docs:
+        d.can_download = bool(user) and permission_check(user["id"], d, download=True)
     context = {
         "documents": docs,
         "page": page,
@@ -1180,9 +1187,9 @@ def document_detail(doc_id: int | None = None, id: int | None = None):
     elif file_url and mime in OFFICE_MIMETYPES:
         preview = {"type": "office", "url": file_url}
 
-    download_url = None
+    can_download = False
     if user and permission_check(user["id"], doc, download=True):
-        download_url = generate_presigned_url(doc.doc_key)
+        can_download = True
 
     return render_template(
         "document_detail.html",
@@ -1190,7 +1197,7 @@ def document_detail(doc_id: int | None = None, id: int | None = None):
         revisions=revisions,
         preview=preview,
         logs=logs,
-        download_url=download_url,
+        can_download=can_download,
         roles=roles,
         users=users,
         ack_count=ack_count,
@@ -1263,6 +1270,27 @@ def get_file(file_key: str):
         resp = redirect(url)
         resp.headers["Cache-Control"] = "public, max-age=86400"
         return resp
+    finally:
+        db.close()
+
+
+@app.get("/documents/<int:doc_id>/download")
+@roles_required(RoleEnum.READER.value)
+def document_download(doc_id: int):
+    """Redirect to a presigned URL for downloading the document."""
+    db = get_session()
+    try:
+        doc = db.get(Document, doc_id)
+        if not doc:
+            return "Document not found", 404
+        user = session.get("user")
+        if not user or not permission_check(user["id"], doc, download=True):
+            return "Forbidden", 403
+        url = storage_client.generate_presigned_url(doc.doc_key)
+        if not url:
+            return "File not available", 404
+        log_action(user["id"], doc_id, "download_document")
+        return redirect(url)
     finally:
         db.close()
 
