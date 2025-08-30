@@ -21,7 +21,7 @@
 <script src="{{ editor_js }}"></script>
 <script>
   if (editorToken && window.DocsAPI && window.DocsAPI.setRequestHeaders) {
-    window.DocsAPI.setRequestHeaders([{ header: '{{ token_header|default('Authorization') }}', value: editorToken }]);
+    window.DocsAPI.setRequestHeaders([{ header: '{{ token_header|default("Authorization") }}', value: 'Bearer ' + editorToken }]);
   }
   window.docEditor = new DocsAPI.DocEditor('docEditor', editorConfig);
 </script>

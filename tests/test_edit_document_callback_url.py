@@ -32,3 +32,4 @@ def test_edit_route_builds_callback_url_from_request_host():
     assert resp.status_code == 200
     body = resp.get_data(as_text=True)
     assert f"callbackUrl\": \"http://localhost/onlyoffice/callback/{doc.doc_key}\"" in body
+    assert "value: 'Bearer ' + editorToken" in body
