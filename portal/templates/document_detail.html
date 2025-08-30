@@ -42,15 +42,16 @@
 </ul>
 
 <h2>Revision History</h2>
-{% if revisions %}
-<ul>
-  {% for rev in revisions %}
-  <li>Version {{ rev.major_version }}.{{ rev.minor_version }} – {{ rev.created_at.strftime('%Y-%m-%d') }}</li>
-  {% endfor %}
-</ul>
-{% else %}
-<p>No revisions found.</p>
-{% endif %}
+{% include "partials/documents/_versions.html" %}
+<form class="mt-3" hx-post="/api/documents/{{ doc.id }}/versions" hx-target="#version-list" hx-swap="outerHTML" hx-encoding="multipart/form-data">
+  <div class="mb-2">
+    <input type="file" name="file" required>
+  </div>
+  <div class="mb-2">
+    <input type="text" class="form-control" name="notes" placeholder="Revision notes">
+  </div>
+  <button type="submit" class="btn btn-primary">Upload New Version</button>
+</form>
 
 {% include "partials/_audit_log.html" %}
 

@@ -159,6 +159,9 @@ OFFICE_MIMETYPES = {
     "application/vnd.openxmlformats-officedocument.presentationml.presentation",
 }
 
+# Maximum allowed upload size for document versions (50MB)
+MAX_UPLOAD_SIZE = 50 * 1024 * 1024
+
 
 def log_action(
     user_id=None,
@@ -259,7 +262,7 @@ def _format_tags(value):
     else:
         return None
 
-    return ",".join(tags) if tags else None
+    return ",".join(tags) if tags else ""
 
 
 # Load ISO standards from the ``standards`` table.  For test fixtures that
@@ -991,8 +994,6 @@ def new_document():
                 errors["standard"] = "Standard is required"
             tags = request.form.get("tags", "")
             data["tags"] = ",".join([t.strip() for t in tags.split(",") if t.strip()])
-            if not data["tags"]:
-                errors["tags"] = "Tags are required"
             DOCUMENT_DRAFTS[draft_id] = data
             if errors:
                 standard_map = get_standard_map()
@@ -1489,6 +1490,7 @@ def revert_document(doc_id: int, revision_id: int):
         revision_notes=rev.revision_notes,
         track_changes=rev.track_changes,
         compare_result=rev.compare_result,
+        file_key=doc.doc_key,
     )
     session.add(new_rev)
     session.commit()
@@ -1537,6 +1539,7 @@ def rollback_document(doc_id: int):
         major_version=doc.major_version,
         minor_version=doc.minor_version,
         revision_notes=doc.revision_notes,
+        file_key=doc.doc_key,
     )
     db.add(current_rev)
     doc.major_version = rev.major_version
@@ -1577,6 +1580,7 @@ def rollback_document_api(doc_id: int):
         major_version=doc.major_version,
         minor_version=doc.minor_version,
         revision_notes=doc.revision_notes,
+        file_key=doc.doc_key,
     )
     db.add(current_rev)
     doc.major_version = rev.major_version
@@ -1600,6 +1604,7 @@ def _start_revision(doc: Document, version_type: str, notes: str, user: dict, db
         major_version=doc.major_version,
         minor_version=doc.minor_version,
         revision_notes=doc.revision_notes,
+        file_key=doc.doc_key,
     )
     db.add(old_rev)
     if version_type == "major":
@@ -1653,6 +1658,89 @@ def revise_document(id: int):
     return redirect(url_for("document_detail", doc_id=id))
 
 
+@app.post("/api/documents/<int:doc_id>/versions")
+@roles_required(RoleEnum.CONTRIBUTOR.value)
+def upload_document_version(doc_id: int):
+    db = get_session()
+    doc = db.get(Document, doc_id)
+    if not doc:
+        db.close()
+        return jsonify(error="Document not found"), 404
+
+    uploaded = request.files.get("file")
+    if not uploaded or not uploaded.filename:
+        db.close()
+        return jsonify(error="File is required"), 400
+
+    data = uploaded.read()
+    if len(data) > MAX_UPLOAD_SIZE:
+        db.close()
+        return jsonify(error="File too large"), 400
+
+    mime = uploaded.mimetype
+    allowed_mimes = {"application/pdf", *OFFICE_MIMETYPES}
+    if mime not in allowed_mimes:
+        db.close()
+        return jsonify(error="Unsupported file type"), 400
+
+    _, ext = os.path.splitext(uploaded.filename)
+    notes = request.form.get("notes")
+    prev_key = doc.doc_key
+
+    revision = DocumentRevision(
+        doc_id=doc.id,
+        major_version=doc.major_version,
+        minor_version=doc.minor_version,
+        revision_notes=notes,
+        file_key=prev_key,
+    )
+    db.add(revision)
+
+    new_minor = doc.minor_version + 1
+    new_key = f"documents/{doc.id}/versions/{doc.major_version}.{new_minor}{ext}"
+    storage_client.put(Key=new_key, Body=data, ContentType=mime)
+
+    doc.doc_key = new_key
+    doc.minor_version = new_minor
+    doc.revision_notes = notes
+    doc.mime = mime
+    db.commit()
+
+    user = session.get("user") or {}
+    log_action(user.get("id"), doc.id, "upload_version")
+
+    if request.headers.get("HX-Request"):
+        revisions = (
+            db.query(DocumentRevision)
+            .filter_by(doc_id=doc.id)
+            .order_by(
+                DocumentRevision.major_version.desc(),
+                DocumentRevision.minor_version.desc(),
+            )
+            .all()
+        )
+        can_download = False
+        if user and permission_check(user.get("id"), doc, download=True):
+            can_download = True
+        db.close()
+        return render_template(
+            "partials/documents/_versions.html",
+            doc=doc,
+            revisions=revisions,
+            revision=None,
+            can_download=can_download,
+        )
+
+    resp = {
+        "doc_id": doc.id,
+        "major_version": doc.major_version,
+        "minor_version": doc.minor_version,
+        "doc_key": doc.doc_key,
+    }
+    db.close()
+    return jsonify(resp), 201
+
+
 @app.post("/documents")
 @roles_required(RoleEnum.CONTRIBUTOR.value)
 def create_document():
@@ -1673,7 +1761,7 @@ def create_document():
         errors["department"] = "Department is required."
     if not doc_type:
         errors["type"] = "Type is required."
-    if not tags_val:
+    if tags_val is None:
         errors["tags"] = "Invalid tags format."
     if errors:
         context = {
@@ -1737,7 +1825,7 @@ def create_document_api(data: dict | None = None):
         return jsonify({"errors": errors}), 400
 
     tags_val = _format_tags(data.get("tags"))
-    if not tags_val:
+    if tags_val is None:
         return jsonify({"errors": {"tags": "Invalid tags format."}}), 400
     uploaded_file_key = data.get("uploaded_file_key")
     uploaded_file_name = data.get("uploaded_file_name", "")
@@ -1817,7 +1905,7 @@ def update_document_api(id: int):
         doc.retention_period = data.get("retention_period")
     if "tags" in data:
         tags_val = _format_tags(data.get("tags"))
-        if not tags_val:
+        if tags_val is None:
             session_db.close()
             return jsonify({"errors": {"tags": "Invalid tags format."}}), 400
         doc.tags = tags_val
@@ -2778,6 +2866,7 @@ def save_revision(doc_id):
         revision_notes=revision_notes,
         track_changes=track_changes,
         compare_result=compare_result,
+        file_key=doc.doc_key,
     )
     session.add(rev)
     session.commit()

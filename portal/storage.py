@@ -16,6 +16,8 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import urlparse, urlunparse
 import posixpath
+import base64
+import hashlib
 
 import boto3
 from botocore.client import Config
@@ -222,12 +224,16 @@ class MinIOBackend(StorageBackend):
 
         dest_key = f"{self.archive_prefix}{object_key.split('/')[-1]}"
         retain_until = datetime.utcnow() + timedelta(days=retention_days)
-        self.copy(
-            CopySource={"Bucket": self.bucket_main, "Key": object_key},
-            Key=dest_key,
+        obj = self.client.get_object(Bucket=self.bucket_main, Key=object_key)
+        body = obj["Body"].read()
+        md5 = base64.b64encode(hashlib.md5(body).digest()).decode()
+        self.client.put_object(
             Bucket=self.bucket_archive,
+            Key=dest_key,
+            Body=body,
             ObjectLockMode="COMPLIANCE",
             ObjectLockRetainUntilDate=retain_until,
+            ContentMD5=md5,
         )
         self.delete(Key=object_key, Bucket=self.bucket_main)
         return dest_key

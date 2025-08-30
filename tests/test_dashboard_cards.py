@@ -40,7 +40,7 @@ def app_models():
         step_type="approval",
     )
     revision = m.DocumentRevision(
-        doc_id=recent_doc.id, major_version=1, minor_version=0
+        doc_id=recent_doc.id, major_version=1, minor_version=0, file_key="recent.docx"
     )
     session.add_all([step, revision])
     session.commit()

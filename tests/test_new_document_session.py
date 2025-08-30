@@ -72,8 +72,8 @@ def test_final_payload_includes_department_and_type():
 
     captured = {}
 
-    def fake_create_document_api():
-        captured.update(app_module.request.get_json() or {})
+    def fake_create_document_api(data=None):
+        captured.update(data or {})
         return app_module.jsonify({"id": 1}), 201
 
     app_module.create_document_api = fake_create_document_api

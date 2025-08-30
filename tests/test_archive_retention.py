@@ -30,7 +30,10 @@ def test_move_to_archive_retains_object_and_lists():
 
         head = client.head_object(Bucket="qdms-archive", Key=dest_key)
         assert head["ObjectLockMode"] == "COMPLIANCE"
-        assert head["ObjectLockRetainUntilDate"] > datetime.utcnow()
+        retain = head["ObjectLockRetainUntilDate"]
+        if getattr(retain, "tzinfo", None):
+            retain = retain.replace(tzinfo=None)
+        assert retain > datetime.utcnow()
 
         assert dest_key in storage.list_archived()
 
