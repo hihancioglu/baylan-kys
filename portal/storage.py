@@ -14,6 +14,8 @@ import shutil
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlparse, urlunparse
+import posixpath
 
 import boto3
 from botocore.client import Config
@@ -92,6 +94,7 @@ class MinIOBackend(StorageBackend):
 
     def __init__(self) -> None:
         self.endpoint = os.getenv("S3_ENDPOINT")
+        self.public_endpoint = os.getenv("S3_PUBLIC_ENDPOINT")
         self.access_key = os.getenv("S3_ACCESS_KEY") or os.getenv(
             "S3_ACCESS_KEY_ID"
         )
@@ -183,7 +186,7 @@ class MinIOBackend(StorageBackend):
             # underlying credentials, but this mirrors previous behavior.
             pass
         try:
-            return self.client.generate_presigned_url(
+            url = self.client.generate_presigned_url(
                 "get_object",
                 Params={
                     "Bucket": bucket_name,
@@ -194,8 +197,24 @@ class MinIOBackend(StorageBackend):
             )
         except NoCredentialsError:
             if self.endpoint:
-                return f"{self.endpoint}/{bucket_name}/{key}"
+                url = f"{self.endpoint}/{bucket_name}/{key}"
+                return self._apply_public_endpoint(url)
             return None
+
+        return self._apply_public_endpoint(url)
+
+    def _apply_public_endpoint(self, url: str | None) -> str | None:
+        if not url or not self.public_endpoint:
+            return url
+        pub = urlparse(self.public_endpoint)
+        orig = urlparse(url)
+        path = posixpath.join(pub.path.rstrip("/"), orig.path.lstrip("/")) if pub.path else orig.path
+        replaced = orig._replace(
+            scheme=pub.scheme or orig.scheme,
+            netloc=pub.netloc or orig.netloc,
+            path=path,
+        )
+        return urlunparse(replaced)
 
     # -- higher level helpers ------------------------------------------
     def move_to_archive(self, object_key: str, retention_days: int) -> str:
