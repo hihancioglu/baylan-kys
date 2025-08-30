@@ -65,8 +65,18 @@ def models(reset_database):
     session.add_all([ack1, ack2])
     session.commit()
 
-    rev1 = DocumentRevision(doc_id=mandatory_doc1.id, major_version=1, minor_version=0)
-    rev2 = DocumentRevision(doc_id=mandatory_doc2.id, major_version=1, minor_version=0)
+    rev1 = DocumentRevision(
+        doc_id=mandatory_doc1.id,
+        major_version=1,
+        minor_version=0,
+        file_key="mandatory1.docx",
+    )
+    rev2 = DocumentRevision(
+        doc_id=mandatory_doc2.id,
+        major_version=1,
+        minor_version=0,
+        file_key="mandatory2.docx",
+    )
     session.add_all([rev1, rev2])
     session.commit()
 

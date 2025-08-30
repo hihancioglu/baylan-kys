@@ -113,6 +113,7 @@ class DocumentRevision(Base):
     doc_id = Column(Integer, ForeignKey('documents.id'), nullable=False)
     major_version = Column(Integer, nullable=False)
     minor_version = Column(Integer, nullable=False)
+    file_key = Column(String, nullable=False)
     revision_notes = Column(Text)
     track_changes = Column(JSON)
     compare_result = Column(JSON)
