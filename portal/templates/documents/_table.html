@@ -39,6 +39,8 @@
           {% else %}
           <span class="btn btn-sm btn-outline-secondary disabled">Workflow</span>
           {% endif %}
+          <a href="{{ url_for('get_file', file_key=doc.doc_key) }}" class="btn btn-sm btn-outline-secondary">Download</a>
+          <a href="{{ url_for('new_document', step=1) }}?doc_id={{ doc.id }}" class="btn btn-sm btn-outline-secondary">Upload New Version</a>
         </td>
       </tr>
       {% endfor %}

@@ -14,14 +14,13 @@ export function initPreview() {
     return;
   }
 
-  if (data.type === 'office') {
-    const iframe = document.createElement('iframe');
-    iframe.src = `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(data.url)}`;
-    iframe.width = '100%';
-    iframe.height = '600';
-    iframe.frameBorder = '0';
-    container.appendChild(iframe);
-  }
+  // For office files or any other types, always use the Microsoft Office viewer.
+  const iframe = document.createElement('iframe');
+  iframe.src = `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(data.url)}`;
+  iframe.width = '100%';
+  iframe.height = '600';
+  iframe.frameBorder = '0';
+  container.appendChild(iframe);
 }
 
 document.addEventListener('DOMContentLoaded', initPreview);
