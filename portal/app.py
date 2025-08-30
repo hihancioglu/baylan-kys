@@ -17,8 +17,6 @@ from sqlalchemy import and_, func, inspect, or_
 from sqlalchemy.orm import joinedload, sessionmaker
 from sqlalchemy.exc import ResourceClosedError
 
-import jwt
-
 from auth import auth_bp
 from auth import init_app as auth_init
 from auth import login_required, roles_required
@@ -150,29 +148,8 @@ def inject_user():
 
 # -- Preview configuration -------------------------------------------------
 #
-# ``USE_ONLYOFFICE`` toggles whether Office documents are displayed using
-# the OnlyOffice document server or the Microsoft Office Web Viewer.  The
-# environment variables required for OnlyOffice are optional when this flag
-# is disabled so that deployments without OnlyOffice can still render
-# documents via the fallback viewer.
-app.config["USE_ONLYOFFICE"] = (
-    os.environ.get("USE_ONLYOFFICE", "true").lower() == "true"
-)
-
-USE_ONLYOFFICE = app.config["USE_ONLYOFFICE"]
-
-if USE_ONLYOFFICE:
-    ONLYOFFICE_INTERNAL_URL = os.environ.get("ONLYOFFICE_INTERNAL_URL")
-    ONLYOFFICE_PUBLIC_URL = os.environ.get("ONLYOFFICE_PUBLIC_URL")
-    ONLYOFFICE_JWT_SECRET = os.environ.get("ONLYOFFICE_JWT_SECRET", "")
-    ONLYOFFICE_JWT_HEADER = os.environ.get(
-        "ONLYOFFICE_JWT_HEADER", "Authorization"
-    )
-else:
-    ONLYOFFICE_INTERNAL_URL = None
-    ONLYOFFICE_PUBLIC_URL = None
-    ONLYOFFICE_JWT_SECRET = ""
-    ONLYOFFICE_JWT_HEADER = None
+# Office documents are displayed using the Microsoft Office Web Viewer while
+# PDFs are shown via Mozilla's pdf.js.
 
 OFFICE_MIMETYPES = {
     "application/msword",
@@ -182,27 +159,6 @@ OFFICE_MIMETYPES = {
     "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     "application/vnd.openxmlformats-officedocument.presentationml.presentation",
 }
-
-# Map file extensions to OnlyOffice document types
-ONLYOFFICE_DOCUMENT_TYPES = {
-    "docx": "word",
-    "docxf": "word",
-    "xlsx": "cell",
-    "pptx": "slide",
-    "pdf": "pdf",
-}
-
-
-def _onlyoffice_types(file_key: str) -> tuple[str, str]:
-    """Return ``(extension, documentType)`` for a given file key."""
-    ext = file_key.rsplit(".", 1)[-1].lower()
-    doc_type = ONLYOFFICE_DOCUMENT_TYPES.get(ext, "word")
-    return ext, doc_type
-
-# Sign OnlyOffice payloads using HS256 JWT tokens.
-def sign_payload(payload: dict) -> str:
-    token = jwt.encode({"payload": payload}, ONLYOFFICE_JWT_SECRET, algorithm="HS256")
-    return token.decode() if isinstance(token, bytes) else token
 
 
 def log_action(
@@ -1304,43 +1260,7 @@ def document_detail(doc_id: int | None = None, id: int | None = None):
     if file_url and mime == "application/pdf":
         preview = {"type": "pdf", "url": file_url}
     elif file_url and mime in OFFICE_MIMETYPES:
-        preview = {"type": "office", "url": file_url, "useOnlyOffice": USE_ONLYOFFICE}
-        if USE_ONLYOFFICE and ONLYOFFICE_PUBLIC_URL:
-            user = session.get("user") or {"id": "viewer", "name": "Viewer"}
-            user_name = (
-                user.get("name")
-                or user.get("username")
-                or user.get("email", "")
-            )
-            ext, doc_type = _onlyoffice_types(doc.file_key)
-            config = {
-                "document": {
-                    "fileType": ext,
-                    "key": f"{doc.doc_key}",
-                    "title": doc.title or doc.doc_key.split("/")[-1],
-                    "url": file_url,
-                    "permissions": {
-                        "edit": False,
-                        "download": True,
-                        "review": False,
-                        "comment": False,
-                    },
-                },
-                "documentType": doc_type,
-                "editorConfig": {
-                    "mode": "view",
-                    "user": {"id": str(user["id"]), "name": user_name},
-                },
-            }
-            token = sign_payload(config) if ONLYOFFICE_JWT_SECRET else ""
-            preview.update(
-                {
-                    "editorJs": f"{ONLYOFFICE_PUBLIC_URL}/web-apps/apps/api/documents/api.js",
-                    "config": config,
-                    "token": token,
-                    "tokenHeader": ONLYOFFICE_JWT_HEADER,
-                }
-            )
+        preview = {"type": "office", "url": file_url}
 
     download_url = None
     if user and permission_check(user["id"], doc, download=True):
@@ -1598,89 +1518,6 @@ def compare_document_versions(doc_id: int):
     )
 
 
-@app.get("/api/documents/compare")
-@roles_required(RoleEnum.READER.value)
-def api_compare_documents():
-    """Return OnlyOffice comparison configuration between two versions."""
-    doc_id = request.args.get("doc_id", type=int)
-    from_ver = request.args.get("from")
-    to_ver = request.args.get("to")
-    if not doc_id or not from_ver or not to_ver:
-        return jsonify(error="doc_id, from and to required"), 400
-
-    def _parse(v):
-        try:
-            maj, minr = map(int, v.split("."))
-            return maj, minr
-        except Exception:
-            return None
-
-    from_tuple = _parse(from_ver)
-    to_tuple = _parse(to_ver)
-    if not from_tuple or not to_tuple:
-        return jsonify(error="invalid version"), 400
-
-    db = get_session()
-    doc = db.get(Document, doc_id)
-    if not doc:
-        db.close()
-        return jsonify(error="document not found"), 404
-
-    def _get_version(maj, minr):
-        if doc.major_version == maj and doc.minor_version == minr:
-            return {
-                "url": storage_client.generate_presigned_url(doc.doc_key),
-                "key": f"{doc.doc_key}:{maj}.{minr}",
-                "title": doc.title or doc.doc_key.split('/')[-1],
-            }
-        rev = (
-            db.query(DocumentRevision)
-            .filter_by(doc_id=doc_id, major_version=maj, minor_version=minr)
-            .first()
-        )
-        if rev and rev.track_changes and rev.track_changes.get("url"):
-            return {
-                "url": rev.track_changes.get("url"),
-                "key": f"{doc.doc_key}:{maj}.{minr}",
-                "title": doc.title or doc.doc_key.split('/')[-1],
-            }
-        return None
-
-    from_doc = _get_version(*from_tuple)
-    to_doc = _get_version(*to_tuple)
-    db.close()
-    if not from_doc or not to_doc:
-        return jsonify(error="version not found"), 404
-
-    user = session.get("user") or {"id": "", "name": ""}
-    user_name = (
-        user.get("name")
-        or user.get("username")
-        or user.get("email", "")
-    )
-    ext, doc_type = _onlyoffice_types(doc.file_key)
-    config = {
-        "document": {
-            "fileType": ext,
-            "key": from_doc["key"],
-            "title": from_doc["title"],
-            "url": from_doc["url"],
-            "permissions": {"download": True},
-        },
-        "documentType": doc_type,
-        "editorConfig": {
-            "mode": "view",
-            "user": {"id": str(user["id"]), "name": user_name},
-            "compareFile": {
-                "fileType": ext,
-                "key": to_doc["key"],
-                "title": to_doc["title"],
-                "url": to_doc["url"],
-            },
-        },
-    }
-    token = sign_payload(config)
-    return jsonify(config=config, token=token, token_header=ONLYOFFICE_JWT_HEADER)
 
 
 @app.post("/documents/<int:doc_id>/revert/<int:revision_id>")
@@ -1867,7 +1704,7 @@ def revise_document(id: int):
     user = session.get("user") or {}
     _start_revision(doc, version_type, notes, user, db)
     db.close()
-    return redirect(url_for("edit_document", doc_id=id))
+    return redirect(url_for("document_detail", doc_id=id))
 
 
 @app.post("/documents")
@@ -2166,31 +2003,16 @@ def approval_detail(id: int):
         if not step:
             return "Not found", 404
         doc = step.document
+        file_url = storage_client.generate_presigned_url(doc.doc_key)
+        mime = (doc.mime or "").lower()
+        preview: dict[str, object] = {}
+        if file_url and mime == "application/pdf":
+            preview = {"type": "pdf", "url": file_url}
+        elif file_url and mime in OFFICE_MIMETYPES:
+            preview = {"type": "office", "url": file_url}
         real_user = session.get("user")
-        user = real_user or {"id": "", "name": ""}
-        user_name = (
-            user.get("name")
-            or user.get("username")
-            or user.get("email", "")
-        )
-        ext, doc_type = _onlyoffice_types(doc.file_key)
-        config = {
-            "document": {
-                "fileType": ext,
-                "key": f"{doc.doc_key}",
-                "title": doc.title or doc.doc_key.split("/")[-1],
-                "url": storage_client.generate_presigned_url(doc.doc_key),
-                "permissions": {"download": True},
-            },
-            "documentType": doc_type,
-            "editorConfig": {
-                "user": {"id": str(user["id"]), "name": user_name},
-                "mode": "view",
-            },
-        }
-        token = sign_payload(config)
         if real_user:
-            log_action(user["id"], doc.id, "view_approval")
+            log_action(real_user["id"], doc.id, "view_approval")
         breadcrumbs = [
             {"title": "Home", "url": url_for("dashboard")},
             {"title": "Approvals", "url": url_for("approval_queue")},
@@ -2198,11 +2020,8 @@ def approval_detail(id: int):
         ]
         return render_template(
             "approvals/detail.html",
-            editor_js=f"{ONLYOFFICE_PUBLIC_URL}/web-apps/apps/api/documents/api.js",
-            config=config,
-            token=token,
-            token_header=ONLYOFFICE_JWT_HEADER,
             step=step,
+            preview=preview,
             breadcrumbs=breadcrumbs,
         )
     finally:
@@ -3039,57 +2858,6 @@ def delete_department_api(dept_id):
     finally:
         db.close()
 
-@app.get("/documents/<int:doc_id>/edit")
-@roles_required(RoleEnum.CONTRIBUTOR.value)
-def edit_document(doc_id):
-    db = get_session()
-    doc = db.get(Document, doc_id)
-    if not doc:
-        db.close()
-        return "Document not found", 404
-    user = session.get("user") or {"id": "u1", "name": "Ibrahim H.", "email": "ih@baylan.local"}
-    user_name = user.get("name") or user.get("username") or user.get("email", "")
-    public_base_url = os.environ.get(
-        "PORTAL_PUBLIC_BASE_URL", request.host_url.rstrip("/")
-    )
-    # Defaults to the incoming request's host when PORTAL_PUBLIC_BASE_URL is unset
-    ext, doc_type = _onlyoffice_types(doc.file_key)
-    config = {
-        "document": {
-            "fileType": ext,
-            "key": f"{doc.doc_key}",
-            "title": doc.title or doc.doc_key.split('/')[-1],
-            "url": storage_client.generate_presigned_url(doc.doc_key),
-            "permissions": {
-                "edit": True,
-                "download": True,
-                "review": True,
-                "comment": True,
-            },
-        },
-        "documentType": doc_type,
-        "editorConfig": {
-            "callbackUrl": f"{public_base_url}/onlyoffice/callback/{doc.doc_key}",
-            "user": {"id": str(user["id"]), "name": user_name},
-            "mode": "edit",
-        },
-    }
-    token = sign_payload(config)
-    db.close()
-    return render_template(
-        "documents/edit.html",
-        editor_js=f"{ONLYOFFICE_PUBLIC_URL}/web-apps/apps/api/documents/api.js",
-        config=config,
-        token=token,
-        token_header=ONLYOFFICE_JWT_HEADER,
-        doc_id=doc_id,
-        breadcrumbs=[
-            {"title": "Home", "url": url_for("dashboard")},
-            {"title": "Documents", "url": url_for("list_documents")},
-            {"title": doc.title, "url": url_for("document_detail", doc_id=doc_id)},
-            {"title": "Edit"},
-        ],
-    )
 
 @app.post("/documents/<int:doc_id>/revision")
 @roles_required(RoleEnum.REVIEWER.value)
@@ -4337,31 +4105,6 @@ def api_dif_request_changes(id: int):
         return html
     finally:
         db.close()
-
-@app.post("/onlyoffice/callback/<path:doc_key>")
-def onlyoffice_callback(doc_key):
-    data = request.get_json(silent=True) or {}
-    status = data.get("status")
-    file_url = data.get("url")
-    db = get_session()
-    try:
-        doc = db.query(Document).filter_by(doc_key=doc_key).first()
-        if doc and status in {2, 6} and file_url:
-            doc.minor_version += 1
-            rev = DocumentRevision(
-                doc_id=doc.id,
-                major_version=doc.major_version,
-                minor_version=doc.minor_version,
-                track_changes={"status": status, "url": file_url},
-            )
-            db.add(rev)
-            db.commit()
-            user_id = session.get("user", {}).get("id") if session.get("user") else None
-            log_action(user_id, doc.id, f"onlyoffice_callback:{status}")
-    finally:
-        db.close()
-    return jsonify(error=0)
-
 
 if __name__ == "__main__":
     bind = os.environ.get("BIND", "0.0.0.0:5000")
