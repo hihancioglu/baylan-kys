@@ -53,7 +53,7 @@ services:
     image: onlyoffice/documentserver:latest
     restart: unless-stopped
     environment:
-      JWT_ENABLED: "true"
+      JWT_ENABLED: ${ONLYOFFICE_JWT_ENABLED:-false}
       JWT_SECRET: ${ONLYOFFICE_JWT_SECRET}
       JWT_HEADER: ${ONLYOFFICE_JWT_HEADER}
     # Eğer büyük dosyalar/çok kullanıcı planı varsa CPU/RAM artırın
