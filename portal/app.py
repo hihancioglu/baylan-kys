@@ -1,7 +1,5 @@
-import base64
 import csv
 import hashlib
-import hmac
 import io
 import json
 import os
@@ -18,6 +16,8 @@ from markupsafe import Markup
 from sqlalchemy import and_, func, inspect, or_
 from sqlalchemy.orm import joinedload, sessionmaker
 from sqlalchemy.exc import ResourceClosedError
+
+import jwt
 
 from auth import auth_bp
 from auth import init_app as auth_init
@@ -199,15 +199,10 @@ def _onlyoffice_types(file_key: str) -> tuple[str, str]:
     doc_type = ONLYOFFICE_DOCUMENT_TYPES.get(ext, "word")
     return ext, doc_type
 
-# Demo: örnek bir dokümanı MinIO'ya kaydettiğinizi varsayın ve anahtarını (storage key) biliyorsunuz:
+# Sign OnlyOffice payloads using HS256 JWT tokens.
 def sign_payload(payload: dict) -> str:
-    # OnlyOffice JWT payload (HS256)
-    header = {"alg":"HS256","typ":"JWT"}
-    def b64(x): return base64.urlsafe_b64encode(json.dumps(x, separators=(',',':')).encode()).rstrip(b'=')
-    segs = [b64(header), b64(payload)]
-    sig = hmac.new(ONLYOFFICE_JWT_SECRET.encode(), b'.'.join(segs), hashlib.sha256).digest()
-    segs.append(base64.urlsafe_b64encode(sig).rstrip(b'='))
-    return b'.'.join(segs).decode()
+    token = jwt.encode({"payload": payload}, ONLYOFFICE_JWT_SECRET, algorithm="HS256")
+    return token.decode() if isinstance(token, bytes) else token
 
 
 def log_action(
