@@ -20,7 +20,6 @@ from sqlalchemy.exc import ResourceClosedError
 from auth import auth_bp
 from auth import init_app as auth_init
 from auth import login_required, roles_required
-from docxf_render import render_form_and_store
 from models import STANDARD_MAP as MODEL_STANDARD_MAP
 from models import (Acknowledgement, AuditLog, CAPAAction, ChangeRequest,
                     DepartmentVisibility, Deviation, DifRequest,
@@ -1007,15 +1006,10 @@ def new_document():
 
         if step == "2":
             data.update(request.form.to_dict())
-            data["template"] = request.form.get("template", "").strip()
-            data["generate_docxf"] = bool(request.form.get("generate_docxf"))
+            data.pop("generate_docxf", None)
             uploaded = request.files.get("upload_file")
-            if data["generate_docxf"]:
-                if not data["template"]:
-                    errors["template"] = "Template is required"
-            else:
-                if not (uploaded and uploaded.filename):
-                    errors["upload_file"] = "File is required"
+            if not (uploaded and uploaded.filename):
+                errors["upload_file"] = "File is required"
             if errors:
                 DOCUMENT_DRAFTS[draft_id] = data
                 base_templates = os.path.abspath(
@@ -1042,63 +1036,6 @@ def new_document():
                     "template_options": template_options,
                 }
                 return render_template("documents/new_step2.html", **context), 400
-            if data["generate_docxf"]:
-                user = session.get("user")
-                roles = session.get("roles", [])
-                payload = {
-                    "title": data.get("title"),
-                    "code": data.get("code"),
-                    "department": data.get("department"),
-                    "process": data.get("type"),
-                    "tags": data.get("tags"),
-                    "retention_period": data.get("retention_period"),
-                }
-                with app.test_request_context(
-                    "/api/documents/from-docxf",
-                    method="POST",
-                    json={"form_id": data.get("template"), "payload": payload},
-                ):
-                    session["user"] = user
-                    session["roles"] = roles
-                    response = create_document_from_docxf()
-                if isinstance(response, tuple):
-                    resp, status = response
-                else:
-                    resp, status = response, response.status_code
-                if status == 201:
-                    result = resp.get_json()
-                    data["doc_id"] = result.get("id")
-                    data["preview_url"] = result.get("preview_url")
-                    DOCUMENT_DRAFTS[draft_id] = data
-                    return redirect(url_for("new_document", step=3))
-                data["docxf_error"] = (resp.get_json() or {}).get(
-                    "error", "Failed to generate document."
-                )
-                DOCUMENT_DRAFTS[draft_id] = data
-                base_templates = os.path.abspath(
-                    os.path.join(os.path.dirname(__file__), "..", "templates")
-                )
-                template_options = {}
-                for folder in ("forms", "procedures"):
-                    path = os.path.join(base_templates, folder)
-                    if os.path.isdir(path):
-                        template_options[folder] = [
-                            f
-                            for f in os.listdir(path)
-                            if os.path.isfile(os.path.join(path, f))
-                        ]
-                context = {
-                    "breadcrumbs": [
-                        {"title": "Home", "url": url_for("dashboard")},
-                        {"title": "Documents", "url": url_for("list_documents")},
-                        {"title": "New"},
-                    ],
-                    "errors": {},
-                    "form": data,
-                    "step": 2,
-                    "template_options": template_options,
-                }
-                return render_template("documents/new_step2.html", **context), status
             _, ext = os.path.splitext(uploaded.filename)
             doc_key = f"{secrets.token_hex(16)}{ext}"
             try:
@@ -1125,25 +1062,6 @@ def new_document():
                 return redirect(url_for("list_documents"))
             form_data = DOCUMENT_DRAFTS.pop(draft_id, {})
             session.pop("new_doc_id", None)
-            user = session.get("user")
-            roles = session.get("roles", [])
-            if form_data.get("generate_docxf"):
-                doc_id = form_data.get("doc_id")
-                if doc_id:
-                    session.pop("uploaded_file_key", None)
-                    return redirect(url_for("document_detail", doc_id=doc_id, created=1))
-                context = {
-                    "breadcrumbs": [
-                        {"title": "Home", "url": url_for("dashboard")},
-                        {"title": "Documents", "url": url_for("list_documents")},
-                        {"title": "New"},
-                    ],
-                    "errors": {"docxf": form_data.get("docxf_error") or "Generation failed"},
-                    "form": form_data,
-                    "step": 3,
-                    "standard_map": get_standard_map(),
-                }
-                return render_template("documents/new_step3.html", **context), 400
             if not form_data.get("uploaded_file_key"):
                 context = {
                     "breadcrumbs": [
@@ -1885,54 +1803,6 @@ def update_document_api(id: int):
     session_db.close()
     return jsonify(result)
 
-
-@app.post("/api/documents/from-docxf")
-@roles_required(RoleEnum.CONTRIBUTOR.value)
-def create_document_from_docxf():
-    """Create a new document by rendering a DOCXF template."""
-    data = request.get_json(silent=True) or {}
-    form_id = data.get("form_id")
-    payload = data.get("payload", {})
-    if not form_id or not isinstance(payload, dict):
-        return jsonify(error="form_id and payload required"), 400
-
-    _, docx_key, pdf_key = render_form_and_store(form_id, payload)
-    preview_key = pdf_key or docx_key
-    preview_url = generate_presigned_url(preview_key) if preview_key else None
-
-    session_db = get_session()
-    try:
-        doc = Document(
-            doc_key=pdf_key,
-            title=payload.get("title"),
-            code=payload.get("code"),
-            tags=_format_tags(payload.get("tags")),
-            department=payload.get("department"),
-            process=payload.get("process"),
-            retention_period=payload.get("retention_period"),
-            major_version=1,
-            minor_version=0,
-            status="Draft",
-        )
-        session_db.add(doc)
-        session_db.flush()
-        rev = DocumentRevision(doc_id=doc.id, major_version=1, minor_version=0)
-        session_db.add(rev)
-        session_db.commit()
-        doc_id = doc.id
-        version = f"{doc.major_version}.{doc.minor_version}"
-    finally:
-        session_db.close()
-
-    return jsonify(
-        {
-            "id": doc_id,
-            "docx_key": docx_key,
-            "pdf_key": pdf_key,
-            "preview_url": preview_url,
-            "version": version,
-        }
-    ), 201
 
 
 @app.post("/documents/<int:doc_id>/sign")

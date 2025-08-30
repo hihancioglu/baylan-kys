@@ -2,12 +2,7 @@
 {% block title %}{{ t('new_document_step3_title') }}{% endblock %}
 {% block content %}
 <h1 class="fw-bold page-title">{{ t('new_document_step3_title') }}</h1>
-{% if form.docxf_error %}
-<div class="alert alert-danger">{{ t('generation_failed', error=form.docxf_error) }}</div>
-{% elif form.preview_url %}
-<div class="alert alert-success">{{ t('document_generated_success') }}</div>
-<div class="mb-3"><iframe src="{{ form.preview_url }}" class="w-100 preview-frame"></iframe></div>
-{% elif form.upload_error %}
+{% if form.upload_error %}
 <div class="alert alert-danger">{{ t('upload_failed', error=form.upload_error) }}</div>
 {% elif form.uploaded_file_key %}
 <div class="alert alert-success">{{ t('file_uploaded_success') }}</div>
@@ -28,8 +23,8 @@
   <p><strong>{{ t('department_label') }}:</strong> {{ form.department }}</p>
   <p><strong>{{ t('type_label') }}:</strong> {{ form.type }}</p>
   <p><strong>{{ t('standard_label') }}:</strong> {{ standard_map.get(form.standard, form.standard) }}</p>
-  <button type="submit" class="btn btn-primary">{% if form.generate_docxf %}{{ t('view_document') }}{% else %}{{ t('create') }}{% endif %}</button>
-  {% if not form.generate_docxf %}<button type="button" id="save-draft" class="btn btn-secondary ms-2"
+  <button type="submit" class="btn btn-primary">{{ t('create') }}</button>
+  <button type="button" id="save-draft" class="btn btn-secondary ms-2"
     data-code="{{ form.code }}"
     data-title="{{ form.title }}"
     data-department="{{ form.department }}"
@@ -39,12 +34,11 @@
     data-template="{{ form.template }}"
     data-uploaded-file-key="{{ form.uploaded_file_key }}"
     data-uploaded-file-name="{{ form.uploaded_file_name }}"
-    data-generate-docxf="{{ 'true' if form.generate_docxf else 'false' }}"
     data-file-not-uploaded="{{ t('file_not_uploaded') }}"
     data-session-ended="{{ t('session_ended') }}"
     data-document-uploaded="{{ t('document_uploaded_for_approval') }}"
     data-document-create-error="{{ t('document_create_error') }}"
-  >{{ t('save_draft') }}</button>{% endif %}
+  >{{ t('save_draft') }}</button>
   <button type="submit" name="cancel" value="1" class="btn btn-secondary ms-2">{{ t('cancel') }}</button>
 </form>
 <script type="module" src="{{ url_for('static', filename='documents/new_step3.js') }}"></script>

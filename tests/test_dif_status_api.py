@@ -4,9 +4,6 @@ from sqlalchemy.orm import sessionmaker
 
 
 def test_dif_approve_notifies_requester_and_next(monkeypatch):
-    os.environ.setdefault("ONLYOFFICE_INTERNAL_URL", "http://oo")
-    os.environ.setdefault("ONLYOFFICE_PUBLIC_URL", "http://oo-public")
-    os.environ.setdefault("ONLYOFFICE_JWT_SECRET", "secret")
     os.environ.setdefault("S3_ENDPOINT", "http://s3")
 
     app_module = importlib.reload(importlib.import_module("app"))

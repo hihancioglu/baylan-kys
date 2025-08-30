@@ -6,9 +6,6 @@ from sqlalchemy.orm import sessionmaker
 
 def test_dif_creation_enqueues_email(monkeypatch):
     # Set required environment variables before importing the app
-    os.environ.setdefault("ONLYOFFICE_INTERNAL_URL", "http://oo")
-    os.environ.setdefault("ONLYOFFICE_PUBLIC_URL", "http://oo-public")
-    os.environ.setdefault("ONLYOFFICE_JWT_SECRET", "secret")
     os.environ.setdefault("S3_ENDPOINT", "http://s3")
 
     rq = importlib.import_module("rq_stub")

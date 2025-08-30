@@ -10,9 +10,6 @@ from unittest.mock import patch
 
 # set up environment variables
 auto_env = {
-    "ONLYOFFICE_INTERNAL_URL": "http://oo",
-    "ONLYOFFICE_PUBLIC_URL": "http://oo-public",
-    "ONLYOFFICE_JWT_SECRET": "secret",
     "S3_ENDPOINT": "http://s3",
 }
 for k, v in auto_env.items():

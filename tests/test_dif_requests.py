@@ -7,9 +7,6 @@ from sqlalchemy.orm import sessionmaker
 
 
 def test_creation_validation_and_attachment_upload(monkeypatch):
-    os.environ.setdefault("ONLYOFFICE_INTERNAL_URL", "http://oo")
-    os.environ.setdefault("ONLYOFFICE_PUBLIC_URL", "http://oo-public")
-    os.environ.setdefault("ONLYOFFICE_JWT_SECRET", "secret")
     os.environ.setdefault("S3_ENDPOINT", "http://s3")
 
     storage = importlib.import_module("storage")
@@ -55,9 +52,6 @@ def test_creation_validation_and_attachment_upload(monkeypatch):
 
 
 def test_listing_filters(monkeypatch):
-    os.environ.setdefault("ONLYOFFICE_INTERNAL_URL", "http://oo")
-    os.environ.setdefault("ONLYOFFICE_PUBLIC_URL", "http://oo-public")
-    os.environ.setdefault("ONLYOFFICE_JWT_SECRET", "secret")
     os.environ.setdefault("S3_ENDPOINT", "http://s3")
 
     app_module = importlib.reload(importlib.import_module("app"))
@@ -101,9 +95,6 @@ def test_listing_filters(monkeypatch):
 
 
 def test_workflow_actions_and_notifications(monkeypatch):
-    os.environ.setdefault("ONLYOFFICE_INTERNAL_URL", "http://oo")
-    os.environ.setdefault("ONLYOFFICE_PUBLIC_URL", "http://oo-public")
-    os.environ.setdefault("ONLYOFFICE_JWT_SECRET", "secret")
     os.environ.setdefault("S3_ENDPOINT", "http://s3")
 
     app_module = importlib.reload(importlib.import_module("app"))

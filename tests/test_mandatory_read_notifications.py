@@ -4,9 +4,6 @@ import sys
 from unittest.mock import MagicMock
 
 # Set required environment variables before importing the app
-os.environ.setdefault("ONLYOFFICE_INTERNAL_URL", "http://oo")
-os.environ.setdefault("ONLYOFFICE_PUBLIC_URL", "http://oo-public")
-os.environ.setdefault("ONLYOFFICE_JWT_SECRET", "secret")
 os.environ.setdefault("S3_ENDPOINT", "http://s3")
 
 def test_mandatory_read_notification_does_not_detach():
