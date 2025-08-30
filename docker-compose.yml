@@ -56,7 +56,7 @@ services:
       JWT_ENABLED: ${ONLYOFFICE_JWT_ENABLED:-false}
       JWT_SECRET: ${ONLYOFFICE_JWT_SECRET}
       JWT_HEADER: ${ONLYOFFICE_JWT_HEADER}
-      ALLOW_PRIVATE_IP: "true"  # allow access to services on the internal network
+      ONLYOFFICE_DOCUMENT_SERVER_SERVICES_COAUTHORING_REQUEST_RESTRICTIONS_ALLOWPRIVATEIPADDRESS: "true"  # allow access to services on the internal network
     # Eğer büyük dosyalar/çok kullanıcı planı varsa CPU/RAM artırın
     networks: [qdms]
 
