@@ -11,7 +11,7 @@ HSM_API_URL = os.environ.get("HSM_API_URL", "http://hsm.example.com/sign")
 
 
 def convert_to_pdf(source_path: str, output_dir: str) -> str:
-    """Convert a document to PDF using LibreOffice/OnlyOffice.
+    """Convert a document to PDF using LibreOffice.
 
     The caller is responsible for providing a temporary ``output_dir`` and
     cleaning up any files created within it.

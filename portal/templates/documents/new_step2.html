@@ -2,11 +2,6 @@
 {% block title %}New Document - Step 2{% endblock %}
 {% block content %}
 <h1 class="fw-bold page-title">New Document - Step 2</h1>
-{% if form.docxf_error %}
-<div class="alert alert-danger">Generation failed: {{ form.docxf_error }}</div>
-{% elif form.preview_url %}
-<div class="alert alert-success">Preview ready. <a href="{{ form.preview_url }}" target="_blank">View preview</a></div>
-{% endif %}
 {% if errors %}
 <div class="alert alert-danger">Please correct the errors below.</div>
 {% endif %}
@@ -34,10 +29,6 @@
     {% if errors.upload_file %}<div class="invalid-feedback">{{ errors.upload_file }}</div>{% endif %}
   </div>
 
-  <div class="mb-3 form-check">
-    <input type="checkbox" class="form-check-input" id="generate_docxf" name="generate_docxf" value="1"{% if form.generate_docxf %} checked{% endif %} title="Generate document from DOCXF">
-    <label class="form-check-label" for="generate_docxf">Generate from DOCXF</label>
-  </div>
   <button type="submit" class="btn btn-primary" id="next-step2" title="Proceed to next step">Next</button>
 </form>
 

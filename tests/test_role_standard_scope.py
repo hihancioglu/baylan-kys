@@ -10,9 +10,6 @@ repo_root = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(repo_root))
 sys.path.insert(0, str(repo_root / "portal"))
 
-os.environ.setdefault("ONLYOFFICE_INTERNAL_URL", "http://oo")
-os.environ.setdefault("ONLYOFFICE_PUBLIC_URL", "http://oo-public")
-os.environ.setdefault("ONLYOFFICE_JWT_SECRET", "secret")
 os.environ.setdefault("S3_ENDPOINT", "http://s3")
 os.environ.setdefault("S3_BUCKET_MAIN", "test-bucket")
 os.environ.setdefault("S3_ACCESS_KEY", "test")

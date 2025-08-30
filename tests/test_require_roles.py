@@ -3,9 +3,6 @@ import importlib
 import pytest
 
 # Set minimal environment variables before importing the application
-os.environ.setdefault("ONLYOFFICE_INTERNAL_URL", "http://oo")
-os.environ.setdefault("ONLYOFFICE_PUBLIC_URL", "http://oo-public")
-os.environ.setdefault("ONLYOFFICE_JWT_SECRET", "secret")
 os.environ.setdefault("S3_ENDPOINT", "http://s3")
 
 

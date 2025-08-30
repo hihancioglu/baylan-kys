@@ -28,8 +28,7 @@ if (saveDraftBtn) {
       tags: saveDraftBtn.dataset.tags.split(',').map(t => t.trim()).filter(Boolean),
       template: saveDraftBtn.dataset.template,
       uploaded_file_key: saveDraftBtn.dataset.uploadedFileKey,
-      uploaded_file_name: saveDraftBtn.dataset.uploadedFileName,
-      generate_docxf: saveDraftBtn.dataset.generateDocxf === 'true'
+      uploaded_file_name: saveDraftBtn.dataset.uploadedFileName
     };
     if (!data.uploaded_file_key) {
       showToast(messages.fileNotUploaded, { timeout: 6000 });

@@ -6,7 +6,10 @@ import boto3
 import pytest
 
 moto = pytest.importorskip("moto")
-from moto import mock_s3
+try:
+    from moto import mock_s3
+except ImportError:  # moto>=5
+    from moto import mock_aws as mock_s3
 
 
 def test_move_to_archive_retains_object_and_lists():

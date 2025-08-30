@@ -8,9 +8,5 @@ const uploadInput = document.getElementById('upload_file');
 attachHelpText(uploadInput, 'Upload the document file.');
 attachTooltip(uploadInput, 'Upload document file');
 
-const generateDocxf = document.getElementById('generate_docxf');
-attachHelpText(generateDocxf, 'Generate document from a DOCXF file.');
-attachTooltip(generateDocxf, 'Generate from DOCXF');
-
 const nextBtn = document.getElementById('next-step2');
 attachTooltip(nextBtn, 'Proceed to next step');
