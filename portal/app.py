@@ -6,7 +6,7 @@ import os
 import secrets
 import tempfile
 import time
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 
 from flask import (Flask, Response, jsonify, make_response, redirect,
@@ -1148,7 +1148,7 @@ def document_detail(doc_id: int | None = None, id: int | None = None):
     db = get_session()
     doc = (
         db.query(Document)
-        .options(joinedload(Document.revisions))
+        .options(joinedload(Document.revisions), joinedload(Document.lock_owner))
         .filter(Document.id == doc_id)
         .one_or_none()
     )
@@ -1202,6 +1202,7 @@ def document_detail(doc_id: int | None = None, id: int | None = None):
         roles=roles,
         users=users,
         ack_count=ack_count,
+        now=datetime.utcnow(),
     )
 
 
@@ -1567,6 +1568,17 @@ def rollback_document_api(doc_id: int):
     if not doc:
         db.close()
         return jsonify(error="Document not found"), 404
+
+    user = session.get("user") or {}
+    now = datetime.utcnow()
+    if (
+        doc.locked_by
+        and doc.lock_expires_at
+        and doc.locked_by != user.get("id")
+        and doc.lock_expires_at > now
+    ):
+        db.close()
+        return jsonify(error="Document locked"), 409
     rev = (
         db.query(DocumentRevision)
         .filter_by(doc_id=doc_id, major_version=major, minor_version=minor)
@@ -1667,6 +1679,17 @@ def upload_document_version(doc_id: int):
         db.close()
         return jsonify(error="Document not found"), 404
 
+    user = session.get("user") or {}
+    now = datetime.utcnow()
+    if (
+        doc.locked_by
+        and doc.lock_expires_at
+        and doc.locked_by != user.get("id")
+        and doc.lock_expires_at > now
+    ):
+        db.close()
+        return jsonify(error="Document locked"), 409
+
     uploaded = request.files.get("file")
     if not uploaded or not uploaded.filename:
         db.close()
@@ -1739,6 +1762,61 @@ def upload_document_version(doc_id: int):
     }
     db.close()
     return jsonify(resp), 201
+
+
+@app.post("/api/documents/<int:doc_id>/checkout")
+@roles_required(RoleEnum.CONTRIBUTOR.value)
+def checkout_document(doc_id: int):
+    db = get_session()
+    doc = db.get(Document, doc_id)
+    if not doc:
+        db.close()
+        return jsonify(error="Document not found"), 404
+
+    user = session.get("user") or {}
+    user_id = user.get("id")
+    roles = session.get("roles", [])
+    now = datetime.utcnow()
+    if (
+        doc.locked_by
+        and doc.lock_expires_at
+        and doc.locked_by != user_id
+        and doc.lock_expires_at > now
+        and RoleEnum.QUALITY_ADMIN.value not in roles
+    ):
+        db.close()
+        return jsonify(error="Document locked"), 409
+
+    doc.locked_by = user_id
+    doc.lock_expires_at = now + timedelta(minutes=30)
+    db.commit()
+    log_action(user_id, doc.id, "checkout_document")
+    db.close()
+    return jsonify(locked_by=user_id, lock_expires_at=doc.lock_expires_at.isoformat())
+
+
+@app.post("/api/documents/<int:doc_id>/checkin")
+@roles_required(RoleEnum.CONTRIBUTOR.value)
+def checkin_document(doc_id: int):
+    db = get_session()
+    doc = db.get(Document, doc_id)
+    if not doc:
+        db.close()
+        return jsonify(error="Document not found"), 404
+
+    user = session.get("user") or {}
+    user_id = user.get("id")
+    roles = session.get("roles", [])
+    if doc.locked_by and doc.locked_by != user_id and RoleEnum.QUALITY_ADMIN.value not in roles:
+        db.close()
+        return jsonify(error="Cannot checkin"), 403
+
+    doc.locked_by = None
+    doc.lock_expires_at = None
+    db.commit()
+    log_action(user_id, doc.id, "checkin_document")
+    db.close()
+    return jsonify(status="ok")
 
 
 @app.post("/documents")
