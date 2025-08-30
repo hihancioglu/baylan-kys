@@ -5,6 +5,7 @@ import sys
 import uuid
 
 import pytest
+from unittest.mock import MagicMock
 
 # Ensure environment variables before importing application
 os.environ.setdefault("S3_ENDPOINT", "http://s3")
@@ -64,42 +65,68 @@ def test_start_revision_increments_version_and_logs(app_models):
     assert len(logs) == 1
 
 
-def test_revert_document_preserves_history(client, app_models):
+def test_rollback_document_creates_new_revision_and_serves_content(client, app_models):
     app, m = app_models
     session = m.SessionLocal()
-    uid = uuid.uuid4().hex
-    doc = m.Document(doc_key=f"doc_{uid}.docx", title="Doc", status="Published", revision_notes="orig")
-    session.add(doc)
-    session.commit()
-    from app import _start_revision
-
-    user = {"id": 1}
-    doc_id = doc.id
-    _start_revision(doc, "minor", "rev1", user, session)
-    rev_id = (
-        session.query(m.DocumentRevision)
-        .filter_by(doc_id=doc_id, major_version=1, minor_version=0)
-        .one()
-        .id
+    role = m.Role(id=1, name="reader")
+    user_db = m.User(id=1, username="u1")
+    user_db.roles.append(role)
+    doc = m.Document(
+        file_key="placeholder",
+        title="Doc",
+        status="Published",
+        major_version=1,
+        minor_version=1,
+        revision_notes="curr",
+        mime="application/pdf",
     )
+    session.add_all([role, user_db, doc])
+    session.commit()
+    doc.file_key = f"documents/{doc.id}/versions/1.1.txt"
+    rev = m.DocumentRevision(
+        doc_id=doc.id,
+        major_version=1,
+        minor_version=0,
+        file_key=f"documents/{doc.id}/versions/1.0.txt",
+        revision_notes="orig",
+    )
+    perm = m.DocumentPermission(role_id=role.id, doc_id=doc.id, can_download=True)
+    session.add_all([rev, perm])
+    session.commit()
+    doc_id = doc.id
     session.close()
+
+    storage = importlib.import_module("storage")
+    storage.storage_client.copy = MagicMock()
+    storage.storage_client.generate_presigned_url = MagicMock(return_value="/signed")
 
     with client.session_transaction() as sess:
         sess["user"] = {"id": 1, "name": "Tester"}
-        sess["roles"] = ["reviewer"]
+        sess["roles"] = ["reviewer", "reader"]
 
-    resp = client.post(f"/documents/{doc_id}/revert/{rev_id}")
-    assert resp.status_code == 302
+    resp = client.post(f"/api/documents/{doc_id}/rollback", json={"version": "v1.0"})
+    assert resp.status_code == 200
+    body = resp.get_json()
+    assert body["minor_version"] == 2
 
     session = m.SessionLocal()
     doc = session.get(m.Document, doc_id)
-    assert doc.major_version == 1
+    dest_key = doc.doc_key
     assert doc.minor_version == 2
-
+    assert dest_key.endswith("1.2.txt")
     revisions = session.query(m.DocumentRevision).filter_by(doc_id=doc_id).all()
-    minor_versions = {r.minor_version for r in revisions}
-    assert 0 in minor_versions and 2 in minor_versions
+    minors = {r.minor_version for r in revisions}
+    assert minors == {0, 1}
     session.close()
+
+    storage.storage_client.copy.assert_called_once_with(
+        CopySource={"Key": f"documents/{doc_id}/versions/1.0.txt"},
+        Key=f"documents/{doc_id}/versions/1.2.txt",
+    )
+
+    resp = client.get(f"/files/{dest_key}")
+    assert resp.status_code == 302
+    storage.storage_client.generate_presigned_url.assert_called_with(dest_key, expires_in=None)
 
 
 def test_compare_nonexistent_document_returns_404(client, app_models):

@@ -1472,36 +1472,28 @@ def compare_document_versions(doc_id: int):
 @roles_required(RoleEnum.REVIEWER.value)
 def revert_document(doc_id: int, revision_id: int):
     partial = bool(request.headers.get("HX-Request"))
-    session = get_session()
-    doc = session.get(Document, doc_id)
+    db = get_session()
+    doc = db.get(Document, doc_id)
     rev = (
-        session.query(DocumentRevision)
+        db.query(DocumentRevision)
         .filter_by(id=revision_id, doc_id=doc_id)
         .first()
     )
     if not doc or not rev:
-        session.close()
+        db.close()
         return "Version not found", 404
-    doc.minor_version += 1
-    doc.revision_notes = rev.revision_notes
-    new_rev = DocumentRevision(
-        doc_id=doc.id,
-        major_version=doc.major_version,
-        minor_version=doc.minor_version,
-        revision_notes=rev.revision_notes,
-        track_changes=rev.track_changes,
-        compare_result=rev.compare_result,
-        file_key=doc.doc_key,
-    )
-    session.add(new_rev)
-    session.commit()
+    user = session.get("user") or {}
+    _rollback_document(doc, rev, user, db)
     revisions = (
-        session.query(DocumentRevision)
+        db.query(DocumentRevision)
         .filter_by(doc_id=doc_id)
-        .order_by(DocumentRevision.major_version.desc(), DocumentRevision.minor_version.desc())
+        .order_by(
+            DocumentRevision.major_version.desc(),
+            DocumentRevision.minor_version.desc(),
+        )
         .all()
     )
-    session.close()
+    db.close()
     if partial:
         return render_template(
             "partials/documents/_versions.html",
@@ -1510,55 +1502,42 @@ def revert_document(doc_id: int, revision_id: int):
             revision=None,
             active_tab="versions",
         )
-    return redirect(url_for("document_detail", doc_id=doc_id))
+    return redirect(url_for("document_detail", doc_id=doc_id, tab="versions"))
 
 
-@app.post("/documents/<int:doc_id>/rollback")
-@roles_required(RoleEnum.REVIEWER.value)
-def rollback_document(doc_id: int):
-    """Rollback document to a specific version."""
-    version_str = request.form.get("version") or ""
-    try:
-        major, minor = map(int, version_str.split("."))
-    except ValueError:
-        return "Invalid version", 400
-    db = get_session()
-    doc = db.get(Document, doc_id)
-    if not doc:
-        db.close()
-        return "Document not found", 404
-    rev = (
-        db.query(DocumentRevision)
-        .filter_by(doc_id=doc_id, major_version=major, minor_version=minor)
-        .first()
-    )
-    if not rev:
-        db.close()
-        return "Revision not found", 404
-    current_rev = DocumentRevision(
+def _rollback_document(doc: Document, rev: DocumentRevision, user: dict, db):
+    old_rev = DocumentRevision(
         doc_id=doc.id,
         major_version=doc.major_version,
         minor_version=doc.minor_version,
         revision_notes=doc.revision_notes,
         file_key=doc.doc_key,
     )
-    db.add(current_rev)
-    doc.major_version = rev.major_version
-    doc.minor_version = rev.minor_version
+    db.add(old_rev)
+    new_minor = doc.minor_version + 1
+    _, ext = os.path.splitext(rev.file_key)
+    new_key = f"documents/{doc.id}/versions/{doc.major_version}.{new_minor}{ext}"
+    storage_client.copy(CopySource={"Key": rev.file_key}, Key=new_key)
+    doc.doc_key = new_key
+    doc.minor_version = new_minor
     doc.revision_notes = rev.revision_notes
-    db.delete(rev)
     db.commit()
-    user = session.get("user") or {}
     log_action(user.get("id"), doc.id, "rollback_document")
-    db.close()
-    return redirect(url_for("document_detail", doc_id=doc_id, tab="versions"))
+    return doc
 
 
 @app.post("/api/documents/<int:doc_id>/rollback")
 @roles_required(RoleEnum.REVIEWER.value)
 def rollback_document_api(doc_id: int):
     """Rollback document to a specific version via API."""
-    version_str = request.args.get("version") or ""
+    data = request.get_json(silent=True) or {}
+    version_str = (
+        data.get("version")
+        or request.form.get("version")
+        or request.args.get("version")
+        or ""
+    )
+    version_str = version_str.lstrip("v")
     try:
         major, minor = map(int, version_str.split("."))
     except ValueError:
@@ -1568,17 +1547,6 @@ def rollback_document_api(doc_id: int):
     if not doc:
         db.close()
         return jsonify(error="Document not found"), 404
-
-    user = session.get("user") or {}
-    now = datetime.utcnow()
-    if (
-        doc.locked_by
-        and doc.lock_expires_at
-        and doc.locked_by != user.get("id")
-        and doc.lock_expires_at > now
-    ):
-        db.close()
-        return jsonify(error="Document locked"), 409
     rev = (
         db.query(DocumentRevision)
         .filter_by(doc_id=doc_id, major_version=major, minor_version=minor)
@@ -1587,25 +1555,13 @@ def rollback_document_api(doc_id: int):
     if not rev:
         db.close()
         return jsonify(error="Revision not found"), 404
-    current_rev = DocumentRevision(
-        doc_id=doc.id,
-        major_version=doc.major_version,
-        minor_version=doc.minor_version,
-        revision_notes=doc.revision_notes,
-        file_key=doc.doc_key,
-    )
-    db.add(current_rev)
-    doc.major_version = rev.major_version
-    doc.minor_version = rev.minor_version
-    doc.revision_notes = rev.revision_notes
-    db.commit()
     user = session.get("user") or {}
+    doc = _rollback_document(doc, rev, user, db)
     resp = {
         "doc_id": doc.id,
         "major_version": doc.major_version,
         "minor_version": doc.minor_version,
     }
-    log_action(user.get("id"), doc.id, "rollback_document")
     db.close()
     return jsonify(resp)
 
