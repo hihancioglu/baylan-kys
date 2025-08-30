@@ -10,3 +10,4 @@ The portal uses [OnlyOffice](https://www.onlyoffice.com/) for document editing. 
 - `ONLYOFFICE_JWT_ENABLED`: Controls JWT validation in the Document Server. Set to `true` to require JWTs. Defaults to `false`.
 - `ONLYOFFICE_JWT_SECRET`: Shared secret for signing JWT payloads.
 - `ONLYOFFICE_JWT_HEADER`: HTTP header name that carries the JWT. Defaults to `Authorization`.
+- `ALLOW_PRIVATE_IP`: Set to `true` to allow the Document Server to access private network resources such as the local MinIO service.
