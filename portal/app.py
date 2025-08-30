@@ -4339,7 +4339,6 @@ def api_dif_request_changes(id: int):
         db.close()
 
 @app.post("/onlyoffice/callback/<path:doc_key>")
-@login_required
 def onlyoffice_callback(doc_key):
     data = request.get_json(silent=True) or {}
     status = data.get("status")
