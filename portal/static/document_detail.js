@@ -37,11 +37,30 @@ function initVersionSelection() {
   const compareToBtn = document.getElementById('compare-to-button');
   const downloadA = document.getElementById('download-rev-a');
   const downloadB = document.getElementById('download-rev-b');
+  const form = document.getElementById('version-list');
+  const docId = form?.action.match(/\/documents\/(\d+)\/compare/)?.[1];
+  let revA = null;
+  let revB = null;
+  const hasServerDiff = !compareBtn?.dataset.bsTarget;
+  if (!hasServerDiff && compareBtn) {
+    compareBtn.addEventListener('click', () => {
+      if (compareBtn.disabled) return;
+      const modalEl = document.getElementById('local-compare-modal');
+      if (modalEl) {
+        const modal =
+          bootstrap.Modal.getInstance(modalEl) ||
+          new bootstrap.Modal(modalEl);
+        modal.show();
+      }
+    });
+  }
   if (!checkboxes.length) return;
   const update = () => {
     if (!summary || !compareBtn) return;
     summary.innerHTML = '';
     const selected = Array.from(checkboxes).filter((cb) => cb.checked);
+    revA = selected[0]?.value || null;
+    revB = selected[1]?.value || null;
     selected.forEach((cb) => {
       const li = document.createElement('li');
       li.className = 'list-group-item';
@@ -52,11 +71,11 @@ function initVersionSelection() {
       compareBtn.disabled = false;
       compareBtn.classList.remove('btn-secondary');
       compareBtn.classList.add('btn-primary');
-      if (downloadA && downloadB) {
+      if (downloadA && downloadB && docId && revA && revB) {
         downloadA.classList.remove('d-none');
         downloadB.classList.remove('d-none');
-        downloadA.href = selected[0].dataset.downloadUrl;
-        downloadB.href = selected[1].dataset.downloadUrl;
+        downloadA.href = `/documents/${docId}/revisions/${revA}/download`;
+        downloadB.href = `/documents/${docId}/revisions/${revB}/download`;
         downloadA.textContent = `Download ${selected[0].dataset.label}`;
         downloadB.textContent = `Download ${selected[1].dataset.label}`;
       }
