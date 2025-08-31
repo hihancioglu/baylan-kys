@@ -9,7 +9,7 @@ delivery.  Actual delivery is handled by :func:`_send_notification` which is
 executed by an RQ worker.  The worker will retry failed jobs up to three times
 using RQ's built in :class:`rq.retry.Retry` mechanism.
 
-Three notifier implementations are provided:
+Four notifier implementations are provided:
 
 ``EmailNotifier``
     Sends e‑mails using SMTP.
@@ -19,6 +19,9 @@ Three notifier implementations are provided:
 
 ``TelegramNotifier``
     Uses the Telegram bot API to send a message to a chat.
+
+``WebhookNotifier``
+    POSTs a JSON payload to a configurable URL.
 
 Notifier classes can be enabled or disabled using environment variables.  This
 allows deployments to select the channels that are relevant for them without any
@@ -145,6 +148,18 @@ class TelegramNotifier(Notifier):
         requests.post(url, json={"chat_id": self.chat_id, "text": message})
 
 
+class WebhookNotifier(Notifier):
+    """Send notifications to an arbitrary webhook URL."""
+
+    def __init__(self, url: str, user_id: int) -> None:
+        self.url = url
+        self.user_id = user_id
+
+    def send(self, user: User, subject: str, body: str) -> None:  # pragma: no cover - network
+        payload = {"user_id": self.user_id, "subject": subject, "body": body}
+        requests.post(self.url, json=payload)
+
+
 def _load_notifiers() -> Iterable[Notifier]:
     """Instantiate enabled notifiers based on environment variables."""
 
@@ -182,15 +197,30 @@ def _send_notification(user_id: int, subject: str, body: str) -> None:
         note = Notification(user_id=user_id, message=body)
         session.add(note)
         session.commit()
+
+        email_enabled = settings.email_enabled if settings else True
+        webhook_enabled = settings.webhook_enabled if settings else False
+        webhook_url = settings.webhook_url if settings else None
+        user_id_val = user.id if user else user_id
     finally:
         session.close()
 
     if not user:
         return
 
-    for notifier in _load_notifiers():
+    notifiers = list(_load_notifiers())
+
+    if (
+        webhook_enabled
+        and os.getenv("ENABLE_WEBHOOK_NOTIFIER") in ("1", "true", "True")
+    ):
+        url = webhook_url or os.getenv("WEBHOOK_URL_DEFAULT")
+        if url:
+            notifiers.append(WebhookNotifier(url, user_id_val))
+
+    for notifier in notifiers:
         if isinstance(notifier, EmailNotifier):
-            if settings and not settings.email_enabled:
+            if not email_enabled:
                 continue
             notifier.send(user, subject, body)
         else:
