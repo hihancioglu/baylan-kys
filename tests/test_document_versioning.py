@@ -142,3 +142,49 @@ def test_compare_nonexistent_document_returns_404(client, app_models):
 
     resp = client.get(f"/documents/{missing_id}/compare?rev_id=1&rev_id=2")
     assert resp.status_code == 404
+
+
+def test_increment_major_resets_minor_and_logs(client, app_models):
+    app, m = app_models
+    session = m.SessionLocal()
+    doc = m.Document(
+        file_key="doc.txt",
+        title="Doc",
+        status="Published",
+        major_version=1,
+        minor_version=3,
+        revision_notes="notes",
+    )
+    session.add(doc)
+    session.commit()
+    doc_id = doc.id
+    session.close()
+
+    with client.session_transaction() as sess:
+        sess["user"] = {"id": 99, "name": "Admin"}
+        sess["roles"] = [m.RoleEnum.ADMIN.value]
+
+    resp = client.patch(
+        f"/api/documents/{doc_id}/versioning", json={"action": "increment_major"}
+    )
+    assert resp.status_code == 200
+    data = resp.get_json()
+    assert data["major_version"] == 2
+    assert data["minor_version"] == 0
+
+    session = m.SessionLocal()
+    doc = session.get(m.Document, doc_id)
+    assert doc.major_version == 2 and doc.minor_version == 0
+    revisions = session.query(m.DocumentRevision).filter_by(doc_id=doc_id).all()
+    assert len(revisions) == 1
+    assert revisions[0].major_version == 1 and revisions[0].minor_version == 3
+    session.close()
+
+    log_session = m.SessionLocal()
+    logs = (
+        log_session.query(m.AuditLog)
+        .filter_by(doc_id=doc_id, action="increment_major")
+        .all()
+    )
+    log_session.close()
+    assert len(logs) == 1

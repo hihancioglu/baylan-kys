@@ -59,6 +59,8 @@ STANDARD_MAP = _parse_standard_map(
 
 
 class RoleEnum(PyEnum):
+    ADMIN = "admin"
+    QUALITY = "quality"
     READER = "reader"
     CONTRIBUTOR = "contributor"
     REVIEWER = "reviewer"

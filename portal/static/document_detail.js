@@ -147,11 +147,22 @@ function initAssignForm() {
   });
 }
 
+function initVersioningMenu() {
+  const form = document.getElementById('increment-major-form');
+  if (!form) return;
+  form.addEventListener('htmx:afterRequest', (evt) => {
+    if (evt.detail.successful) {
+      window.location.reload();
+    }
+  });
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   initTabs();
   initVersionSelection();
   initWorkflowForm();
   initAssignForm();
+  initVersioningMenu();
 
   const params = new URLSearchParams(window.location.search);
   if (params.get('created') === '1') {
