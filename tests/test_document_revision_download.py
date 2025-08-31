@@ -93,3 +93,18 @@ def test_revision_download_forbidden(app_modules):
     resp = client.get("/documents/1/revisions/1/download")
     assert resp.status_code == 403
     app_module.storage_client.generate_presigned_url.assert_not_called()
+
+
+def test_revision_download_missing_revision(app_modules):
+    app_module, models = app_modules
+    _setup_revision(models, can_download=True)
+    app_module.storage_client.generate_presigned_url = MagicMock(
+        return_value="/signed"
+    )
+    client = app_module.app.test_client()
+    with client.session_transaction() as sess:
+        sess["user"] = {"id": 1}
+        sess["roles"] = ["reader"]
+    resp = client.get("/documents/1/revisions/999/download")
+    assert resp.status_code == 404
+    app_module.storage_client.generate_presigned_url.assert_not_called()
