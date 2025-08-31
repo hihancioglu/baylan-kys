@@ -253,6 +253,10 @@ _TEMPLATES = {
         "Document {title} revised",
         "Document {title} has a new revision {major_version}.{minor_version}.",
     ),
+    "version_uploaded": (
+        "Yeni sürüm yüklendi",
+        "Doküman {title} için yeni sürüm {major_version}.{minor_version} yüklendi.",
+    ),
     "mandatory_read": (
         "Document {title} requires your acknowledgement",
         "Please read and acknowledge document {title}.",
@@ -279,6 +283,17 @@ def notify_approval_queue(doc, user_ids):
 def notify_revision_time(doc, user_ids):
     subject, body = _render(
         "revision_time", title=doc.title, major_version=doc.major_version, minor_version=doc.minor_version
+    )
+    for uid in user_ids:
+        notify_user(uid, subject, body)
+
+
+def notify_version_uploaded(doc, user_ids):
+    subject, body = _render(
+        "version_uploaded",
+        title=doc.title,
+        major_version=doc.major_version,
+        minor_version=doc.minor_version,
     )
     for uid in user_ids:
         notify_user(uid, subject, body)

@@ -29,8 +29,13 @@ from models import (Acknowledgement, AuditLog, CAPAAction, ChangeRequest,
                     FormSubmission, Notification, PersonalAccessToken, Role,
                     RoleEnum, Standard, TrainingResult, User, UserSetting,
                     WorkflowStep, engine, get_session)
-from notifications import (notify_approval_queue, notify_mandatory_read,
-                           notify_revision_time, notify_user)
+from notifications import (
+    notify_approval_queue,
+    notify_mandatory_read,
+    notify_revision_time,
+    notify_user,
+    notify_version_uploaded,
+)
 from ocr import extract_text
 from permissions import permission_check
 from reports import (build_report, pending_approvals_report, revision_report,
@@ -1923,6 +1928,18 @@ def upload_document_version(doc_id: int):
 
     user = session.get("user") or {}
     log_action(user.get("id"), doc.id, "upload_version")
+
+    notify_ids: set[int] = set()
+    if doc.owner_id:
+        notify_ids.add(doc.owner_id)
+    subs = (
+        db.query(Acknowledgement.user_id)
+        .filter(Acknowledgement.doc_id == doc.id)
+        .all()
+    )
+    notify_ids.update(uid for (uid,) in subs)
+    if notify_ids:
+        notify_version_uploaded(doc, list(notify_ids))
 
     auto_review = app.config.get("AUTO_REVIEW_ON_UPLOAD")
     if auto_review:
