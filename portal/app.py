@@ -1496,6 +1496,57 @@ def _office_diff(data_a: bytes, data_b: bytes, mime: str) -> str:
     return difflib.HtmlDiff().make_table(text_a.splitlines(), text_b.splitlines())
 
 
+@app.post("/api/documents/<int:doc_id>/compare")
+@roles_required(RoleEnum.READER.value)
+def compare_document_revisions_api(doc_id: int):
+    """Generate and store a diff between two document revisions."""
+    rev_from = request.args.get("from", type=int)
+    rev_to = request.args.get("to", type=int)
+    if not rev_from or not rev_to or rev_from == rev_to:
+        return jsonify(error="Invalid revision ids"), 400
+
+    session = get_session()
+    try:
+        doc = session.get(Document, doc_id)
+        if not doc:
+            return jsonify(error="Document not found"), 404
+
+        rev_a = (
+            session.query(DocumentRevision)
+            .filter_by(id=rev_from, doc_id=doc_id)
+            .first()
+        )
+        rev_b = (
+            session.query(DocumentRevision)
+            .filter_by(id=rev_to, doc_id=doc_id)
+            .first()
+        )
+        if not rev_a or not rev_b:
+            return jsonify(error="Revision not found"), 404
+
+        obj_a = storage_client.get_object(Key=rev_a.file_key)
+        obj_b = storage_client.get_object(Key=rev_b.file_key)
+        data_a = obj_a["Body"].read()
+        data_b = obj_b["Body"].read()
+        diff_html = _office_diff(data_a, data_b, doc.mime)
+
+        filename = f"previews/{doc_id}/diff-{rev_from}-{rev_to}.html"
+        storage_client.put(
+            Bucket=storage_client.bucket_previews,
+            Key=filename,
+            Body=diff_html.encode("utf-8"),
+            ContentType="text/html",
+        )
+        url = storage_client.generate_presigned_url(
+            filename, bucket=storage_client.bucket_previews
+        )
+        if not url:
+            app.logger.warning("Failed to generate presigned URL for %s", filename)
+        return jsonify(filename=filename, url=url)
+    finally:
+        session.close()
+
+
 @app.get("/documents/<int:doc_id>/compare")
 @roles_required(RoleEnum.READER.value)
 def compare_document_versions(doc_id: int):
