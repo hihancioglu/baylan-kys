@@ -1666,6 +1666,40 @@ def revise_document(id: int):
     return redirect(url_for("document_detail", doc_id=id))
 
 
+@app.patch("/api/documents/<int:id>/versioning")
+@roles_required(RoleEnum.ADMIN.value, RoleEnum.QUALITY.value)
+def document_versioning(id: int):
+    db = get_session()
+    doc = db.get(Document, id)
+    if not doc:
+        db.close()
+        return jsonify(error="Document not found"), 404
+    data = request.get_json() or {}
+    if data.get("action") != "increment_major":
+        db.close()
+        return jsonify(error="Invalid action"), 400
+    old_rev = DocumentRevision(
+        doc_id=doc.id,
+        major_version=doc.major_version,
+        minor_version=doc.minor_version,
+        file_key=doc.doc_key,
+        revision_notes=doc.revision_notes,
+    )
+    db.add(old_rev)
+    doc.major_version += 1
+    doc.minor_version = 0
+    db.commit()
+    user = session.get("user") or {}
+    log_action(user.get("id"), id, "increment_major")
+    resp = {
+        "doc_id": doc.id,
+        "major_version": doc.major_version,
+        "minor_version": doc.minor_version,
+    }
+    db.close()
+    return jsonify(resp)
+
+
 @app.post("/api/documents/<int:doc_id>/versions")
 @roles_required(RoleEnum.CONTRIBUTOR.value)
 def upload_document_version(doc_id: int):

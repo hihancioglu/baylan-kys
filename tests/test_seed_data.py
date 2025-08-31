@@ -1,4 +1,12 @@
 import runpy
+import os
+import sys
+from pathlib import Path
+
+repo_root = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(repo_root))
+sys.path.insert(0, str(repo_root / "portal"))
+os.environ.setdefault("DATABASE_URL", f"sqlite:///{repo_root / 'test.db'}")
 
 from portal import models
 

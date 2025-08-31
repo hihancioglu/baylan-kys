@@ -24,6 +24,22 @@
     Assign Mandatory Reading <span class="badge bg-secondary" id="assignment-count">{{ ack_count | default(0) }}</span>
   </button>
   {% endif %}
+  {% if has_role('admin') or has_role('quality') %}
+  <div class="btn-group">
+    <button type="button" class="btn btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown">
+      Sürüm İşlemleri
+    </button>
+    <ul class="dropdown-menu">
+      <li>
+        <form id="increment-major-form" hx-patch="/api/documents/{{ doc.id }}/versioning" hx-swap="none">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <input type="hidden" name="action" value="increment_major">
+          <button type="submit" class="dropdown-item">Majör Sürümü Artır</button>
+        </form>
+      </li>
+    </ul>
+  </div>
+  {% endif %}
 </div>
 <script type="module" src="{{ url_for('static', filename='toolbar/toolbar.js') }}"></script>
 {% endblock %}
