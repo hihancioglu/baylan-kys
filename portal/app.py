@@ -38,6 +38,7 @@ from reports import (build_report, pending_approvals_report, revision_report,
 from search import index_document, search_documents
 from signing import create_signed_pdf
 from storage import generate_presigned_url, storage_client
+from pdf_preview_job import enqueue_preview
 from translations import t
 from static_build import build_all
 import services
@@ -1238,12 +1239,14 @@ def document_detail(doc_id: int | None = None, id: int | None = None):
     )
 
     preview: dict[str, object] = {}
-    file_url = generate_presigned_url(doc.file_key)
     mime = (doc.mime or "").lower()
-    if file_url and mime == "application/pdf":
+    version = f"{doc.major_version}.{doc.minor_version}"
+    preview_key = f"previews/{doc.id}/{version}.pdf"
+    file_url = storage_client.generate_presigned_url(
+        preview_key, bucket=storage_client.bucket_previews
+    )
+    if file_url:
         preview = {"type": "pdf", "url": file_url}
-    elif file_url and mime in OFFICE_MIMETYPES:
-        preview = {"type": "office", "url": file_url}
 
     can_download = False
     if user and permission_check(user["id"], doc, download=True):
@@ -1912,6 +1915,11 @@ def upload_document_version(doc_id: int):
     doc.revision_notes = notes
     doc.mime = mime
     db.commit()
+    enqueue_preview(
+        doc.id,
+        f"{doc.major_version}.{doc.minor_version}",
+        doc.doc_key,
+    )
 
     user = session.get("user") or {}
     log_action(user.get("id"), doc.id, "upload_version")
@@ -2137,6 +2145,7 @@ def create_document_api(data: dict | None = None):
     if standard:
         session_db.add(DocumentStandard(doc_id=doc.id, standard_code=standard))
     session_db.commit()
+    enqueue_preview(doc.id, f"{doc.major_version}.{doc.minor_version}", doc.doc_key)
     content = extract_text(doc_key)
     index_document(doc, content)
     if app.config.get("AUTO_REVIEW_ON_UPLOAD"):
@@ -2275,13 +2284,15 @@ def approval_detail(id: int):
         if not step:
             return "Not found", 404
         doc = step.document
-        file_url = storage_client.generate_presigned_url(doc.doc_key)
         mime = (doc.mime or "").lower()
+        version = f"{doc.major_version}.{doc.minor_version}"
+        preview_key = f"previews/{doc.id}/{version}.pdf"
+        file_url = storage_client.generate_presigned_url(
+            preview_key, bucket=storage_client.bucket_previews
+        )
         preview: dict[str, object] = {}
-        if file_url and mime == "application/pdf":
+        if file_url:
             preview = {"type": "pdf", "url": file_url}
-        elif file_url and mime in OFFICE_MIMETYPES:
-            preview = {"type": "office", "url": file_url}
         real_user = session.get("user")
         if real_user:
             log_action(real_user["id"], doc.id, "view_approval")

@@ -8,10 +8,10 @@
 <script type="module" src="{{ url_for('static', filename='toolbar/toolbar.js') }}"></script>
 {% endblock %}
 {% block content %}
+{% if preview.type == 'pdf' %}
+<div class="mb-3">
+  <a href="{{ preview.url }}" target="_blank">Preview (PDF)</a>
+</div>
+{% endif %}
 <div class="alert alert-info mb-3">Review the document, add a comment, then choose to approve or reject.</div>
-<div id="preview-container" class="vh-100 overflow-auto"></div>
-<script>
-  window.previewData = {{ preview | tojson }};
-</script>
-<script type="module" src="{{ url_for('static', filename='document_preview.js') }}"></script>
 {% endblock %}

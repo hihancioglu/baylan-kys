@@ -68,12 +68,10 @@
     <button type="submit" class="btn btn-outline-primary">Check out</button>
   </form>
 {% endif %}
-{% if preview.type %}
-<div id="preview-container" class="mb-4"></div>
-<script>
-  window.previewData = {{ preview | tojson }};
-</script>
-<script type="module" src="{{ url_for('static', filename='document_preview.js') }}"></script>
+{% if preview.type == 'pdf' %}
+<div class="mb-4">
+  <a href="{{ preview.url }}" target="_blank">Preview (PDF)</a>
+</div>
 {% endif %}
 <ul>
   <li><strong>Code:</strong> {{ doc.code }}</li>
