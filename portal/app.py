@@ -1461,6 +1461,41 @@ def api_start_workflow():
         db.close()
 
 
+def _office_diff(data_a: bytes, data_b: bytes, mime: str) -> str:
+    """Generate an HTML diff for Office documents."""
+    import difflib
+
+    if mime == "application/vnd.openxmlformats-officedocument.wordprocessingml.document":
+        from docx import Document as DocxDocument
+
+        def _docx_text(data: bytes) -> str:
+            doc = DocxDocument(io.BytesIO(data))
+            return "\n".join(p.text for p in doc.paragraphs)
+
+        text_a = _docx_text(data_a)
+        text_b = _docx_text(data_b)
+    elif mime == "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet":
+        import openpyxl
+
+        def _xlsx_text(data: bytes) -> str:
+            wb = openpyxl.load_workbook(io.BytesIO(data), data_only=True)
+            lines: list[str] = []
+            for ws in wb.worksheets:
+                for row in ws.iter_rows(values_only=True):
+                    lines.append(
+                        "\t".join("" if v is None else str(v) for v in row)
+                    )
+            return "\n".join(lines)
+
+        text_a = _xlsx_text(data_a)
+        text_b = _xlsx_text(data_b)
+    else:
+        text_a = data_a.decode(errors="ignore")
+        text_b = data_b.decode(errors="ignore")
+
+    return difflib.HtmlDiff().make_table(text_a.splitlines(), text_b.splitlines())
+
+
 @app.get("/documents/<int:doc_id>/compare")
 @roles_required(RoleEnum.READER.value)
 def compare_document_versions(doc_id: int):
@@ -1468,42 +1503,51 @@ def compare_document_versions(doc_id: int):
     if len(rev_ids) < 2:
         return "Select at least two versions", 400
     session = get_session()
-    doc = session.get(Document, doc_id)
-    if not doc:
-        session.close()
-        return "Document not found", 404
+    try:
+        doc = session.get(Document, doc_id)
+        if not doc:
+            return "Document not found", 404
 
-    revisions = (
-        session.query(DocumentRevision)
-        .filter(DocumentRevision.doc_id == doc_id, DocumentRevision.id.in_(rev_ids))
-        .order_by(DocumentRevision.major_version, DocumentRevision.minor_version)
-        .all()
-    )
-    session.close()
-    if len(revisions) < 2:
-        return "Versions not found", 404
-    if revisions[0].compare_result:
-        diff_html = revisions[0].compare_result
-    else:
-        import difflib
-        diff_html = difflib.HtmlDiff().make_table(
-            (revisions[0].revision_notes or "").splitlines(),
-            (revisions[1].revision_notes or "").splitlines(),
-            fromdesc=f"{revisions[0].major_version}.{revisions[0].minor_version}",
-            todesc=f"{revisions[1].major_version}.{revisions[1].minor_version}",
+        revisions = (
+            session.query(DocumentRevision)
+            .filter(DocumentRevision.doc_id == doc_id, DocumentRevision.id.in_(rev_ids))
+            .order_by(
+                DocumentRevision.major_version, DocumentRevision.minor_version
+            )
+            .all()
         )
-    return render_template(
-        "document_compare.html",
-        doc_id=doc_id,
-        revisions=revisions,
-        diff=diff_html,
-        breadcrumbs=[
-            {"title": "Home", "url": url_for("dashboard")},
-            {"title": "Documents", "url": url_for("list_documents")},
-            {"title": doc.title, "url": url_for("document_detail", doc_id=doc_id)},
-            {"title": "Compare"},
-        ],
-    )
+        if len(revisions) < 2:
+            return "Versions not found", 404
+
+        rev_a, rev_b = revisions[:2]
+        compare_cache = rev_a.compare_result or {}
+        cache_key = str(rev_b.id)
+        diff_html = compare_cache.get(cache_key)
+        if not diff_html:
+            obj_a = storage_client.get_object(Key=rev_a.file_key)
+            obj_b = storage_client.get_object(Key=rev_b.file_key)
+            data_a = obj_a["Body"].read()
+            data_b = obj_b["Body"].read()
+
+            diff_html = _office_diff(data_a, data_b, doc.mime)
+            compare_cache[cache_key] = diff_html
+            rev_a.compare_result = compare_cache
+            session.commit()
+
+        return render_template(
+            "document_compare.html",
+            doc_id=doc_id,
+            revisions=revisions,
+            diff=diff_html,
+            breadcrumbs=[
+                {"title": "Home", "url": url_for("dashboard")},
+                {"title": "Documents", "url": url_for("list_documents")},
+                {"title": doc.title, "url": url_for("document_detail", doc_id=doc_id)},
+                {"title": "Compare"},
+            ],
+        )
+    finally:
+        session.close()
 
 
 
