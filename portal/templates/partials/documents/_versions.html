@@ -1,3 +1,7 @@
+{% set server_diff = doc.mime not in [
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+] %}
 <form id="version-list" method="get" action="{{ url_for('compare_document_versions', doc_id=doc.id) }}">
   <div class="row">
     <div class="col-md-8">
@@ -5,7 +9,7 @@
         {% for rev in revisions %}
         <li class="list-group-item d-flex justify-content-between align-items-center">
           <div class="d-flex align-items-center">
-            <input class="form-check-input me-2 version-checkbox" type="checkbox" name="rev_id" value="{{ rev.id }}" id="rev-{{ rev.id }}" data-label="{{ rev.major_version }}.{{ rev.minor_version }}" hx-get="{{ url_for('document_detail', doc_id=doc.id, revision_id=rev.id) }}" hx-target="#revision-panel" hx-select="#revision-note" hx-swap="innerHTML" hx-trigger="change" hx-push-url="false">
+            <input class="form-check-input me-2 version-checkbox" type="checkbox" name="rev_id" value="{{ rev.id }}" id="rev-{{ rev.id }}" data-label="{{ rev.major_version }}.{{ rev.minor_version }}" data-download-url="{{ url_for('get_file', file_key=rev.file_key) }}" hx-get="{{ url_for('document_detail', doc_id=doc.id, revision_id=rev.id) }}" hx-target="#revision-panel" hx-select="#revision-note" hx-swap="innerHTML" hx-trigger="change" hx-push-url="false">
             <label class="form-check-label" for="rev-{{ rev.id }}">{{ rev.major_version }}.{{ rev.minor_version }}</label>
           </div>
           <small class="text-muted">{{ rev.created_at.strftime('%Y-%m-%d') if rev.created_at else '' }}</small>
@@ -14,7 +18,11 @@
         <li class="list-group-item">No versions found.</li>
         {% endfor %}
       </ul>
+      {% if server_diff %}
       <button type="submit" id="compare-button" class="btn btn-secondary mt-2" disabled>Compare</button>
+      {% else %}
+      <button type="button" id="compare-button" class="btn btn-secondary mt-2" data-bs-toggle="modal" data-bs-target="#local-compare-modal" disabled>Compare</button>
+      {% endif %}
     </div>
     <div class="col-md-4">
       <div id="revision-panel">
@@ -37,7 +45,26 @@
       </div>
       <h5 class="mt-3">Selected Versions</h5>
       <ul id="selected-versions" class="list-group"></ul>
+      <a id="download-rev-a" class="btn btn-outline-secondary mt-2 d-none" download>Download A</a>
+      <a id="download-rev-b" class="btn btn-outline-secondary mt-2 d-none" download>Download B</a>
     </div>
   </div>
 </form>
+
+<div class="modal fade" id="local-compare-modal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Compare Locally</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <p>Download the two selected versions using the buttons above. Then open one of the files in Microsoft Word or Excel and use the "Compare" feature to select the other file and view the differences.</p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
 
