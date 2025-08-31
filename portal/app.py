@@ -1337,6 +1337,31 @@ def document_download(doc_id: int):
         db.close()
 
 
+@app.get("/documents/<int:doc_id>/revisions/<int:rev_id>/download")
+@roles_required(RoleEnum.READER.value)
+def document_revision_download(doc_id: int, rev_id: int):
+    """Redirect to a presigned URL for downloading a document revision."""
+    db = get_session()
+    try:
+        revision = (
+            db.query(DocumentRevision)
+            .filter_by(id=rev_id, doc_id=doc_id)
+            .first()
+        )
+        if not revision:
+            return "Revision not found", 404
+        user = session.get("user")
+        if not user or not permission_check(user["id"], revision.document, download=True):
+            return "Forbidden", 403
+        url = storage_client.generate_presigned_url(revision.file_key)
+        if not url:
+            return "File not available", 404
+        log_action(user["id"], doc_id, "download_revision")
+        return redirect(url)
+    finally:
+        db.close()
+
+
 @app.post("/workflow/start")
 @roles_required(RoleEnum.CONTRIBUTOR.value)
 def start_workflow():
@@ -4333,6 +4358,10 @@ def api_dif_request_changes(id: int):
         return html
     finally:
         db.close()
+
+
+# Exported route names for templates and JavaScript usage
+DOCUMENT_REVISION_DOWNLOAD_ROUTE = "document_revision_download"
 
 if __name__ == "__main__":
     bind = os.environ.get("BIND", "0.0.0.0:5000")
