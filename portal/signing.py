@@ -1,3 +1,4 @@
+import logging
 import os
 import subprocess
 import tempfile
@@ -9,25 +10,47 @@ from models import SignatureLog, get_session
 
 HSM_API_URL = os.environ.get("HSM_API_URL", "http://hsm.example.com/sign")
 
+logger = logging.getLogger(__name__)
 
-def convert_to_pdf(source_path: str, output_dir: str) -> str:
+
+def convert_to_pdf(source_path: str, output_dir: str, *, timeout: int = 60) -> str:
     """Convert a document to PDF using LibreOffice in headless mode.
 
     The caller is responsible for providing a temporary ``output_dir`` and
-    cleaning up any files created within it.
+    cleaning up any files created within it.  A timeout is enforced to avoid
+    hanging conversions.
     """
-    subprocess.run(
-        [
-            "libreoffice",
-            "--headless",
-            "--convert-to",
-            "pdf",
-            source_path,
-            "--outdir",
-            output_dir,
-        ],
-        check=True,
-    )
+
+    if not os.path.exists(source_path):
+        raise FileNotFoundError(f"source file not found: {source_path}")
+    if os.path.getsize(source_path) == 0:
+        raise ValueError(f"source file is empty: {source_path}")
+
+    try:
+        subprocess.run(
+            [
+                "libreoffice",
+                "--headless",
+                "--convert-to",
+                "pdf",
+                source_path,
+                "--outdir",
+                output_dir,
+            ],
+            check=True,
+            timeout=timeout,
+        )
+    except subprocess.TimeoutExpired as exc:  # pragma: no cover - timing dependent
+        logger.error("LibreOffice timed out converting %s", source_path)
+        raise RuntimeError(
+            f"PDF conversion timed out after {timeout}s for {source_path}"
+        ) from exc
+    except subprocess.CalledProcessError as exc:
+        logger.error("LibreOffice failed to convert %s: %s", source_path, exc)
+        raise RuntimeError(
+            f"PDF conversion failed for {source_path}: {exc}"
+        ) from exc
+
     base = os.path.splitext(os.path.basename(source_path))[0]
     return os.path.join(output_dir, f"{base}.pdf")
 
