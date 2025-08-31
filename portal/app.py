@@ -40,6 +40,7 @@ from signing import create_signed_pdf
 from storage import generate_presigned_url, storage_client
 from translations import t
 from static_build import build_all
+import services
 
 
 # Automatically run database migrations in non-SQLite environments.
@@ -168,6 +169,8 @@ AV_SCAN_ENABLED = os.getenv("AV_SCAN_ENABLED", "").lower() in {"1", "true", "yes
 CLAMD_HOST = os.getenv("CLAMD_HOST")
 CLAMD_PORT = os.getenv("CLAMD_PORT")
 CLAMD_SOCKET = os.getenv("CLAMD_SOCKET")
+AUTO_REVIEW_ON_UPLOAD = os.getenv("AUTO_REVIEW_ON_UPLOAD", "").lower() in {"1", "true", "yes"}
+app.config["AUTO_REVIEW_ON_UPLOAD"] = AUTO_REVIEW_ON_UPLOAD
 
 
 def _clamdscan(data: bytes) -> tuple[bool, str]:
@@ -1739,6 +1742,16 @@ def upload_document_version(doc_id: int):
     user = session.get("user") or {}
     log_action(user.get("id"), doc.id, "upload_version")
 
+    auto_review = app.config.get("AUTO_REVIEW_ON_UPLOAD")
+    if auto_review:
+        approver_ids = [
+            u.id
+            for u in db.query(User).join(User.roles).filter(Role.name == RoleEnum.APPROVER.value)
+        ]
+        if approver_ids:
+            services.submit_for_approval(doc.id, approver_ids)
+        log_action(user.get("id"), doc.id, "auto_review")
+
     if request.headers.get("HX-Request"):
         revisions = (
             db.query(DocumentRevision)
@@ -1752,20 +1765,26 @@ def upload_document_version(doc_id: int):
         can_download = False
         if user and permission_check(user.get("id"), doc, download=True):
             can_download = True
-        db.close()
-        return render_template(
-            "partials/documents/_versions.html",
-            doc=doc,
-            revisions=revisions,
-            revision=None,
-            can_download=can_download,
+        response = make_response(
+            render_template(
+                "partials/documents/_versions.html",
+                doc=doc,
+                revisions=revisions,
+                revision=None,
+                can_download=can_download,
+            )
         )
+        if auto_review:
+            response.headers["HX-Trigger"] = "auto-review-started"
+        db.close()
+        return response
 
     resp = {
         "doc_id": doc.id,
         "major_version": doc.major_version,
         "minor_version": doc.minor_version,
         "doc_key": doc.doc_key,
+        "auto_review": bool(auto_review),
     }
     db.close()
     return jsonify(resp), 201
@@ -1946,6 +1965,14 @@ def create_document_api(data: dict | None = None):
     session_db.commit()
     content = extract_text(doc_key)
     index_document(doc, content)
+    if app.config.get("AUTO_REVIEW_ON_UPLOAD"):
+        approver_ids = [
+            u.id
+            for u in session_db.query(User).join(User.roles).filter(Role.name == RoleEnum.APPROVER.value)
+        ]
+        if approver_ids:
+            services.submit_for_approval(doc.id, approver_ids)
+        log_action(user_id, doc.id, "auto_review")
     user_ids = [u.id for u in session_db.query(User).all()]
     notify_mandatory_read(doc, user_ids)
     result = {"id": doc.id, "doc_key": doc_key, "standard": doc.standard_code}

@@ -172,3 +172,11 @@ document.addEventListener('htmx:afterSwap', (evt) => {
     }
   }
 });
+document.body.addEventListener('auto-review-started', () => {
+  showToast('Doküman incelemeye gönderildi');
+  const btn = document.getElementById('publish-button');
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = 'Publish (Approval pending)';
+  }
+});
