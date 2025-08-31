@@ -41,7 +41,7 @@ function initVersionSelection() {
   const docId = form?.action.match(/\/documents\/(\d+)\/compare/)?.[1];
   let revA = null;
   let revB = null;
-  const hasServerDiff = !compareBtn?.dataset.bsTarget;
+  const hasServerDiff = compareBtn?.dataset.canServerDiff === 'true';
   if (!hasServerDiff && compareBtn) {
     compareBtn.addEventListener('click', () => {
       if (compareBtn.disabled) return;

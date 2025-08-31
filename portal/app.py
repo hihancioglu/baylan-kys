@@ -162,6 +162,23 @@ OFFICE_MIMETYPES = {
 
 ALLOWED_UPLOAD_MIMES = {"application/pdf", *OFFICE_MIMETYPES}
 
+SERVER_DIFF_DEPENDENCIES = {
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document": "docx",
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": "openpyxl",
+}
+
+
+def _can_server_diff(mime: str) -> bool:
+    mime = (mime or "").lower()
+    module = SERVER_DIFF_DEPENDENCIES.get(mime)
+    if not module:
+        return False
+    try:
+        __import__(module)
+    except Exception:
+        return False
+    return True
+
 # Maximum allowed upload size for document versions (default 50MB)
 MAX_UPLOAD_SIZE = int(os.getenv("MAX_UPLOAD_SIZE_MB", "50")) * 1024 * 1024
 
@@ -1232,6 +1249,8 @@ def document_detail(doc_id: int | None = None, id: int | None = None):
     if user and permission_check(user["id"], doc, download=True):
         can_download = True
 
+    can_server_diff = _can_server_diff(mime)
+
     return render_template(
         "document_detail.html",
         doc=doc,
@@ -1239,6 +1258,7 @@ def document_detail(doc_id: int | None = None, id: int | None = None):
         preview=preview,
         logs=logs,
         can_download=can_download,
+        can_server_diff=can_server_diff,
         roles=roles,
         users=users,
         ack_count=ack_count,
