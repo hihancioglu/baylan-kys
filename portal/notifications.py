@@ -160,7 +160,7 @@ class WebhookNotifier(Notifier):
         requests.post(self.url, json=payload)
 
 
-def _load_notifiers() -> Iterable[Notifier]:
+def _load_notifiers() -> Iterable[Tuple[str, Notifier]]:
     """Instantiate enabled notifiers based on environment variables."""
 
     enabled: Dict[str, Notifier] = {}
@@ -178,7 +178,7 @@ def _load_notifiers() -> Iterable[Notifier]:
         if token and chat_id:
             enabled["telegram"] = TelegramNotifier(token, chat_id)
 
-    return enabled.values()
+    return enabled.items()
 
 
 # ---------------------------------------------------------------------------
@@ -216,15 +216,22 @@ def _send_notification(user_id: int, subject: str, body: str) -> None:
     ):
         url = webhook_url or os.getenv("WEBHOOK_URL_DEFAULT")
         if url:
-            notifiers.append(WebhookNotifier(url, user_id_val))
+            notifiers.append(("webhook", WebhookNotifier(url, user_id_val)))
 
-    for notifier in notifiers:
-        if isinstance(notifier, EmailNotifier):
-            if not email_enabled:
-                continue
+    failures: Dict[str, Exception] = {}
+    for channel, notifier in notifiers:
+        if isinstance(notifier, EmailNotifier) and not email_enabled:
+            continue
+        try:
             notifier.send(user, subject, body)
-        else:
-            notifier.send(user, subject, body)
+        except Exception as exc:  # pragma: no cover - logging path isn't critical
+            failures[channel] = exc
+            logger.exception("Notifier %s failed", channel)
+
+    if notifiers and len(failures) == len(notifiers):
+        # Raise an exception so RQ retry semantics kick in when every channel fails.
+        failures_str = ", ".join(f"{ch}: {err}" for ch, err in failures.items())
+        raise RuntimeError(f"All notification channels failed: {failures_str}")
 
 
 def notify_user(user_id: int, subject: str, body: str) -> None:
