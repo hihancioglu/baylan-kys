@@ -35,6 +35,8 @@ function initVersionSelection() {
   const summary = document.getElementById('selected-versions');
   const compareBtn = document.getElementById('compare-button');
   const compareToBtn = document.getElementById('compare-to-button');
+  const downloadA = document.getElementById('download-rev-a');
+  const downloadB = document.getElementById('download-rev-b');
   if (!checkboxes.length) return;
   const update = () => {
     if (!summary || !compareBtn) return;
@@ -46,14 +48,28 @@ function initVersionSelection() {
       li.textContent = cb.dataset.label;
       summary.appendChild(li);
     });
-    if (selected.length >= 2) {
+    if (selected.length === 2) {
       compareBtn.disabled = false;
       compareBtn.classList.remove('btn-secondary');
       compareBtn.classList.add('btn-primary');
+      if (downloadA && downloadB) {
+        downloadA.classList.remove('d-none');
+        downloadB.classList.remove('d-none');
+        downloadA.href = selected[0].dataset.downloadUrl;
+        downloadB.href = selected[1].dataset.downloadUrl;
+        downloadA.textContent = `Download ${selected[0].dataset.label}`;
+        downloadB.textContent = `Download ${selected[1].dataset.label}`;
+      }
     } else {
       compareBtn.disabled = true;
       compareBtn.classList.remove('btn-primary');
       compareBtn.classList.add('btn-secondary');
+      if (downloadA && downloadB) {
+        downloadA.classList.add('d-none');
+        downloadB.classList.add('d-none');
+        downloadA.removeAttribute('href');
+        downloadB.removeAttribute('href');
+      }
     }
   };
   checkboxes.forEach((cb) => cb.addEventListener('change', update));
