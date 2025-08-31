@@ -5,7 +5,8 @@ The following environment variables control email and webhook notifications:
 - `SMTP_SERVER`: Hostname of the SMTP server used to send emails.
 - `SMTP_PORT`: Port number for the SMTP server (e.g., 587 for TLS).
 - `SMTP_SENDER`: Default `From` address for outgoing emails.
-- `WEBHOOK_URL_DEFAULT`: Fallback webhook URL used when no specific webhook is configured.
+- `ENABLE_WEBHOOK_NOTIFIER`: Enable per-user webhooks when set to `1`.
+- `WEBHOOK_URL_DEFAULT`: Fallback webhook URL used when a user's setting does not provide one.
 - `REDIS_HOST`: Hostname of the Redis server used for the notifications queue.
 - `REDIS_PORT`: Port number for the Redis server.
 - `REDIS_DB`: Redis database number that stores queued notifications.
