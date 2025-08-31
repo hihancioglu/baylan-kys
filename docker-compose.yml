@@ -57,6 +57,11 @@ services:
       - xpack.security.enabled=false
     networks: [qdms]
 
+  clamav:
+    image: clamav/clamav:latest
+    restart: unless-stopped
+    networks: [qdms]
+
   portal:
     build:
       context: .
@@ -88,12 +93,17 @@ services:
       LDAP_SEARCH_FILTER: ${LDAP_SEARCH_FILTER}
       PORTAL_JWT_SECRET: ${PORTAL_JWT_SECRET}
       ELASTIC_URL: ${ELASTIC_URL}
+      AV_SCAN_ENABLED: ${AV_SCAN_ENABLED}
+      CLAMD_HOST: ${CLAMD_HOST}
+      CLAMD_PORT: ${CLAMD_PORT}
+      CLAMD_SOCKET: ${CLAMD_SOCKET}
     depends_on:
       - postgres
       - redis
       - minio
       - minio-setup
       - elasticsearch
+      - clamav
     networks: [qdms]
     volumes:
       # Shared volume for static assets built at image creation. The contents
@@ -131,6 +141,10 @@ services:
       LDAP_SEARCH_FILTER: ${LDAP_SEARCH_FILTER}
       PORTAL_JWT_SECRET: ${PORTAL_JWT_SECRET}
       ELASTIC_URL: ${ELASTIC_URL}
+      AV_SCAN_ENABLED: ${AV_SCAN_ENABLED}
+      CLAMD_HOST: ${CLAMD_HOST}
+      CLAMD_PORT: ${CLAMD_PORT}
+      CLAMD_SOCKET: ${CLAMD_SOCKET}
     command: python -m rq.worker
     depends_on:
       - postgres
@@ -138,6 +152,7 @@ services:
       - minio
       - minio-setup
       - elasticsearch
+      - clamav
     networks: [qdms]
 
   scheduler:
@@ -171,6 +186,10 @@ services:
       LDAP_SEARCH_FILTER: ${LDAP_SEARCH_FILTER}
       PORTAL_JWT_SECRET: ${PORTAL_JWT_SECRET}
       ELASTIC_URL: ${ELASTIC_URL}
+      AV_SCAN_ENABLED: ${AV_SCAN_ENABLED}
+      CLAMD_HOST: ${CLAMD_HOST}
+      CLAMD_PORT: ${CLAMD_PORT}
+      CLAMD_SOCKET: ${CLAMD_SOCKET}
     command: >
       sh -c "pip install -r requirements.txt &&
              ( while :; do python archive_job.py; sleep 86400; done ) &
@@ -183,6 +202,7 @@ services:
       - minio
       - minio-setup
       - elasticsearch
+      - clamav
     networks: [qdms]
 
   nginx:

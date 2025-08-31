@@ -4,6 +4,7 @@ import io
 import json
 import os
 import secrets
+import subprocess
 import tempfile
 import time
 from datetime import datetime, timedelta
@@ -151,16 +152,41 @@ def inject_user():
 # PDFs are shown via Mozilla's pdf.js.
 
 OFFICE_MIMETYPES = {
-    "application/msword",
-    "application/vnd.ms-excel",
-    "application/vnd.ms-powerpoint",
     "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
     "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+    "application/vnd.oasis.opendocument.text",
+    "application/vnd.oasis.opendocument.spreadsheet",
 }
 
-# Maximum allowed upload size for document versions (50MB)
-MAX_UPLOAD_SIZE = 50 * 1024 * 1024
+ALLOWED_UPLOAD_MIMES = {"application/pdf", *OFFICE_MIMETYPES}
+
+# Maximum allowed upload size for document versions (default 50MB)
+MAX_UPLOAD_SIZE = int(os.getenv("MAX_UPLOAD_SIZE_MB", "50")) * 1024 * 1024
+
+AV_SCAN_ENABLED = os.getenv("AV_SCAN_ENABLED", "").lower() in {"1", "true", "yes"}
+CLAMD_HOST = os.getenv("CLAMD_HOST")
+CLAMD_PORT = os.getenv("CLAMD_PORT")
+CLAMD_SOCKET = os.getenv("CLAMD_SOCKET")
+
+
+def _clamdscan(data: bytes) -> tuple[bool, str]:
+    """Scan ``data`` with clamdscan. Returns (infected, output)."""
+    env = os.environ.copy()
+    if CLAMD_HOST:
+        env["CLAMD_HOST"] = CLAMD_HOST
+    if CLAMD_PORT:
+        env["CLAMD_PORT"] = CLAMD_PORT
+    if CLAMD_SOCKET:
+        env["CLAMD_SOCKET"] = CLAMD_SOCKET
+    proc = subprocess.run(
+        ["clamdscan", "--no-summary", "-"],
+        input=data,
+        capture_output=True,
+        env=env,
+    )
+    output = (proc.stdout + proc.stderr).decode(errors="ignore")
+    return proc.returncode == 1, output
 
 
 def log_action(
@@ -1016,8 +1042,19 @@ def new_document():
             data.update(request.form.to_dict())
             data.pop("generate_docxf", None)
             uploaded = request.files.get("upload_file")
+            file_data = b""
             if not (uploaded and uploaded.filename):
                 errors["upload_file"] = "File is required"
+                app.logger.warning("new_document: missing file")
+            else:
+                file_data = uploaded.read()
+                if AV_SCAN_ENABLED:
+                    infected, output = _clamdscan(file_data)
+                    user = session.get("user") or {}
+                    log_action(user.get("id"), None, "av_scan", payload={"infected": infected, "output": output.strip()})
+                    if infected:
+                        errors["upload_file"] = "Virus detected"
+                        app.logger.warning("new_document: virus detected during upload")
             if errors:
                 DOCUMENT_DRAFTS[draft_id] = data
                 base_templates = os.path.abspath(
@@ -1049,7 +1086,7 @@ def new_document():
             try:
                 storage_client.put_object(
                     Key=doc_key,
-                    Body=uploaded.read(),
+                    Body=file_data,
                 )
                 data["uploaded_file_key"] = doc_key
                 data["uploaded_file_name"] = uploaded.filename
@@ -1649,18 +1686,32 @@ def upload_document_version(doc_id: int):
     uploaded = request.files.get("file")
     if not uploaded or not uploaded.filename:
         db.close()
+        app.logger.warning("upload_document_version: missing file", extra={"doc_id": doc_id})
         return jsonify(error="File is required"), 400
 
     data = uploaded.read()
     if len(data) > MAX_UPLOAD_SIZE:
         db.close()
+        app.logger.warning(
+            "upload_document_version: file too large (%s bytes)", len(data), extra={"doc_id": doc_id}
+        )
         return jsonify(error="File too large"), 400
 
     mime = uploaded.mimetype
-    allowed_mimes = {"application/pdf", *OFFICE_MIMETYPES}
-    if mime not in allowed_mimes:
+    if mime not in ALLOWED_UPLOAD_MIMES:
         db.close()
+        app.logger.warning(
+            "upload_document_version: unsupported mime %s", mime, extra={"doc_id": doc_id}
+        )
         return jsonify(error="Unsupported file type"), 400
+
+    if AV_SCAN_ENABLED:
+        infected, output = _clamdscan(data)
+        log_action(user.get("id"), doc.id, "av_scan", payload={"infected": infected, "output": output.strip()})
+        if infected:
+            db.close()
+            app.logger.warning("upload_document_version: virus detected", extra={"doc_id": doc_id})
+            return jsonify(error="Virus detected"), 400
 
     _, ext = os.path.splitext(uploaded.filename)
     notes = request.form.get("notes")

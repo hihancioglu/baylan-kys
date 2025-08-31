@@ -3,7 +3,7 @@ ENV PIP_NO_CACHE_DIR=1
 WORKDIR /app
 
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends tesseract-ocr poppler-utils && \
+    apt-get install -y --no-install-recommends tesseract-ocr poppler-utils clamav-daemon && \
     rm -rf /var/lib/apt/lists/*
 
 # copy portal requirements first to leverage Docker layer cache
