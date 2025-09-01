@@ -1348,8 +1348,17 @@ def document_detail(doc_id: int | None = None, id: int | None = None):
         preview = {"type": "pdf", "url": file_url}
 
     can_download = False
-    if user and permission_check(user["id"], doc, download=True):
-        can_download = True
+    can_upload_version = False
+    can_checkout = False
+    can_checkin = False
+    can_override = False
+    if user:
+        if permission_check(user["id"], doc, download=True):
+            can_download = True
+        can_upload_version = permission_check(user["id"], doc, upload=True)
+        can_checkout = permission_check(user["id"], doc, checkout=True)
+        can_checkin = permission_check(user["id"], doc, checkin=True)
+        can_override = permission_check(user["id"], doc, override=True)
 
     can_server_diff = _can_server_diff(mime)
 
@@ -1360,6 +1369,10 @@ def document_detail(doc_id: int | None = None, id: int | None = None):
         preview=preview,
         logs=logs,
         can_download=can_download,
+        can_upload_version=can_upload_version,
+        can_checkout=can_checkout,
+        can_checkin=can_checkin,
+        can_override=can_override,
         can_server_diff=can_server_diff,
         roles=roles,
         users=users,
@@ -1952,6 +1965,9 @@ def upload_document_version(doc_id: int):
         return jsonify(error="Document not found"), 404
 
     user = session.get("user") or {}
+    if not permission_check(user.get("id"), doc, upload=True):
+        db.close()
+        return jsonify(error="Forbidden"), 403
     now = datetime.utcnow()
     if (
         doc.locked_by
@@ -2095,6 +2111,9 @@ def checkout_document(doc_id: int):
     user = session.get("user") or {}
     user_id = user.get("id")
     roles = session.get("roles", [])
+    if not permission_check(user_id, doc, checkout=True):
+        db.close()
+        return jsonify(error="Forbidden"), 403
     now = datetime.utcnow()
     if (
         doc.locked_by
@@ -2135,9 +2154,15 @@ def checkin_document(doc_id: int):
     user = session.get("user") or {}
     user_id = user.get("id")
     roles = session.get("roles", [])
-    if doc.locked_by and doc.locked_by != user_id and RoleEnum.QUALITY_ADMIN.value not in roles:
+    if not permission_check(user_id, doc, checkin=True):
         db.close()
         return jsonify(error="Cannot checkin"), 403
+    if doc.locked_by and doc.locked_by != user_id:
+        if RoleEnum.QUALITY_ADMIN.value not in roles and not permission_check(
+            user_id, doc, override=True
+        ):
+            db.close()
+            return jsonify(error="Cannot checkin"), 403
 
     doc.locked_by = None
     doc.lock_expires_at = None
