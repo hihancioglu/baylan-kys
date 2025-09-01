@@ -169,10 +169,13 @@ def test_api_recent_changes(client, models):
     assert set(data.keys()) == {"items", "error"}
     assert data["error"] is None
     assert len(data["items"]) == 2
+    assert all(item[1] == "1.0" for item in data["items"])
 
     resp = client.get("/api/dashboard/recent-changes?limit=1")
     assert resp.status_code == 200
-    assert len(resp.get_json()["items"]) == 1
+    data = resp.get_json()
+    assert len(data["items"]) == 1
+    assert data["items"][0][1] == "1.0"
 
     db = SessionLocal()
     db.query(DocumentRevision).delete()

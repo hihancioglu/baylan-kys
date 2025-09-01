@@ -597,6 +597,7 @@ def _get_recent_revisions(db, limit: int = 5):
     return [
         (
             r.document.title,
+            f"{r.major_version}.{r.minor_version}",
             url_for("document_detail", doc_id=r.doc_id, revision_id=r.id),
         )
         for r in revisions
