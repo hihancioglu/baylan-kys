@@ -38,6 +38,12 @@ def _login(client):
         sess["roles"] = ["contributor"]
 
 
+def _login_reader(client):
+    with client.session_transaction() as sess:
+        sess["user"] = {"id": 1, "name": "Tester"}
+        sess["roles"] = ["reader"]
+
+
 def _create_doc(models):
     session = models.SessionLocal()
     doc = models.Document(
@@ -80,6 +86,31 @@ def test_upload_new_version_success(client, app_models):
     assert revs[0].file_key == "orig.pdf"
     session.close()
     assert storage.storage_client.put.called
+
+
+def test_upload_new_version_forbidden(client, app_models):
+    app_module, models = app_models
+    _login_reader(client)
+    doc_id = _create_doc(models)
+
+    storage = importlib.import_module("storage")
+    storage.storage_client.put = MagicMock()
+
+    data = {"file": (io.BytesIO(b"data"), "test.pdf")}
+    resp = client.post(
+        f"/api/documents/{doc_id}/versions",
+        data=data,
+        content_type="multipart/form-data",
+    )
+    assert resp.status_code == 403
+
+    session = models.SessionLocal()
+    doc = session.get(models.Document, doc_id)
+    assert doc.minor_version == 0
+    revs = session.query(models.DocumentRevision).filter_by(doc_id=doc_id).all()
+    assert len(revs) == 0
+    session.close()
+    storage.storage_client.put.assert_not_called()
 
 
 def test_upload_new_version_invalid_mime(client, app_models):
