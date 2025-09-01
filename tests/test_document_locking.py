@@ -193,3 +193,31 @@ def test_force_checkin_allowed_with_override(client, app_models):
     _login(client, user2)
     resp = client.post(f"/api/documents/{doc_id}/checkin")
     assert resp.status_code == 200
+
+def test_force_checkin_button_visibility(client, app_models):
+    app_module, models = app_models
+    storage = importlib.import_module("storage")
+    storage.storage_client.generate_presigned_url = lambda *a, **k: None
+    doc_id, user1, user2 = _create_doc_and_users(
+        models,
+        u1_perms={"checkout": True, "checkin": True},
+        u2_perms={"checkin": True, "override": False},
+    )
+    session = models.SessionLocal()
+    doc = session.get(models.Document, doc_id)
+    doc.locked_by = user1
+    doc.lock_expires_at = datetime.utcnow() + timedelta(minutes=5)
+    session.commit()
+    session.close()
+
+    _login(client, user2, roles=["reader"])
+    resp = client.get(f"/documents/{doc_id}")
+    assert resp.status_code == 200
+    body = resp.get_data(as_text=True)
+    assert "Force Check in" not in body
+
+    _login(client, user2, roles=["reader", "quality_admin"])
+    resp = client.get(f"/documents/{doc_id}")
+    assert resp.status_code == 200
+    body = resp.get_data(as_text=True)
+    assert "Force Check in" in body
