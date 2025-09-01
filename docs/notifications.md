@@ -15,6 +15,14 @@ The following environment variables control email and webhook notifications:
 ### REST polling
 
 Unread notifications and dashboard counts can be retrieved by polling the
-`/api/notifications` and `/api/counts` endpoints.  Clients poll at an interval
-configured by the `POLL_INTERVAL_MS` environment variable (default 5000 ms).
+`/api/notifications` and `/api/counts` endpoints. Clients poll at an interval
+configured by the `POLL_INTERVAL_MS` environment variable (default 10000 ms).
 Each request to `/api/notifications` marks returned notifications as read.
+
+### Server-Sent Events
+
+The dashboard can stream card updates over Server-Sent Events from
+`/api/dashboard/stream`. When the browser supports `hx-sse`, the dashboard
+connects to this stream and receives real-time updates. If SSE is not
+available, the templates fall back to polling every `POLL_INTERVAL_MS`
+milliseconds.

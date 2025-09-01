@@ -11,7 +11,8 @@ from datetime import datetime, timedelta
 from pathlib import Path
 
 from flask import (Flask, Response, jsonify, make_response, redirect,
-                   render_template, request, session, url_for)
+                   render_template, request, session, url_for,
+                   stream_with_context)
 from flask_wtf.csrf import CSRFProtect
 from markupsafe import Markup
 from sqlalchemy import and_, func, inspect, or_
@@ -103,7 +104,7 @@ app.config["SESSION_COOKIE_SECURE"] = (
 )
 
 # Interval for client-side polling of counts/notifications (milliseconds)
-app.config["POLL_INTERVAL_MS"] = int(os.environ.get("POLL_INTERVAL_MS", "5000"))
+app.config["POLL_INTERVAL_MS"] = int(os.environ.get("POLL_INTERVAL_MS", "10000"))
 
 # Temporary in-memory storage for document drafts keyed by a random ID
 DOCUMENT_DRAFTS: dict[str, dict] = {}
@@ -713,6 +714,72 @@ def dashboard_cards(card):
         return render_template("partials/dashboard/_cards.html", **context)
     finally:
         db.close()
+
+
+@app.get("/api/dashboard/stream")
+@login_required
+def dashboard_stream():
+    poll_interval = app.config["POLL_INTERVAL_MS"] / 1000
+
+    def generate():
+        while True:
+            db = get_session()
+            try:
+                user = session.get("user") or {}
+                user_id = user.get("id")
+                roles = session.get("roles") or []
+                events = [
+                    (
+                        "pending",
+                        {
+                            "card": "pending",
+                            "pending_approvals": _get_pending_approvals(
+                                db, user_id, roles=roles
+                            ),
+                        },
+                    ),
+                    (
+                        "mandatory",
+                        {
+                            "card": "mandatory",
+                            "mandatory_reading": _get_mandatory_reading(
+                                db, user_id
+                            ),
+                        },
+                    ),
+                    (
+                        "recent",
+                        {
+                            "card": "recent",
+                            "recent_revisions": _get_recent_revisions(db),
+                        },
+                    ),
+                    (
+                        "recent_docs",
+                        {
+                            "card": "recent_docs",
+                            "recent_documents": _get_recent_documents(db, user_id),
+                        },
+                    ),
+                    (
+                        "shortcuts",
+                        {
+                            "card": "shortcuts",
+                            "search_shortcuts": _get_search_shortcuts(),
+                        },
+                    ),
+                ]
+                for name, ctx in events:
+                    html = render_template(
+                        "partials/dashboard/_cards.html", **ctx
+                    ).replace("\n", "")
+                    yield f"event: {name}\ndata: {html}\n\n"
+            finally:
+                db.close()
+            time.sleep(poll_interval)
+
+    headers = {"Cache-Control": "no-cache"}
+    return Response(stream_with_context(generate()), headers=headers, mimetype="text/event-stream")
 
 
 @app.get("/api/dashboard/pending-approvals")
