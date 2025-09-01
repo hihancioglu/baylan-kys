@@ -134,6 +134,10 @@ class DocumentPermission(Base):
     doc_id = Column(Integer, ForeignKey("documents.id"))
     folder = Column(String)
     can_download = Column(Boolean, default=True)
+    can_upload_version = Column(Boolean, default=False)
+    can_checkout = Column(Boolean, default=False)
+    can_checkin = Column(Boolean, default=False)
+    can_override = Column(Boolean, default=False)
 
     role = relationship("Role", back_populates="permissions")
     document = relationship("Document")
