@@ -269,6 +269,14 @@ _TEMPLATES = {
         "DIF workflow step overdue",
         "A workflow step for DIF request {dif_id} assigned to {role} is overdue.",
     ),
+    "document_approved": (
+        "Document {title} approved",
+        "Document {title} has been approved.",
+    ),
+    "document_published": (
+        "Document {title} published",
+        "Document {title} is now published.",
+    ),
 }
 
 
@@ -313,6 +321,18 @@ def notify_dif_step_overdue(step, user_ids):
     subject, body = _render(
         "dif_step_overdue", dif_id=step.dif_id, role=step.role
     )
+    for uid in user_ids:
+        notify_user(uid, subject, body)
+
+
+def notify_document_approved(doc, user_ids):
+    subject, body = _render("document_approved", title=doc.title)
+    for uid in user_ids:
+        notify_user(uid, subject, body)
+
+
+def notify_document_published(doc, user_ids):
+    subject, body = _render("document_published", title=doc.title)
     for uid in user_ids:
         notify_user(uid, subject, body)
 
