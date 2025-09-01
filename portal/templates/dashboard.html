@@ -2,7 +2,7 @@
 {% block title %}Dashboard{% endblock %}
 
 {% block content %}
-<div class="row row-cols-1 row-cols-md-2 g-3">
+<div class="row row-cols-1 row-cols-md-2 g-3" hx-ext="sse" hx-sse="connect:/api/dashboard/stream">
   <div class="col">
     <div class="card h-100">
       <div class="card-header d-flex align-items-center">
@@ -23,7 +23,8 @@
            hx-get="/api/dashboard/cards/pending"
            hx-trigger="load, every {{ poll_interval }}s"
            hx-swap="innerHTML"
-           hx-include="#pending-standard">
+           hx-include="#pending-standard"
+           hx-sse="swap:pending">
         {% set card = 'pending' %}
         {% include 'partials/dashboard/_cards.html' %}
       </div>
@@ -50,7 +51,8 @@
            hx-get="/api/dashboard/cards/mandatory"
            hx-trigger="load, every {{ poll_interval }}s"
            hx-swap="innerHTML"
-           hx-include="#mandatory-standard">
+           hx-include="#mandatory-standard"
+           hx-sse="swap:mandatory">
         {% set card = 'mandatory' %}
         {% include 'partials/dashboard/_cards.html' %}
       </div>
@@ -63,7 +65,8 @@
       <div class="card-body"
            hx-get="/api/dashboard/cards/recent"
            hx-trigger="load, every {{ poll_interval }}s"
-           hx-swap="innerHTML">
+           hx-swap="innerHTML"
+           hx-sse="swap:recent">
         {% set card = 'recent' %}
         {% include 'partials/dashboard/_cards.html' %}
       </div>
@@ -76,7 +79,8 @@
       <div class="card-body"
            hx-get="/api/dashboard/cards/recent-docs"
            hx-trigger="load, every {{ poll_interval }}s"
-           hx-swap="innerHTML">
+           hx-swap="innerHTML"
+           hx-sse="swap:recent_docs">
         {% set card = 'recent_docs' %}
         {% include 'partials/dashboard/_cards.html' %}
       </div>
@@ -89,7 +93,8 @@
         <div class="card-body"
              hx-get="/api/dashboard/cards/shortcuts"
              hx-trigger="load, every {{ poll_interval }}s"
-             hx-swap="innerHTML">
+             hx-swap="innerHTML"
+             hx-sse="swap:shortcuts">
           {% set card = 'shortcuts' %}
           {% include 'partials/dashboard/_cards.html' %}
         </div>
