@@ -35,6 +35,7 @@ from notifications import (
     notify_revision_time,
     notify_user,
     notify_version_uploaded,
+    _render,
 )
 from ocr import extract_text
 from permissions import permission_check
@@ -2012,10 +2013,19 @@ def checkout_document(doc_id: int):
         db.close()
         return jsonify(error="Document locked"), 409
 
+    previous_locked_by = doc.locked_by
     doc.locked_by = user_id
     doc.lock_expires_at = now + timedelta(minutes=30)
     db.commit()
     log_action(user_id, doc.id, "checkout_document")
+    subject, body = _render(
+        "checkout_taken", title=doc.title, username=user.get("name", "")
+    )
+    owner_id = getattr(doc, "owner_id", None)
+    if owner_id and owner_id != user_id:
+        notify_user(owner_id, subject, body)
+    if previous_locked_by and previous_locked_by not in {owner_id, user_id}:
+        notify_user(previous_locked_by, subject, body)
     db.close()
     return jsonify(locked_by=user_id, lock_expires_at=doc.lock_expires_at.isoformat())
 
