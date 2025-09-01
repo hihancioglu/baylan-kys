@@ -42,6 +42,7 @@ def setup_data():
         doc_id=unassigned_doc.id,
         step_order=1,
         user_id=None,
+        required_role=app_module.RoleEnum.APPROVER.value,
         status="Pending",
         step_type="approval",
     )
@@ -99,4 +100,23 @@ def test_pending_approvals_other_user(client, setup_data):
     assert assigned_url not in html
     assert "Unassigned Approver Doc" not in html
     assert unassigned_url not in html
+
+
+def test_pending_approvals_for_role_user(client, setup_data):
+    app, ids = setup_data
+    with client.session_transaction() as sess:
+        sess["user"] = {"id": ids["user2"], "name": "Tester2"}
+        sess["roles"] = ["approver"]
+    resp = client.get(
+        "/api/dashboard/cards/pending", headers={"HX-Request": "true"}
+    )
+    assert resp.status_code == 200
+    html = resp.get_data(as_text=True)
+    with app.test_request_context():
+        assigned_url = url_for("approval_detail", id=ids["assigned_step"])
+        unassigned_url = url_for("approval_detail", id=ids["unassigned_step"])
+    assert "Assigned Approver Doc" not in html
+    assert assigned_url not in html
+    assert "Unassigned Approver Doc" in html
+    assert unassigned_url in html
 

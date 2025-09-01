@@ -469,7 +469,11 @@ def api_notifications():
 
 
 def _get_pending_approvals(
-    db, user_id: int | None, limit: int = 5, standard: str | None = None
+    db,
+    user_id: int | None,
+    limit: int = 5,
+    standard: str | None = None,
+    roles: list[str] | None = None,
 ):
     """Return titles and approval URLs for pending workflow steps.
 
@@ -498,7 +502,23 @@ def _get_pending_approvals(
 
     inspector = inspect(db.get_bind())
     columns = {c["name"] for c in inspector.get_columns("workflow_steps")}
-    if "user_id" in columns:
+    filters = []
+    if "user_id" in columns and user_id is not None:
+        filters.append(WorkflowStep.user_id == user_id)
+    if (
+        "user_id" in columns
+        and "required_role" in columns
+        and roles
+    ):
+        filters.append(
+            and_(
+                WorkflowStep.user_id.is_(None),
+                WorkflowStep.required_role.in_(roles),
+            )
+        )
+    if filters:
+        query = query.filter(or_(*filters))
+    elif "user_id" in columns:
         if user_id is not None:
             query = query.filter(WorkflowStep.user_id == user_id)
         else:
@@ -597,9 +617,10 @@ def dashboard():
     try:
         user = session.get("user") or {}
         user_id = user.get("id")
+        roles = session.get("roles") or []
         context = {
             "breadcrumbs": [{"title": "Dashboard"}],
-            "pending_approvals": _get_pending_approvals(db, user_id),
+            "pending_approvals": _get_pending_approvals(db, user_id, roles=roles),
             "mandatory_reading": _get_mandatory_reading(db, user_id),
             "recent_revisions": _get_recent_revisions(db),
             "recent_documents": _get_recent_documents(db, user_id),
@@ -669,11 +690,12 @@ def dashboard_cards(card):
     try:
         user = session.get("user") or {}
         user_id = user.get("id")
+        roles = session.get("roles") or []
         standard = request.args.get("standard")
         context = {"card": card}
         if card == "pending":
             context["pending_approvals"] = _get_pending_approvals(
-                db, user_id, standard=standard
+                db, user_id, standard=standard, roles=roles
             )
         elif card == "mandatory":
             context["mandatory_reading"] = _get_mandatory_reading(
@@ -702,7 +724,8 @@ def api_dashboard_pending_approvals():
     try:
         user = session.get("user") or {}
         user_id = user.get("id")
-        items = _get_pending_approvals(db, user_id, limit, standard)
+        roles = session.get("roles") or []
+        items = _get_pending_approvals(db, user_id, limit, standard, roles=roles)
         return jsonify({"items": items, "error": None})
     except Exception as e:
         return jsonify({"items": [], "error": str(e)}), 500
