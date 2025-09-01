@@ -26,3 +26,22 @@ The dashboard can stream card updates over Server-Sent Events from
 connects to this stream and receives real-time updates. If SSE is not
 available, the templates fall back to polling every `POLL_INTERVAL_MS`
 milliseconds.
+
+### Testing
+
+Unit tests exercise notification triggers with a stubbed RQ queue. Run them
+with:
+
+```
+pytest tests/test_version_upload_notifications.py \
+       tests/test_checkout_notifications.py \
+       tests/test_document_notifications.py
+```
+
+Integration tests cover dashboard behaviour, including pending approvals and
+recent changes cards:
+
+```
+pytest tests/test_z_dashboard_api.py::test_api_pending_approvals_includes_unassigned_for_role_user \
+       tests/test_dashboard_cards.py::test_recent_changes_shows_version_numbers
+```

@@ -121,3 +121,23 @@ def test_dashboard_card_endpoints(app_models, client):
     resp = client.get("/")
     assert resp.status_code == 200
 
+
+def test_recent_changes_shows_version_numbers(app_models, client):
+    app = app_models["app"]
+    revision_id = app_models["revision_id"]
+    recent_doc_id = app_models["recent_doc_id"]
+
+    with client.session_transaction() as sess:
+        sess["user"] = {"id": 1, "name": "Tester"}
+        sess["roles"] = ["approver", "reader"]
+
+    resp = client.get("/api/dashboard/cards/recent", headers={"HX-Request": "true"})
+    assert resp.status_code == 200
+    html = resp.get_data(as_text=True)
+    with app.test_request_context():
+        recent_url = url_for(
+            "document_detail", doc_id=recent_doc_id, revision_id=revision_id
+        )
+    assert "Recent Doc 1.0" in html
+    assert recent_url in html
+

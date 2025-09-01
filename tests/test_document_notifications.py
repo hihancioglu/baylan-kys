@@ -1,4 +1,5 @@
 import importlib
+import sys
 from pathlib import Path
 
 
@@ -6,23 +7,21 @@ def _setup_app(monkeypatch):
     repo_root = Path(__file__).resolve().parent.parent
     monkeypatch.setenv("S3_ENDPOINT", "http://s3")
     models = importlib.import_module("models")
-    notifications = importlib.import_module("notifications")
-    app_module = importlib.import_module("app")
-    app_module.app.config["WTF_CSRF_ENABLED"] = False
-    models.Base.metadata.create_all(bind=models.engine)
-    calls = []
-
-    def fake_notify_user(uid, subject, body):
-        calls.append((uid, subject, body))
-
-    monkeypatch.setattr(notifications, "notify_user", fake_notify_user)
+    rq = importlib.import_module("rq_stub")
+    sys.modules["rq"] = rq
+    notifications = importlib.reload(importlib.import_module("notifications"))
+    app_module = importlib.reload(importlib.import_module("app"))
+    q = rq.Queue("notifications")
+    monkeypatch.setattr(notifications, "queue", q)
     app_module.notify_document_approved = notifications.notify_document_approved
     app_module.notify_document_published = notifications.notify_document_published
-    return app_module, models, calls
+    app_module.app.config["WTF_CSRF_ENABLED"] = False
+    models.Base.metadata.create_all(bind=models.engine)
+    return app_module, models, q
 
 
 def test_document_approval_queues_notification(monkeypatch):
-    app_module, models, calls = _setup_app(monkeypatch)
+    app_module, models, q = _setup_app(monkeypatch)
     session = models.SessionLocal()
     owner = models.User(username="owner")
     approver = models.User(username="approver")
@@ -42,12 +41,12 @@ def test_document_approval_queues_notification(monkeypatch):
         sess["roles"] = [app_module.RoleEnum.APPROVER.value]
     resp = client.post(f"/api/approvals/{step_id}/approve", json={})
     assert resp.status_code == 200
-    assert len(calls) == 1
-    assert calls[0][0] == owner_id
+    assert len(q.jobs) == 1
+    assert q.jobs[0].args[0] == owner_id
 
 
 def test_publish_document_queues_notification(monkeypatch):
-    app_module, models, calls = _setup_app(monkeypatch)
+    app_module, models, q = _setup_app(monkeypatch)
     session = models.SessionLocal()
     owner = models.User(username="owner")
     publisher = models.User(username="publisher")
@@ -66,5 +65,5 @@ def test_publish_document_queues_notification(monkeypatch):
         f"/api/documents/{doc_id}/publish", data={}, headers={"HX-Request": "true"}
     )
     assert resp.status_code == 204
-    assert len(calls) == 1
-    assert calls[0][0] == owner_id
+    assert len(q.jobs) == 1
+    assert q.jobs[0].args[0] == owner_id
