@@ -3,7 +3,9 @@
     {% if items %}
       <ul class="list-unstyled mb-0">
       {% for item in items %}
-        {% if item[1] is defined %}
+        {% if item[2] is defined %}
+          <li><a href="{{ item[2] }}">{{ item[0] }} {{ item[1] }}</a></li>
+        {% elif item[1] is defined %}
           <li><a href="{{ item[1] }}">{{ item[0] }}</a></li>
         {% else %}
           <li>{{ item }}</li>

@@ -103,7 +103,7 @@ def test_dashboard_card_endpoints(app_models, client):
         recent_url = url_for(
             "document_detail", doc_id=recent_doc_id, revision_id=revision_id
         )
-    assert "Recent Doc" in html
+    assert "Recent Doc 1.0" in html
     assert recent_url in html
 
     # Recent documents
