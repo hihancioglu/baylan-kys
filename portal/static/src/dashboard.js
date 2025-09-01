@@ -1,3 +1,5 @@
+import Chart from 'chart.js/auto';
+
 async function loadStandardChart() {
   const resp = await fetch('/api/dashboard/standard-summary');
   const data = await resp.json();
