@@ -35,6 +35,8 @@ from notifications import (
     notify_revision_time,
     notify_user,
     notify_version_uploaded,
+    notify_document_approved,
+    notify_document_published,
     _render,
 )
 from ocr import extract_text
@@ -2378,6 +2380,8 @@ def api_approve_step(step_id: int):
         )
         if remaining == 0:
             document.status = "Approved"
+            if document.owner_id:
+                notify_document_approved(document, [document.owner_id])
         db.commit()
         if next_step and next_step.user_id:
             notify_approval_queue(document, [next_step.user_id])
@@ -3237,6 +3241,7 @@ def publish_document(id: int):
                     user_ids.add(user.id)
         _assign_acknowledgements(db, doc.id, user_ids)
         db.commit()
+        notify_document_published(doc, [doc.owner_id] if doc.owner_id else [])
         if user_ids:
             notify_mandatory_read(doc, list(user_ids))
         publisher = session.get("user")
