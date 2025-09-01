@@ -31,15 +31,20 @@ def test_version_upload_enqueues_notifications(monkeypatch):
     models = importlib.import_module("models")
 
     session = models.SessionLocal()
+    role = models.Role(name="r")
     owner = models.User(username="owner")
+    owner.roles.append(role)
     subscriber = models.User(username="sub")
     doc = models.Document(doc_key="d1", title="Doc1", owner=owner)
-    session.add_all([owner, subscriber, doc])
+    session.add_all([role, owner, subscriber, doc])
     session.commit()
     owner_id = owner.id
     subscriber_id = subscriber.id
     doc_id = doc.id
     session.add(models.Acknowledgement(user_id=subscriber_id, doc_id=doc_id))
+    session.add(
+        models.DocumentPermission(role_id=role.id, doc_id=doc_id, can_upload_version=True)
+    )
     session.commit()
     session.close()
 

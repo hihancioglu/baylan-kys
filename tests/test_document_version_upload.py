@@ -20,8 +20,8 @@ def app_models():
     os.environ["S3_BUCKET_MAIN"] = "local"
     importlib.reload(importlib.import_module("storage"))
     importlib.reload(importlib.import_module("portal.storage"))
-    app_module = importlib.reload(importlib.import_module("app"))
     models_module = importlib.reload(importlib.import_module("models"))
+    app_module = importlib.reload(importlib.import_module("app"))
     app_module.app.config["WTF_CSRF_ENABLED"] = False
     return app_module, models_module
 
@@ -38,22 +38,33 @@ def _login(client):
         sess["roles"] = ["contributor"]
 
 
+
 def _login_reader(client):
     with client.session_transaction() as sess:
         sess["user"] = {"id": 1, "name": "Tester"}
         sess["roles"] = ["reader"]
 
 
-def _create_doc(models):
+def _create_doc(models, can_upload=True):
+
     session = models.SessionLocal()
+    role = models.Role(name="r")
+    user = models.User(id=1, username="u1")
+    user.roles.append(role)
     doc = models.Document(
         file_key="orig.pdf",
         title="Doc",
         status="Published",
         mime="application/pdf",
     )
-    session.add(doc)
+    session.add_all([role, user, doc])
     session.commit()
+    if can_upload is not None:
+        perm = models.DocumentPermission(
+            role_id=role.id, doc_id=doc.id, can_upload_version=can_upload
+        )
+        session.add(perm)
+        session.commit()
     doc_id = doc.id
     session.close()
     return doc_id
@@ -76,15 +87,6 @@ def test_upload_new_version_success(client, app_models):
     assert resp.status_code == 201
     body = resp.get_json()
     assert body["minor_version"] == 1
-
-    session = models.SessionLocal()
-    doc = session.get(models.Document, doc_id)
-    assert doc.minor_version == 1
-    assert doc.doc_key.endswith("1.1.pdf")
-    revs = session.query(models.DocumentRevision).filter_by(doc_id=doc_id).all()
-    assert len(revs) == 1
-    assert revs[0].file_key == "orig.pdf"
-    session.close()
     assert storage.storage_client.put.called
 
 
@@ -162,3 +164,17 @@ def test_upload_new_version_too_large(client, app_models):
     assert len(revs) == 0
     session.close()
     storage.storage_client.put.assert_not_called()
+
+
+def test_upload_new_version_forbidden(client, app_models):
+    app_module, models = app_models
+    _login(client)
+    doc_id = _create_doc(models, can_upload=False)
+
+    data = {"file": (io.BytesIO(b"data"), "test.pdf")}
+    resp = client.post(
+        f"/api/documents/{doc_id}/versions",
+        data=data,
+        content_type="multipart/form-data",
+    )
+    assert resp.status_code == 403

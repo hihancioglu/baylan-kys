@@ -21,10 +21,12 @@ def test_checkout_sends_notifications(monkeypatch):
     models = importlib.import_module("models")
 
     session = models.SessionLocal()
+    role = models.Role(name="r")
     owner = models.User(username="owner", email="o@example.com")
     previous = models.User(username="prev", email="p@example.com")
     actor = models.User(username="actor", email="a@example.com")
-    session.add_all([owner, previous, actor])
+    actor.roles.append(role)
+    session.add_all([role, owner, previous, actor])
     session.commit()
     owner_id, previous_id, actor_id = owner.id, previous.id, actor.id
     doc = models.Document(
@@ -37,6 +39,10 @@ def test_checkout_sends_notifications(monkeypatch):
     session.add(doc)
     session.add(models.UserSetting(user_id=owner_id, email_enabled=True))
     session.add(models.UserSetting(user_id=previous_id, email_enabled=False))
+    session.commit()
+    session.add(
+        models.DocumentPermission(role_id=role.id, doc_id=doc.id, can_checkout=True, can_checkin=True)
+    )
     session.commit()
     doc_id = doc.id
     session.close()
