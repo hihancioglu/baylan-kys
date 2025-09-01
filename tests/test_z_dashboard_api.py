@@ -56,7 +56,14 @@ def models(reset_database):
 
     step1 = WorkflowStep(doc_id=assigned_doc1.id, step_order=1, user_id=user.id, status="Pending", step_type="approval")
     step2 = WorkflowStep(doc_id=assigned_doc2.id, step_order=1, user_id=user.id, status="Pending", step_type="approval")
-    step3 = WorkflowStep(doc_id=unassigned_doc.id, step_order=1, user_id=None, status="Pending", step_type="approval")
+    step3 = WorkflowStep(
+        doc_id=unassigned_doc.id,
+        step_order=1,
+        user_id=None,
+        status="Pending",
+        step_type="approval",
+        required_role="approver",
+    )
     session.add_all([step1, step2, step3])
     session.commit()
 
@@ -127,6 +134,18 @@ def test_api_pending_approvals(client, models):
     resp = client.get("/api/dashboard/pending-approvals")
     assert resp.status_code == 200
     assert resp.get_json()["items"] == []
+
+
+def test_api_pending_approvals_includes_unassigned_for_role_user(client, models):
+    with client.session_transaction() as sess:
+        sess["user"] = {"id": 2, "name": "Other"}
+        sess["roles"] = ["approver"]
+
+    resp = client.get("/api/dashboard/pending-approvals")
+    assert resp.status_code == 200
+    data = resp.get_json()
+    assert len(data["items"]) == 1
+    assert data["items"][0][0] == "Unassigned Doc"
 
 
 def test_api_mandatory_reading(client, models):
