@@ -257,6 +257,10 @@ _TEMPLATES = {
         "Yeni sürüm yüklendi",
         "Doküman {title} için yeni sürüm {major_version}.{minor_version} yüklendi.",
     ),
+    "checkout_taken": (
+        "Check-out alındı",
+        "Doküman {title} {username} tarafından check-out alındı.",
+    ),
     "mandatory_read": (
         "Document {title} requires your acknowledgement",
         "Please read and acknowledge document {title}.",

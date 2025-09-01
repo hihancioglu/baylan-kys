@@ -24,6 +24,7 @@ def app_models():
     app_module = importlib.reload(importlib.import_module("app"))
     models_module = importlib.reload(importlib.import_module("models"))
     app_module.app.config["WTF_CSRF_ENABLED"] = False
+    app_module.notify_user = lambda *a, **k: None
     return app_module, models_module
 
 
