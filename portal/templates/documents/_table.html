@@ -42,7 +42,7 @@
           {% if doc.can_download %}
           <a href="{{ url_for('document_download', doc_id=doc.id) }}" class="btn btn-sm btn-outline-secondary">Download</a>
           {% endif %}
-            <a href="{{ url_for('new_document', step=1, doc_id=doc.id) }}" class="btn btn-sm btn-outline-secondary">Upload New Version</a>
+          <a href="{{ url_for('document_detail', doc_id=doc.id) }}#uploadVersionModal" class="btn btn-sm btn-outline-secondary">Upload New Version</a>
         </td>
       </tr>
       {% endfor %}
