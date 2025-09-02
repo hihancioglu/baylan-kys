@@ -29,7 +29,7 @@ from models import (Acknowledgement, AuditLog, CAPAAction, ChangeRequest,
                     DocumentRevision, DocumentStandard, DocWorkflow,
                     FormSubmission, Notification, PersonalAccessToken, Role,
                     RoleEnum, Standard, TrainingResult, User, UserSetting,
-                    WorkflowStep, engine, get_session)
+                    WorkflowStep, engine, get_session, SessionLocal)
 from notifications import (
     notify_approval_queue,
     notify_mandatory_read,
@@ -2219,10 +2219,10 @@ def create_document():
     user_id = (session.get("user") or {}).get("id") or (request.get_json(silent=True) or {}).get("user_id")
     if not user_id:
         session_db.rollback()
-        session_db.close()
+        SessionLocal.remove()
         return "user_id required", 400
     session_db.commit()
-    session_db.close()
+    SessionLocal.remove()
     return redirect(url_for("document_detail", doc_id=doc.id))
 
 
@@ -2284,7 +2284,7 @@ def create_document_api(data: dict | None = None):
     user_id = (session.get("user") or {}).get("id") or data.get("user_id")
     if not user_id:
         session_db.rollback()
-        session_db.close()
+        SessionLocal.remove()
         return jsonify(error="user_id required"), 400
     session_db.flush()
     if standard:
@@ -2304,7 +2304,7 @@ def create_document_api(data: dict | None = None):
     user_ids = [u.id for u in session_db.query(User).all()]
     notify_mandatory_read(doc, user_ids)
     result = {"id": doc.id, "doc_key": doc_key, "standard": doc.standard_code}
-    session_db.close()
+    SessionLocal.remove()
     return jsonify(result), 201
 
 
