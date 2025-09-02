@@ -7,4 +7,4 @@ body{color:#1a1a1a;background-color:#fff;}
 .quick-search-box{max-width:600px;margin:10vh auto;background:#fff;padding:1rem;border-radius:.5rem;}
 .quick-search-overlay .list-group-item{cursor:pointer;}
 .page-title{font-size:var(--font-size-lg);margin-bottom:var(--spacing-md);}
-.preview-frame{height:600px;}
+.preview-frame{height:600px;}.preview-unavailable .btn{pointer-events:none;opacity:.65;cursor:not-allowed;}

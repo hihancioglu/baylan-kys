@@ -76,6 +76,10 @@
 <div class="mb-4">
   <a href="{{ preview.url }}" target="_blank">Preview (PDF)</a>
 </div>
+{% else %}
+<div class="mb-4 preview-unavailable">
+  <button type="button" class="btn btn-outline-secondary" disabled>Önizleme mevcut değil</button>
+</div>
 {% endif %}
 <ul>
   <li><strong>Code:</strong> {{ doc.code }}</li>
