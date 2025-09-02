@@ -35,6 +35,11 @@ queue: Queue = Queue("pdf_previews", connection=redis_conn)
 
 def generate_preview(doc_id: int, version: str, key: str) -> None:
     """Download a document, convert to PDF, and store the preview."""
+    # Ensure the configured preview bucket is available before doing any work.
+    # This raises an informative error if misconfigured, helping operators
+    # detect missing ``S3_BUCKET_PREVIEWS`` or permission issues early.
+    storage_client.verify_preview_bucket()
+
     obj = storage_client.get_object(Key=key, Bucket=storage_client.bucket_main)
     with tempfile.TemporaryDirectory() as tmpdir:
         src_path = os.path.join(tmpdir, os.path.basename(key))
