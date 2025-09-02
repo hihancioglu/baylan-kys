@@ -4,6 +4,7 @@ import sys
 import importlib
 from pathlib import Path
 from unittest.mock import MagicMock
+from types import SimpleNamespace
 
 import pytest
 from flask import template_rendered
@@ -109,3 +110,44 @@ def test_generate_preview_creates_file_and_view_shows_preview(app_models, client
         resp = client.get(f"/documents/{doc_id}")
     assert resp.status_code == 200
     assert captured["preview"]["type"] == "pdf"
+
+
+def test_presigned_preview_uses_public_endpoint(monkeypatch):
+    monkeypatch.setenv("S3_ENDPOINT", "http://internal:9000")
+    monkeypatch.setenv("S3_PUBLIC_ENDPOINT", "https://cdn.example.com")
+    monkeypatch.setenv("S3_ACCESS_KEY", "key")
+    monkeypatch.setenv("S3_SECRET_KEY", "secret")
+    monkeypatch.setenv("S3_BUCKET_MAIN", "main")
+
+    import portal.storage as storage
+
+    class DummyClient:
+        def list_buckets(self):
+            return {"Buckets": []}
+
+        def create_bucket(self, **kwargs):
+            pass
+
+        def put_bucket_versioning(self, **kwargs):
+            pass
+
+        def head_object(self, Bucket, Key):
+            return {"ContentLength": 1}
+
+        def generate_presigned_url(self, *args, **kwargs):
+            return "http://internal:9000/main/previews/test.pdf?X=internal"
+
+    class DummyPublicClient(DummyClient):
+        def generate_presigned_url(self, *args, **kwargs):
+            return "https://cdn.example.com/main/previews/test.pdf?X=public"
+
+    def client_factory(*args, **kwargs):
+        if kwargs.get("endpoint_url") == "https://cdn.example.com":
+            return DummyPublicClient()
+        return DummyClient()
+
+    monkeypatch.setattr(storage, "boto3", SimpleNamespace(client=client_factory))
+
+    backend = storage.MinIOBackend()
+    url = backend.generate_presigned_url("previews/test.pdf")
+    assert url == "https://cdn.example.com/main/previews/test.pdf?X=public"

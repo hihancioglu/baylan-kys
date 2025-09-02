@@ -91,7 +91,7 @@ def test_files_route_respects_size_limit(app_modules, client):
         backend, type(backend)
     )
     backend.client.head_object = MagicMock(return_value={"ContentLength": 51 * 1024 * 1024})
-    backend.client.generate_presigned_url = MagicMock(return_value="/signed")
+    backend.public_client.generate_presigned_url = MagicMock(return_value="/signed")
     resp = client.get("/files/foo/bar.txt")
     assert resp.status_code == 404
-    backend.client.generate_presigned_url.assert_not_called()
+    backend.public_client.generate_presigned_url.assert_not_called()
