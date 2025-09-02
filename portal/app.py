@@ -361,7 +361,13 @@ def get_standard_map() -> dict[str, str]:
             mapping.setdefault("Uncategorized", "Uncategorized")
         return mapping
     finally:
-        session.close()
+        # ``get_session`` returns a scoped session, which must be removed from
+        # the registry after use.  Using ``session.close`` alone leaves a
+        # closed session in the registry and subsequent calls may attempt to
+        # reuse it, leading to ``ResourceClosedError`` during database
+        # operations.  ``SessionLocal.remove`` disposes of the current session
+        # and ensures future calls get a fresh one.
+        SessionLocal.remove()
 
 
 STANDARD_MAP = get_standard_map()
