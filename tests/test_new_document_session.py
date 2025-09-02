@@ -25,7 +25,7 @@ def test_upload_does_not_bloat_cookie():
         "type": "T",
         "department": "Dept",
         "standard": "ISO9001",
-        "tags": "",
+        "tags": "tag",
     }
     resp = client.post("/documents/new?step=1", data=step1_data)
     assert resp.status_code == 302
@@ -123,3 +123,37 @@ def test_cancel_cleans_up_upload():
     app_module.storage_client.delete_object.assert_called_once_with(Key=key)
     with client.session_transaction() as sess:
         assert "uploaded_file_key" not in sess
+
+
+def test_session_reset_after_user_id_error():
+    app_module = importlib.reload(importlib.import_module("app"))
+    app_module.app.config.update(WTF_CSRF_ENABLED=False, AUTO_REVIEW_ON_UPLOAD=False)
+    client = app_module.app.test_client()
+    app_module.storage_client.head_object = MagicMock()
+    app_module.enqueue_preview = lambda *args, **kwargs: None
+    app_module.extract_text = lambda key: ""
+    app_module.index_document = lambda doc, content: None
+    app_module.notify_mandatory_read = lambda doc, user_ids: None
+    app_module.services.submit_for_approval = lambda *args, **kwargs: None
+
+    payload = {
+        "code": "DOC-4",
+        "title": "Doc",
+        "type": "T",
+        "department": "Dept",
+        "tags": "tag",
+        "uploaded_file_key": "k1",
+        "standard": "ISO9001",
+    }
+
+    with client.session_transaction() as sess:
+        sess["user"] = {"username": "tester"}
+        sess["roles"] = [app_module.RoleEnum.CONTRIBUTOR.value]
+    resp = client.post("/api/documents", json=payload)
+    assert resp.status_code == 400
+
+    with client.session_transaction() as sess:
+        sess["user"] = {"id": 1, "username": "tester"}
+        sess["roles"] = [app_module.RoleEnum.CONTRIBUTOR.value]
+    resp = client.post("/api/documents", json=payload)
+    assert resp.status_code == 201
