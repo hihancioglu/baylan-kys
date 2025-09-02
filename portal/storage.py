@@ -19,7 +19,7 @@ import hashlib
 
 import boto3
 from botocore.client import Config
-from botocore.exceptions import NoCredentialsError
+from botocore.exceptions import ClientError, NoCredentialsError
 
 
 def _env(name: str, default: str | None = None) -> str | None:
@@ -191,6 +191,11 @@ class MinIOBackend(StorageBackend):
             head = self.client.head_object(Bucket=bucket_name, Key=key)
             if head.get("ContentLength", 0) > self.max_presign_size:
                 return None
+        except ClientError as exc:
+            code = exc.response.get("Error", {}).get("Code")
+            if code in ("404", "NoSuchKey"):
+                return None
+            # For other client errors, continue and attempt to generate a URL.
         except Exception:
             # If the object cannot be inspected, continue and attempt to
             # generate a URL. The call below may still fail depending on the

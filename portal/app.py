@@ -1337,14 +1337,14 @@ def document_detail(doc_id: int | None = None, id: int | None = None):
         reverse=True,
     )
 
-    preview: dict[str, object] = {}
+    preview: dict[str, object] | None = None
     mime = (doc.mime or "").lower()
     version = f"{doc.major_version}.{doc.minor_version}"
     preview_key = f"previews/{doc.id}/{version}.pdf"
     file_url = storage_client.generate_presigned_url(
         preview_key, bucket=storage_client.bucket_previews
     )
-    if file_url:
+    if file_url is not None:
         preview = {"type": "pdf", "url": file_url}
 
     can_download = False
