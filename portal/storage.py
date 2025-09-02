@@ -14,8 +14,6 @@ import shutil
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any
-from urllib.parse import urlparse, urlunparse
-import posixpath
 import base64
 import hashlib
 
@@ -115,6 +113,17 @@ class MinIOBackend(StorageBackend):
             config=Config(signature_version="s3v4"),
         )
 
+        if self.public_endpoint:
+            self.public_client = boto3.client(
+                "s3",
+                endpoint_url=self.public_endpoint,
+                aws_access_key_id=self.access_key,
+                aws_secret_access_key=self.secret_key,
+                config=Config(signature_version="s3v4"),
+            )
+        else:
+            self.public_client = self.client
+
         self._add_aliases()
         self._ensure_buckets()
 
@@ -188,7 +197,7 @@ class MinIOBackend(StorageBackend):
             # underlying credentials, but this mirrors previous behavior.
             pass
         try:
-            url = self.client.generate_presigned_url(
+            url = self.public_client.generate_presigned_url(
                 "get_object",
                 Params={
                     "Bucket": bucket_name,
@@ -198,25 +207,12 @@ class MinIOBackend(StorageBackend):
                 ExpiresIn=expires_in or self.signed_url_expire_seconds,
             )
         except NoCredentialsError:
-            if self.endpoint:
-                url = f"{self.endpoint}/{bucket_name}/{key}"
-                return self._apply_public_endpoint(url)
+            base = self.public_endpoint or self.endpoint
+            if base:
+                return f"{base.rstrip('/')}/{bucket_name}/{key}"
             return None
 
-        return self._apply_public_endpoint(url)
-
-    def _apply_public_endpoint(self, url: str | None) -> str | None:
-        if not url or not self.public_endpoint:
-            return url
-        pub = urlparse(self.public_endpoint)
-        orig = urlparse(url)
-        path = posixpath.join(pub.path.rstrip("/"), orig.path.lstrip("/")) if pub.path else orig.path
-        replaced = orig._replace(
-            scheme=pub.scheme or orig.scheme,
-            netloc=pub.netloc or orig.netloc,
-            path=path,
-        )
-        return urlunparse(replaced)
+        return url
 
     # -- higher level helpers ------------------------------------------
     def move_to_archive(self, object_key: str, retention_days: int) -> str:

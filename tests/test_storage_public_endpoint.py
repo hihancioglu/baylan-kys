@@ -30,10 +30,19 @@ def test_minio_public_endpoint(monkeypatch):
             return {"ContentLength": 1}
 
         def generate_presigned_url(self, *args, **kwargs):
-            return "http://internal:9000/main/test.txt?X=1"
+            return "http://internal:9000/main/test.txt?X=internal"
 
-    monkeypatch.setattr(storage, "boto3", SimpleNamespace(client=lambda *a, **k: DummyClient()))
+    class DummyPublicClient(DummyClient):
+        def generate_presigned_url(self, *args, **kwargs):
+            return "https://cdn.example.com/main/test.txt?X=public"
+
+    def client_factory(*args, **kwargs):
+        if kwargs.get("endpoint_url") == "https://cdn.example.com":
+            return DummyPublicClient()
+        return DummyClient()
+
+    monkeypatch.setattr(storage, "boto3", SimpleNamespace(client=client_factory))
 
     backend = storage.MinIOBackend()
     url = backend.generate_presigned_url("test.txt")
-    assert url == "https://cdn.example.com/main/test.txt?X=1"
+    assert url == "https://cdn.example.com/main/test.txt?X=public"
