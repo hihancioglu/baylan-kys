@@ -2002,10 +2002,11 @@ def upload_document_version(doc_id: int):
         return jsonify(error="File is required"), 400
 
     data = uploaded.read()
-    if len(data) > MAX_UPLOAD_SIZE:
+    size = len(data)
+    if size > MAX_UPLOAD_SIZE:
         SessionLocal.remove()
         app.logger.warning(
-            "upload_document_version: file too large (%s bytes)", len(data), extra={"doc_id": doc_id}
+            "upload_document_version: file too large (%s bytes)", size, extra={"doc_id": doc_id}
         )
         return jsonify(error="File too large"), 400
 
@@ -2054,7 +2055,13 @@ def upload_document_version(doc_id: int):
     )
 
     user = session.get("user") or {}
-    log_action(user.get("id"), doc.id, "upload_version")
+    payload = {
+        "version": f"{doc.major_version}.{doc.minor_version}",
+        "size": size,
+        "content_type": mime,
+        "note": notes,
+    }
+    log_action(user.get("id"), doc.id, "version_uploaded", payload=payload)
 
     notify_ids: set[int] = set()
     if doc.owner_id:

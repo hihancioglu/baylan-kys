@@ -89,6 +89,21 @@ def test_upload_new_version_success(client, app_models):
     assert body["minor_version"] == 1
     assert storage.storage_client.put.called
 
+    session = models.SessionLocal()
+    log = (
+        session.query(models.AuditLog)
+        .filter_by(doc_id=doc_id, action="version_uploaded")
+        .first()
+    )
+    assert log is not None
+    assert log.payload == {
+        "version": f"{body['major_version']}.{body['minor_version']}",
+        "size": 4,
+        "content_type": "application/pdf",
+        "note": "rev1",
+    }
+    session.close()
+
 
 def test_upload_new_version_forbidden(client, app_models):
     app_module, models = app_models
