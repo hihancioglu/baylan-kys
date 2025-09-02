@@ -8,28 +8,43 @@ variables.  If the user already exists it will simply be granted the
 
 import os
 
-from portal.models import Base, Role, RoleEnum, SessionLocal, User, engine
+"""Utilities to seed the database with initial roles and an admin user."""
 
 
-def seed_roles(session) -> None:
+def _get_models():
+    """Import and return the models module lazily.
+
+    Importing inside a function avoids issues where different parts of the
+    application reload the ``models`` module, which can result in multiple
+    engine instances pointing at different databases. By fetching the module at
+    call time we always operate on the currently active engine used by the
+    tests or application.
+    """
+
+    from portal import models
+
+    return models
+
+
+def seed_roles(session, models) -> None:
     """Ensure all default roles exist."""
-    for role in RoleEnum:
-        if not session.query(Role).filter_by(name=role.value).first():
-            session.add(Role(name=role.value))
+    for role in models.RoleEnum:
+        if not session.query(models.Role).filter_by(name=role.value).first():
+            session.add(models.Role(name=role.value))
 
 
-def seed_admin_user(session) -> None:
+def seed_admin_user(session, models) -> None:
     """Create initial admin user and ensure it has ``quality_admin`` role."""
 
     username = os.getenv("INITIAL_ADMIN_USERNAME", "admin")
     email = os.getenv("INITIAL_ADMIN_EMAIL", f"{username}@example.com")
 
-    admin = session.query(User).filter_by(username=username).first()
+    admin = session.query(models.User).filter_by(username=username).first()
     if not admin:
-        admin = User(username=username, email=email)
+        admin = models.User(username=username, email=email)
         session.add(admin)
 
-    qa_role = session.query(Role).filter_by(name=RoleEnum.QUALITY_ADMIN.value).first()
+    qa_role = session.query(models.Role).filter_by(name=models.RoleEnum.QUALITY_ADMIN.value).first()
     if qa_role and qa_role not in admin.roles:
         admin.roles.append(qa_role)
 
@@ -37,13 +52,15 @@ def seed_admin_user(session) -> None:
 def seed() -> None:
     """Create tables if needed and seed default data."""
 
-    # Ensure all tables exist before attempting to seed data.
-    Base.metadata.create_all(bind=engine)
+    models = _get_models()
 
-    session = SessionLocal()
+    # Ensure all tables exist before attempting to seed data.
+    models.Base.metadata.create_all(bind=models.engine)
+
+    session = models.SessionLocal()
     try:
-        seed_roles(session)
-        seed_admin_user(session)
+        seed_roles(session, models)
+        seed_admin_user(session, models)
         session.commit()
     finally:
         session.close()
