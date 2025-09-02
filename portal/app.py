@@ -898,7 +898,12 @@ def list_archived_documents():
         }
         for d in docs
     ]
-    session.close()
+    # ``get_session`` returns a scoped session.  Using ``session.close`` would
+    # leave a closed session in the registry which can surface as
+    # ``ResourceClosedError`` in subsequent requests.  ``SessionLocal.remove``
+    # disposes of the current session and ensures a fresh one is used next
+    # time.
+    SessionLocal.remove()
     return jsonify(result)
 
 
