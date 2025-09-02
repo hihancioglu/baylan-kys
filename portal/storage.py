@@ -77,6 +77,10 @@ class StorageBackend:
     def list_archived(self) -> list[str]:  # pragma: no cover - interface only
         raise NotImplementedError
 
+    def verify_preview_bucket(self) -> None:  # pragma: no cover - interface only
+        """Ensure the preview bucket is configured and accessible."""
+        return None
+
     # -- S3-style aliases -------------------------------------------------
     def _add_aliases(self) -> None:
         """Expose historical boto3-style method names."""
@@ -163,6 +167,23 @@ class MinIOBackend(StorageBackend):
             except Exception:
                 # Ignore failures so a missing permission doesn't break the app
                 pass
+
+    def verify_preview_bucket(self) -> None:
+        """Validate that the preview bucket exists and is accessible."""
+        if not self.bucket_previews:
+            raise RuntimeError(
+                "Preview bucket not configured. Set S3_BUCKET_PREVIEWS or S3_BUCKET_MAIN."
+            )
+        if not hasattr(self.client, "head_bucket"):
+            # Simplified stub clients used in tests may not implement this call.
+            return
+        try:
+            # ``head_bucket`` checks both existence and access permissions.
+            self.client.head_bucket(Bucket=self.bucket_previews)
+        except Exception as exc:  # pragma: no cover - network/credentials
+            raise RuntimeError(
+                f"Unable to access preview bucket '{self.bucket_previews}'"
+            ) from exc
 
     # -- basic wrappers -------------------------------------------------
     def put(self, Bucket: str | None = None, **kwargs):
