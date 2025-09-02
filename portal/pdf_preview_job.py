@@ -1,12 +1,15 @@
 """Background job to generate PDF previews for documents."""
 from __future__ import annotations
 
+import logging
 import os
 import tempfile
 from typing import Any
 
 from signing import convert_to_pdf
 from storage import storage_client
+
+logger = logging.getLogger(__name__)
 
 try:  # pragma: no cover - real redis only used in production
     from redis import Redis
@@ -61,7 +64,7 @@ def enqueue_preview(doc_id: int, version: str, key: str) -> None:
     try:
         queue.enqueue(generate_preview, doc_id, version, key)
     except Exception:  # pragma: no cover - queue backend unavailable
-        pass
+        logger.exception("Failed to enqueue PDF preview job")
 
 
 __all__ = ["enqueue_preview", "generate_preview", "queue"]
