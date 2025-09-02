@@ -5,15 +5,19 @@
 {% block page_actions %}
 <link rel="stylesheet" href="{{ url_for('static', filename='toolbar/toolbar.css') }}">
 <div class="toolbar" data-component="toolbar" data-variant="icon-text">
-  {% if doc.status == 'Approved' %}
-  <form id="publish-form" hx-post="/api/documents/{{ doc.id }}/publish" hx-swap="none" class="d-inline">
-    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-    <button type="submit" class="btn btn-primary" id="publish-button">Publish</button>
-  </form>
-  {% elif doc.status == 'Review' %}
-  <button type="button" class="btn btn-primary" id="publish-button" disabled>Publish (Approval pending)</button>
+  {% if doc.status in ['Review', 'Approved'] %}
+    {% if doc.file_key %}
+    <form id="publish-form" hx-post="/api/documents/{{ doc.id }}/publish" hx-swap="none" class="d-inline">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <button type="submit" class="btn btn-primary" id="publish-button">Publish</button>
+    </form>
+    {% else %}
+    <button type="button" class="btn btn-primary" id="publish-button" disabled title="No active version">Publish (No active version)</button>
+    {% endif %}
+  {% elif doc.status == 'Draft' %}
+  <button type="button" class="btn btn-primary" id="publish-button" disabled title="Document is in draft status">Publish (Draft)</button>
   {% else %}
-  <button type="button" class="btn btn-primary" id="publish-button" disabled>Publish</button>
+  <button type="button" class="btn btn-primary" id="publish-button" disabled title="Publish unavailable">Publish</button>
   {% endif %}
   {% if doc.status == 'Published' %}
   <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#assignModal">
