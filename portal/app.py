@@ -1112,7 +1112,13 @@ def documents_table():
 @app.route("/documents/new", methods=["GET", "POST"])
 @roles_required(RoleEnum.CONTRIBUTOR.value)
 def new_document():
-    step = request.args.get("step") or request.form.get("step") or "1"
+    step = request.args.get("step", default=1, type=int)
+    if "step" not in request.args:
+        step = request.form.get("step", default=1, type=int)
+    if step not in {1, 2, 3} or ("step" not in request.args and "step" not in request.form):
+        if request.method == "GET":
+            return redirect(url_for("new_document", step=1))
+        return "Invalid step", 400
 
     def cleanup_uploaded_file():
         uploaded_key = session.pop("uploaded_file_key", None)
@@ -1128,12 +1134,12 @@ def new_document():
         session["new_doc_id"] = draft_id
     data = DOCUMENT_DRAFTS.get(draft_id, {})
 
-    if request.method == "GET" and step == "1":
+    if request.method == "GET" and step == 1:
         cleanup_uploaded_file()
 
     if request.method == "POST":
         errors: dict[str, str] = {}
-        if step == "1":
+        if step == 1:
             data["code"] = request.form.get("code", "").strip()
             if not data["code"]:
                 errors["code"] = "Code is required"
@@ -1169,7 +1175,7 @@ def new_document():
                 return render_template("documents/new_step1.html", **context), 400
             return redirect(url_for("new_document", step=2))
 
-        if step == "2":
+        if step == 2:
             data.update(request.form.to_dict())
             data.pop("generate_docxf", None)
             uploaded = request.files.get("upload_file")
@@ -1230,7 +1236,7 @@ def new_document():
         data.update(request.form.to_dict())
         DOCUMENT_DRAFTS[draft_id] = data
 
-        if step == "3":
+        if step == 3:
             if request.form.get("cancel"):
                 cleanup_uploaded_file()
                 DOCUMENT_DRAFTS.pop(draft_id, None)
@@ -1289,13 +1295,13 @@ def new_document():
         ],
         "errors": {},
         "form": data,
-        "step": int(step),
+        "step": step,
     }
-    if step == "1":
+    if step == 1:
         standard_map = get_standard_map()
         context["standards"] = sorted(standard_map.keys())
         context["standard_map"] = standard_map
-    if step == "2":
+    if step == 2:
         base_templates = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "templates"))
         template_options = {}
         for folder in ("forms", "procedures"):
@@ -1303,7 +1309,7 @@ def new_document():
             if os.path.isdir(path):
                 template_options[folder] = [f for f in os.listdir(path) if os.path.isfile(os.path.join(path, f))]
         context["template_options"] = template_options
-    if step == "3":
+    if step == 3:
         context["standard_map"] = get_standard_map()
     return render_template(template, **context)
 
