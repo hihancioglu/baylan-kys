@@ -448,7 +448,7 @@ def api_counts():
     try:
         counts = _compute_counts(db, user_id, session.get("roles", []))
     finally:
-        db.close()
+        SessionLocal.remove()
     return jsonify(counts)
 
 
@@ -472,7 +472,7 @@ def api_notifications():
         db.commit()
         return jsonify(data)
     finally:
-        db.close()
+        SessionLocal.remove()
 
 
 def _get_pending_approvals(
@@ -639,7 +639,7 @@ def dashboard():
         }
         return render_template("dashboard.html", **context)
     finally:
-        db.close()
+        SessionLocal.remove()
 
 
 @app.get("/profile")
@@ -688,7 +688,7 @@ def dashboard_recent_docs_card():
         }
         return render_template("partials/dashboard/_cards.html", **context)
     finally:
-        db.close()
+        SessionLocal.remove()
 
 
 @app.get("/api/dashboard/cards/<card>")
@@ -720,7 +720,7 @@ def dashboard_cards(card):
             return ("", 404)
         return render_template("partials/dashboard/_cards.html", **context)
     finally:
-        db.close()
+        SessionLocal.remove()
 
 
 @app.get("/api/dashboard/stream")
@@ -782,7 +782,7 @@ def dashboard_stream():
                     ).replace("\n", "")
                     yield f"event: {name}\ndata: {html}\n\n"
             finally:
-                db.close()
+                SessionLocal.remove()
             time.sleep(poll_interval)
 
     headers = {"Cache-Control": "no-cache"}
@@ -804,7 +804,7 @@ def api_dashboard_pending_approvals():
     except Exception as e:
         return jsonify({"items": [], "error": str(e)}), 500
     finally:
-        db.close()
+        SessionLocal.remove()
 
 
 @app.get("/api/dashboard/mandatory-reading")
@@ -820,7 +820,7 @@ def api_dashboard_mandatory_reading():
     except Exception as e:
         return jsonify({"items": [], "error": str(e)}), 500
     finally:
-        db.close()
+        SessionLocal.remove()
 
 
 @app.get("/api/dashboard/recent-changes")
@@ -834,7 +834,7 @@ def api_dashboard_recent_changes():
     except Exception as e:
         return jsonify({"items": [], "error": str(e)}), 500
     finally:
-        db.close()
+        SessionLocal.remove()
 
 
 @app.get("/api/dashboard/search-shortcuts")
@@ -876,7 +876,7 @@ def api_dashboard_standard_summary():
         ]
         return jsonify(data)
     finally:
-        db.close()
+        SessionLocal.remove()
 
 
 @app.get("/health")
@@ -1037,7 +1037,7 @@ def _get_documents():
         if d.standard_code is None:
             d.standard_code = ""
 
-    db.close()
+    SessionLocal.remove()
 
     params = request.args.to_dict()
     params.pop("page", None)
@@ -1065,7 +1065,7 @@ def list_documents():
 
     db_session = get_session()
     departments = [d[0] for d in db_session.query(Document.department).distinct().all()]
-    db_session.close()
+    SessionLocal.remove()
 
     context = {
         "documents": docs,
@@ -1321,7 +1321,7 @@ def document_detail(doc_id: int | None = None, id: int | None = None):
         .one_or_none()
     )
     if not doc:
-        db.close()
+        SessionLocal.remove()
         return "Document not found", 404
 
     logs = (
@@ -1336,7 +1336,7 @@ def document_detail(doc_id: int | None = None, id: int | None = None):
     users = db.query(User).order_by(User.username).all()
     ack_count = db.query(Acknowledgement).filter_by(doc_id=doc.id).count()
 
-    db.close()
+    SessionLocal.remove()
 
     user = session.get("user")
     if user and user.get("id"):
@@ -1398,10 +1398,10 @@ def document_workflow(doc_id: int):
     db = get_session()
     doc = db.get(Document, doc_id)
     if not doc:
-        db.close()
+        SessionLocal.remove()
         return "Document not found", 404
     if doc.status not in {"Review", "Approved"}:
-        db.close()
+        SessionLocal.remove()
         return redirect(url_for("document_detail", doc_id=doc_id))
     steps = (
         db.query(WorkflowStep)
@@ -1430,7 +1430,7 @@ def document_workflow(doc_id: int):
             {"title": "Workflow"},
         ],
     )
-    db.close()
+    SessionLocal.remove()
     return html
 
 @app.get("/files/<path:file_key>")
@@ -1459,7 +1459,7 @@ def get_file(file_key: str):
         resp.headers["Cache-Control"] = "public, max-age=86400"
         return resp
     finally:
-        db.close()
+        SessionLocal.remove()
 
 
 @app.get("/documents/<int:doc_id>/download")
@@ -1480,7 +1480,7 @@ def document_download(doc_id: int):
         log_action(user["id"], doc_id, "download_document")
         return redirect(url)
     finally:
-        db.close()
+        SessionLocal.remove()
 
 
 @app.get("/documents/<int:doc_id>/revisions/<int:rev_id>/download")
@@ -1505,7 +1505,7 @@ def document_revision_download(doc_id: int, rev_id: int):
         log_action(user["id"], doc_id, "download_revision")
         return redirect(url)
     finally:
-        db.close()
+        SessionLocal.remove()
 
 
 @app.post("/workflow/start")
@@ -1557,7 +1557,7 @@ def start_workflow():
         notify_revision_time(doc, [s.user_id for s in steps if s.user_id])
         return jsonify(ok=True)
     finally:
-        db.close()
+        SessionLocal.remove()
 
 
 @app.post("/api/workflow/start")
@@ -1629,7 +1629,7 @@ def api_start_workflow():
         notify_revision_time(doc, [s.user_id for s in steps if s.user_id])
         return jsonify(ok=True)
     finally:
-        db.close()
+        SessionLocal.remove()
 
 
 def _office_diff(data_a: bytes, data_b: bytes, mime: str) -> str:
@@ -1715,7 +1715,7 @@ def compare_document_revisions_api(doc_id: int):
             app.logger.warning("Failed to generate presigned URL for %s", filename)
         return jsonify(filename=filename, url=url)
     finally:
-        session.close()
+        SessionLocal.remove()
 
 
 @app.get("/documents/<int:doc_id>/compare")
@@ -1769,7 +1769,7 @@ def compare_document_versions(doc_id: int):
             ],
         )
     finally:
-        session.close()
+        SessionLocal.remove()
 
 
 
@@ -1786,7 +1786,7 @@ def revert_document(doc_id: int, revision_id: int):
         .first()
     )
     if not doc or not rev:
-        db.close()
+        SessionLocal.remove()
         return "Version not found", 404
     user = session.get("user") or {}
     _rollback_document(doc, rev, user, db)
@@ -1799,7 +1799,7 @@ def revert_document(doc_id: int, revision_id: int):
         )
         .all()
     )
-    db.close()
+    SessionLocal.remove()
     if partial:
         return render_template(
             "partials/documents/_versions.html",
@@ -1851,7 +1851,7 @@ def rollback_document_api(doc_id: int):
     db = get_session()
     doc = db.get(Document, doc_id)
     if not doc:
-        db.close()
+        SessionLocal.remove()
         return jsonify(error="Document not found"), 404
     rev = (
         db.query(DocumentRevision)
@@ -1859,7 +1859,7 @@ def rollback_document_api(doc_id: int):
         .first()
     )
     if not rev:
-        db.close()
+        SessionLocal.remove()
         return jsonify(error="Revision not found"), 404
     user = session.get("user") or {}
     doc = _rollback_document(doc, rev, user, db)
@@ -1868,7 +1868,7 @@ def rollback_document_api(doc_id: int):
         "major_version": doc.major_version,
         "minor_version": doc.minor_version,
     }
-    db.close()
+    SessionLocal.remove()
     return jsonify(resp)
 
 
@@ -1899,7 +1899,7 @@ def revise_document_api(id: int):
     db = get_session()
     doc = db.get(Document, id)
     if not doc:
-        db.close()
+        SessionLocal.remove()
         return jsonify(error="Document not found"), 404
     data = request.get_json() or {}
     version_type = data.get("version_type", "minor")
@@ -1912,7 +1912,7 @@ def revise_document_api(id: int):
         "minor_version": doc.minor_version,
         "status": doc.status,
     }
-    db.close()
+    SessionLocal.remove()
     return jsonify(resp)
 
 
@@ -1922,13 +1922,13 @@ def revise_document(id: int):
     db = get_session()
     doc = db.get(Document, id)
     if not doc:
-        db.close()
+        SessionLocal.remove()
         return "Document not found", 404
     version_type = request.form.get("version_type", "minor")
     notes = request.form.get("revision_notes")
     user = session.get("user") or {}
     _start_revision(doc, version_type, notes, user, db)
-    db.close()
+    SessionLocal.remove()
     return redirect(url_for("document_detail", doc_id=id))
 
 
@@ -1938,11 +1938,11 @@ def document_versioning(id: int):
     db = get_session()
     doc = db.get(Document, id)
     if not doc:
-        db.close()
+        SessionLocal.remove()
         return jsonify(error="Document not found"), 404
     data = request.get_json() or {}
     if data.get("action") != "increment_major":
-        db.close()
+        SessionLocal.remove()
         return jsonify(error="Invalid action"), 400
     old_rev = DocumentRevision(
         doc_id=doc.id,
@@ -1962,7 +1962,7 @@ def document_versioning(id: int):
         "major_version": doc.major_version,
         "minor_version": doc.minor_version,
     }
-    db.close()
+    SessionLocal.remove()
     return jsonify(resp)
 
 
@@ -1972,12 +1972,12 @@ def upload_document_version(doc_id: int):
     db = get_session()
     doc = db.get(Document, doc_id)
     if not doc:
-        db.close()
+        SessionLocal.remove()
         return jsonify(error="Document not found"), 404
 
     user = session.get("user") or {}
     if not permission_check(user.get("id"), doc, upload=True):
-        db.close()
+        SessionLocal.remove()
         return jsonify(error="Forbidden"), 403
     now = datetime.utcnow()
     if (
@@ -1986,18 +1986,18 @@ def upload_document_version(doc_id: int):
         and doc.locked_by != user.get("id")
         and doc.lock_expires_at > now
     ):
-        db.close()
+        SessionLocal.remove()
         return jsonify(error="Document locked"), 409
 
     uploaded = request.files.get("file")
     if not uploaded or not uploaded.filename:
-        db.close()
+        SessionLocal.remove()
         app.logger.warning("upload_document_version: missing file", extra={"doc_id": doc_id})
         return jsonify(error="File is required"), 400
 
     data = uploaded.read()
     if len(data) > MAX_UPLOAD_SIZE:
-        db.close()
+        SessionLocal.remove()
         app.logger.warning(
             "upload_document_version: file too large (%s bytes)", len(data), extra={"doc_id": doc_id}
         )
@@ -2005,7 +2005,7 @@ def upload_document_version(doc_id: int):
 
     mime = uploaded.mimetype
     if mime not in ALLOWED_UPLOAD_MIMES:
-        db.close()
+        SessionLocal.remove()
         app.logger.warning(
             "upload_document_version: unsupported mime %s", mime, extra={"doc_id": doc_id}
         )
@@ -2015,7 +2015,7 @@ def upload_document_version(doc_id: int):
         infected, output = _clamdscan(data)
         log_action(user.get("id"), doc.id, "av_scan", payload={"infected": infected, "output": output.strip()})
         if infected:
-            db.close()
+            SessionLocal.remove()
             app.logger.warning("upload_document_version: virus detected", extra={"doc_id": doc_id})
             return jsonify(error="Virus detected"), 400
 
@@ -2096,7 +2096,7 @@ def upload_document_version(doc_id: int):
         )
         if auto_review:
             response.headers["HX-Trigger"] = "auto-review-started"
-        db.close()
+        SessionLocal.remove()
         return response
 
     resp = {
@@ -2106,7 +2106,7 @@ def upload_document_version(doc_id: int):
         "doc_key": doc.doc_key,
         "auto_review": bool(auto_review),
     }
-    db.close()
+    SessionLocal.remove()
     return jsonify(resp), 201
 
 
@@ -2116,14 +2116,14 @@ def checkout_document(doc_id: int):
     db = get_session()
     doc = db.get(Document, doc_id)
     if not doc:
-        db.close()
+        SessionLocal.remove()
         return jsonify(error="Document not found"), 404
 
     user = session.get("user") or {}
     user_id = user.get("id")
     roles = session.get("roles", [])
     if not permission_check(user_id, doc, checkout=True):
-        db.close()
+        SessionLocal.remove()
         return jsonify(error="Forbidden"), 403
     now = datetime.utcnow()
     if (
@@ -2133,7 +2133,7 @@ def checkout_document(doc_id: int):
         and doc.lock_expires_at > now
         and RoleEnum.QUALITY_ADMIN.value not in roles
     ):
-        db.close()
+        SessionLocal.remove()
         return jsonify(error="Document locked"), 409
 
     previous_locked_by = doc.locked_by
@@ -2149,7 +2149,7 @@ def checkout_document(doc_id: int):
         notify_user(owner_id, subject, body)
     if previous_locked_by and previous_locked_by not in {owner_id, user_id}:
         notify_user(previous_locked_by, subject, body)
-    db.close()
+    SessionLocal.remove()
     return jsonify(locked_by=user_id, lock_expires_at=doc.lock_expires_at.isoformat())
 
 
@@ -2159,27 +2159,27 @@ def checkin_document(doc_id: int):
     db = get_session()
     doc = db.get(Document, doc_id)
     if not doc:
-        db.close()
+        SessionLocal.remove()
         return jsonify(error="Document not found"), 404
 
     user = session.get("user") or {}
     user_id = user.get("id")
     roles = session.get("roles", [])
     if not permission_check(user_id, doc, checkin=True):
-        db.close()
+        SessionLocal.remove()
         return jsonify(error="Cannot checkin"), 403
     if doc.locked_by and doc.locked_by != user_id:
         if RoleEnum.QUALITY_ADMIN.value not in roles and not permission_check(
             user_id, doc, override=True
         ):
-            db.close()
+            SessionLocal.remove()
             return jsonify(error="Cannot checkin"), 403
 
     doc.locked_by = None
     doc.lock_expires_at = None
     db.commit()
     log_action(user_id, doc.id, "checkin_document")
-    db.close()
+    SessionLocal.remove()
     return jsonify(status="ok")
 
 
@@ -2326,7 +2326,7 @@ def update_document_api(id: int):
     session_db = get_session()
     doc = session_db.get(Document, id)
     if not doc:
-        session_db.close()
+        SessionLocal.remove()
         return jsonify(error="Document not found"), 404
 
     if "standard" in data:
@@ -2334,10 +2334,10 @@ def update_document_api(id: int):
         allowed = get_allowed_standards()
         if allowed:
             if standard and standard not in allowed:
-                session_db.close()
+                SessionLocal.remove()
                 return jsonify({"errors": {"standard": "Invalid standard."}}), 400
         elif standard:
-            session_db.close()
+            SessionLocal.remove()
             return jsonify({"errors": {"standard": "Invalid standard."}}), 400
         session_db.query(DocumentStandard).filter_by(doc_id=id).delete()
         if standard:
@@ -2357,7 +2357,7 @@ def update_document_api(id: int):
     if "tags" in data:
         tags_val = _format_tags(data.get("tags"))
         if tags_val is None:
-            session_db.close()
+            SessionLocal.remove()
             return jsonify({"errors": {"tags": "Invalid tags format."}}), 400
         doc.tags = tags_val
 
@@ -2367,7 +2367,7 @@ def update_document_api(id: int):
     if user_id:
         log_action(user_id, doc.id, "update_document")
     result = {"id": doc.id, "doc_key": doc.doc_key, "standard": doc.standard_code}
-    session_db.close()
+    SessionLocal.remove()
     return jsonify(result)
 
 
@@ -2428,7 +2428,7 @@ def approval_queue():
             ],
         )
     finally:
-        db.close()
+        SessionLocal.remove()
 
 
 @app.route("/approvals/<int:id>", methods=["GET"])
@@ -2464,7 +2464,7 @@ def approval_detail(id: int):
             breadcrumbs=breadcrumbs,
         )
     finally:
-        db.close()
+        SessionLocal.remove()
 
 
 @app.post("/api/approvals/<int:step_id>/approve")
@@ -2519,7 +2519,7 @@ def api_approve_step(step_id: int):
         resp.headers["HX-Trigger"] = json.dumps({"showToast": "Approved"})
         return resp
     finally:
-        db.close()
+        SessionLocal.remove()
 
 
 @app.post("/api/approvals/<int:step_id>/reject")
@@ -2558,7 +2558,7 @@ def api_reject_step(step_id: int):
         resp.headers["HX-Trigger"] = json.dumps({"showToast": "Rejected"})
         return resp
     finally:
-        db.close()
+        SessionLocal.remove()
 
 
 @app.post("/api/approvals/<int:step_id>/reassign")
@@ -2603,7 +2603,7 @@ def api_reassign_step(step_id: int):
         resp.headers["HX-Trigger"] = json.dumps({"showToast": "Reassigned"})
         return resp
     finally:
-        db.close()
+        SessionLocal.remove()
 
 
 @app.post("/api/approvals/<int:step_id>/undo")
@@ -2636,7 +2636,7 @@ def api_undo_step(step_id: int):
         resp.headers["HX-Trigger"] = json.dumps({"showToast": "Reverted"})
         return resp
     finally:
-        db.close()
+        SessionLocal.remove()
 
 
 @app.post("/approvals/<int:step_id>/approve")
@@ -2686,7 +2686,7 @@ def approve_step(step_id: int):
         resp.headers["HX-Trigger"] = json.dumps({"showToast": "Approved"})
         return resp
     finally:
-        db.close()
+        SessionLocal.remove()
 
 
 @app.post("/approvals/<int:step_id>/reject")
@@ -2723,7 +2723,7 @@ def reject_step(step_id: int):
         resp.headers["HX-Trigger"] = json.dumps({"showToast": "Rejected"})
         return resp
     finally:
-        db.close()
+        SessionLocal.remove()
 
 
 @app.post("/approvals/bulk_approve")
@@ -2762,7 +2762,7 @@ def bulk_approve_steps():
         )
         return render_template("partials/approvals/_queue_body.html", steps=steps)
     finally:
-        db.close()
+        SessionLocal.remove()
 
 
 @app.post("/approvals/bulk_reject")
@@ -2808,7 +2808,7 @@ def bulk_reject_steps():
         )
         return render_template("partials/approvals/_queue_body.html", steps=steps)
     finally:
-        db.close()
+        SessionLocal.remove()
 
 
 @app.get("/search")
@@ -2831,7 +2831,7 @@ def search_view():
     else:
         total = 0
         docs = []
-    session.close()
+    SessionLocal.remove()
     pages = (total + page_size - 1) // page_size if total else 1
     context = {
         "documents": docs,
@@ -2937,7 +2937,7 @@ def assign_role():
         log_action(admin_id, None, f"assign_role_after:{user_id}:{role_name}", endpoint="/roles/assign")
         return jsonify(ok=True)
     finally:
-        db.close()
+        SessionLocal.remove()
 
 
 @app.delete("/roles/assign")
@@ -2963,7 +2963,7 @@ def remove_role():
         log_action(admin_id, None, f"remove_role_after:{user_id}:{role_name}", endpoint="/roles/assign")
         return jsonify(ok=True)
     finally:
-        db.close()
+        SessionLocal.remove()
 
 
 @app.post("/roles")
@@ -2989,7 +2989,7 @@ def create_role():
         log_action(None, None, f"create_role:{role_name}")
         return jsonify(ok=True)
     finally:
-        session.close()
+        SessionLocal.remove()
 
 
 @app.delete("/roles")
@@ -3011,7 +3011,7 @@ def delete_role():
         log_action(None, None, f"delete_role:{role_name}")
         return jsonify(ok=True)
     finally:
-        session.close()
+        SessionLocal.remove()
 
 
 @app.get("/admin/users")
@@ -3033,7 +3033,7 @@ def admin_users_page():
             ],
         )
     finally:
-        db.close()
+        SessionLocal.remove()
 
 
 @app.get("/admin/roles")
@@ -3057,7 +3057,7 @@ def admin_roles_page():
             ],
         )
     finally:
-        db.close()
+        SessionLocal.remove()
 
 
 @app.get("/admin/document-standards")
@@ -3079,7 +3079,7 @@ def admin_document_standards_page():
             ],
         )
     finally:
-        db.close()
+        SessionLocal.remove()
 
 
 @app.route("/admin/document-standards/<int:doc_id>", methods=["POST", "PUT"])
@@ -3095,7 +3095,7 @@ def update_document_standard(doc_id: int):
     db = get_session()
     doc = db.get(Document, doc_id)
     if not doc:
-        db.close()
+        SessionLocal.remove()
         if request.is_json:
             return jsonify(error="Document not found"), 404
         return "Document not found", 404
@@ -3105,7 +3105,7 @@ def update_document_standard(doc_id: int):
     user_id = (session.get("user") or {}).get("id")
     if user_id:
         log_action(user_id, doc_id, "update_document_standard")
-    db.close()
+    SessionLocal.remove()
     if request.is_json:
         return jsonify(ok=True)
     return redirect(url_for("admin_document_standards_page"))
@@ -3128,7 +3128,7 @@ def admin_departments_page():
             ],
         )
     finally:
-        db.close()
+        SessionLocal.remove()
 
 
 @app.get("/admin/audit")
@@ -3148,7 +3148,7 @@ def admin_audit_page():
             ],
         )
     finally:
-        db.close()
+        SessionLocal.remove()
 
 
 @app.get("/admin/api/users")
@@ -3169,7 +3169,7 @@ def list_users_api():
         ]
         return jsonify(data)
     finally:
-        db.close()
+        SessionLocal.remove()
 
 
 @app.post("/admin/api/users")
@@ -3189,7 +3189,7 @@ def create_user_api():
         log_action(admin_id, None, f"create_user:{user.id}")
         return jsonify(id=user.id, username=user.username, email=user.email)
     finally:
-        db.close()
+        SessionLocal.remove()
 
 
 @app.put("/admin/api/users/<int:user_id>")
@@ -3208,7 +3208,7 @@ def update_user_api(user_id):
         log_action(admin_id, None, f"update_user:{user_id}")
         return jsonify(ok=True)
     finally:
-        db.close()
+        SessionLocal.remove()
 
 
 @app.delete("/admin/api/users/<int:user_id>")
@@ -3225,7 +3225,7 @@ def delete_user_api(user_id):
         log_action(admin_id, None, f"delete_user:{user_id}")
         return jsonify(ok=True)
     finally:
-        db.close()
+        SessionLocal.remove()
 
 
 @app.get("/admin/api/departments")
@@ -3240,7 +3240,7 @@ def list_departments_api():
         ]
         return jsonify(data)
     finally:
-        db.close()
+        SessionLocal.remove()
 
 
 @app.post("/admin/api/departments")
@@ -3259,7 +3259,7 @@ def create_department_api():
         log_action(admin_id, None, f"create_department:{dept.id}")
         return jsonify(id=dept.id, name=dept.name, visible=dept.visible)
     finally:
-        db.close()
+        SessionLocal.remove()
 
 
 @app.put("/admin/api/departments/<int:dept_id>")
@@ -3280,7 +3280,7 @@ def update_department_api(dept_id):
         log_action(admin_id, None, f"update_department:{dept_id}")
         return jsonify(ok=True)
     finally:
-        db.close()
+        SessionLocal.remove()
 
 
 @app.delete("/admin/api/departments/<int:dept_id>")
@@ -3297,7 +3297,7 @@ def delete_department_api(dept_id):
         log_action(admin_id, None, f"delete_department:{dept_id}")
         return jsonify(ok=True)
     finally:
-        db.close()
+        SessionLocal.remove()
 
 
 @app.post("/documents/<int:doc_id>/revision")
@@ -3310,7 +3310,7 @@ def save_revision(doc_id):
     revision_notes = data.get("revision_notes")
     doc = session.get(Document, doc_id)
     if not doc:
-        session.close()
+        SessionLocal.remove()
         return jsonify(error="document not found"), 404
     doc.minor_version += 1
     doc.revision_notes = revision_notes
@@ -3328,7 +3328,7 @@ def save_revision(doc_id):
     log_action(data.get("user_id"), doc_id, "save_revision")
     user_ids = [u.id for u in session.query(User).all()]
     notify_revision_time(doc, user_ids)
-    session.close()
+    SessionLocal.remove()
     return jsonify(ok=True, version=f"{doc.major_version}.{doc.minor_version}")
 
 
@@ -3382,7 +3382,7 @@ def publish_document(id: int):
             return resp
         return redirect(url_for("list_documents", status="Published"))
     finally:
-        db.close()
+        SessionLocal.remove()
 
 
 @app.post("/documents/<int:doc_id>/republish")
@@ -3407,7 +3407,7 @@ def republish_document(doc_id: int):
             return resp
         return redirect(url_for("list_documents", status="archived"))
     finally:
-        db.close()
+        SessionLocal.remove()
 
 @app.post("/documents/<int:doc_id>/acknowledge")
 @roles_required(RoleEnum.READER.value)
@@ -3443,7 +3443,7 @@ def acknowledge_document(doc_id):
             ok=True, acknowledged_at=ack.acknowledged_at.isoformat()
         )
     finally:
-        session.close()
+        SessionLocal.remove()
 
 
 @app.post("/api/ack/assign")
@@ -3490,7 +3490,7 @@ def assign_acknowledgements_endpoint():
         )
         return resp
     finally:
-        db.close()
+        SessionLocal.remove()
 
 
 @app.get("/mandatory-reading")
@@ -3514,7 +3514,7 @@ def mandatory_reading():
             for ack in acks
         ]
     finally:
-        db.close()
+        SessionLocal.remove()
     breadcrumbs = [
         {"title": "Home", "url": url_for("dashboard")},
         {"title": "Mandatory Reading"},
@@ -3547,7 +3547,7 @@ def confirm_assignment(assignment_id: int):
         }
         return render_template("partials/_mandatory_row.html", assignment=assignment)
     finally:
-        db.close()
+        SessionLocal.remove()
 
 
 @app.post("/mandatory-reading/confirm-bulk")
@@ -3579,7 +3579,7 @@ def confirm_assignments_bulk():
         ]
         return render_template("partials/_mandatory_body.html", assignments=assignments)
     finally:
-        db.close()
+        SessionLocal.remove()
 
 
 @app.route("/ack", methods=["GET"], endpoint="ack.list")
@@ -3645,7 +3645,7 @@ def ack_list():
         partial = bool(request.headers.get("HX-Request"))
         return render_template("ack/list.html", partial=partial, **context)
     finally:
-        db.close()
+        SessionLocal.remove()
 
 
 @app.post("/ack/<int:id>/confirm", endpoint="ack.confirm")
@@ -3687,7 +3687,7 @@ def ack_confirm(id: int):
         broadcast_counts()
         return resp
     finally:
-        db.close()
+        SessionLocal.remove()
 
 
 @app.get("/acknowledgements")
@@ -3733,7 +3733,7 @@ def acknowledgements():
         ]
         return render_template("acknowledgements.html", partial=partial, **context)
     finally:
-        db.close()
+        SessionLocal.remove()
 
 
 @app.route("/notifications/panel", methods=["GET", "POST"])
@@ -3769,7 +3769,7 @@ def notifications_panel():
             has_more=has_more,
         )
     finally:
-        db.close()
+        SessionLocal.remove()
 
 
 @app.get("/notifications/<int:user_id>")
@@ -3789,7 +3789,7 @@ def notifications(user_id):
                 pending.append({"doc_id": doc.id, "doc_key": doc.doc_key})
         return jsonify(pending_acknowledgements=pending)
     finally:
-        session.close()
+        SessionLocal.remove()
 
 
 @app.get("/notifications/<int:user_id>/view")
@@ -3823,7 +3823,7 @@ def user_settings():
         settings.webhook_enabled = bool(data.get("webhook_enabled"))
         settings.webhook_url = data.get("webhook_url")
         session.commit()
-        session.close()
+        SessionLocal.remove()
         return redirect(url_for("user_settings", user_id=user_id))
     settings_data = {
         "language": settings.language if settings else "en",
@@ -3834,7 +3834,7 @@ def user_settings():
     }
     tokens = session.query(PersonalAccessToken).filter_by(user_id=user_id).all()
     new_token = request.args.get("token")
-    session.close()
+    SessionLocal.remove()
     return render_template(
         "settings.html",
         settings=settings_data,
@@ -3860,7 +3860,7 @@ def create_token():
     session = get_session()
     session.add(PersonalAccessToken(user_id=user_id, name=name, token_hash=token_hash))
     session.commit()
-    session.close()
+    SessionLocal.remove()
     return redirect(url_for("user_settings", user_id=user_id, token=raw_token))
 
 
@@ -3879,7 +3879,7 @@ def delete_token(token_id):
     if token:
         session.delete(token)
         session.commit()
-    session.close()
+    SessionLocal.remove()
     return redirect(url_for("user_settings", user_id=user_id))
 
 
@@ -3915,7 +3915,7 @@ def manage_permissions():
             ],
         )
     finally:
-        db.close()
+        SessionLocal.remove()
 
 
 @app.get("/training/<int:id>")
@@ -3939,7 +3939,7 @@ def training_quiz(id: int):
             return "Acknowledgement not found", 404
         doc_data = {"id": doc.id, "title": doc.title}
     finally:
-        db.close()
+        SessionLocal.remove()
     context = {
         "doc": doc_data,
         "questions": quiz_questions(),
@@ -3991,7 +3991,7 @@ def training_submit(id: int):
         db.commit()
         doc_data = {"id": doc.id, "title": doc.title}
     finally:
-        db.close()
+        SessionLocal.remove()
     log_action(user_id, doc_data["id"], "training_submit")
     notify_user(
         user_id,
@@ -4042,7 +4042,7 @@ def training_evaluate():
         session.commit()
         log_action(user_id, None, "training_evaluate")
     finally:
-        session.close()
+        SessionLocal.remove()
     return jsonify(passed=passed, score=score, max_score=len(correct))
 
 
@@ -4059,7 +4059,7 @@ def create_change_request():
     session.commit()
     log_action(data.get("user_id"), cr.document_id, "create_change_request")
     result = {"id": cr.id}
-    session.close()
+    SessionLocal.remove()
     return jsonify(result), 201
 
 
@@ -4070,7 +4070,7 @@ def update_change_request(cr_id):
     session = get_session()
     cr = session.get(ChangeRequest, cr_id)
     if not cr:
-        session.close()
+        SessionLocal.remove()
         return jsonify(error="not found"), 404
     if data.get("document_id"):
         cr.document_id = data["document_id"]
@@ -4078,7 +4078,7 @@ def update_change_request(cr_id):
         cr.description = data["description"]
     session.commit()
     log_action(data.get("user_id"), cr_id, "update_change_request")
-    session.close()
+    SessionLocal.remove()
     return jsonify(ok=True)
 
 
@@ -4095,7 +4095,7 @@ def create_deviation():
     session.commit()
     log_action(data.get("user_id"), dev.document_id, "create_deviation")
     result = {"id": dev.id}
-    session.close()
+    SessionLocal.remove()
     return jsonify(result), 201
 
 
@@ -4106,7 +4106,7 @@ def update_deviation(dev_id):
     session = get_session()
     dev = session.get(Deviation, dev_id)
     if not dev:
-        session.close()
+        SessionLocal.remove()
         return jsonify(error="not found"), 404
     if data.get("document_id"):
         dev.document_id = data["document_id"]
@@ -4114,7 +4114,7 @@ def update_deviation(dev_id):
         dev.description = data["description"]
     session.commit()
     log_action(data.get("user_id"), dev_id, "update_deviation")
-    session.close()
+    SessionLocal.remove()
     return jsonify(ok=True)
 
 
@@ -4132,7 +4132,7 @@ def create_capa_action():
     session.commit()
     log_action(data.get("user_id"), act.document_id, "create_capa_action")
     result = {"id": act.id}
-    session.close()
+    SessionLocal.remove()
     return jsonify(result), 201
 
 
@@ -4143,7 +4143,7 @@ def update_capa_action(action_id):
     session = get_session()
     act = session.get(CAPAAction, action_id)
     if not act:
-        session.close()
+        SessionLocal.remove()
         return jsonify(error="not found"), 404
     if data.get("document_id"):
         act.document_id = data["document_id"]
@@ -4153,7 +4153,7 @@ def update_capa_action(action_id):
         act.status = data["status"]
     session.commit()
     log_action(data.get("user_id"), action_id, "update_capa_action")
-    session.close()
+    SessionLocal.remove()
     return jsonify(ok=True)
 
 
@@ -4162,7 +4162,7 @@ def update_capa_action(action_id):
 def capa_track():
     session = get_session()
     actions = session.query(CAPAAction).all()
-    session.close()
+    SessionLocal.remove()
     return render_template(
         "capa_track.html",
         actions=actions,
@@ -4191,7 +4191,7 @@ def submit_form(form_name):
         session.commit()
         log_action(user_id, None, f"submit_form:{form_name}")
     finally:
-        session.close()
+        SessionLocal.remove()
     return Response(pdf, mimetype="application/pdf")
 
 
@@ -4201,7 +4201,7 @@ def audit_export():
     fmt = request.args.get("format", "csv").lower()
     session = get_session()
     logs = session.query(AuditLog).order_by(AuditLog.created_at.desc()).all()
-    session.close()
+    SessionLocal.remove()
     if fmt == "pdf":
         from fpdf import FPDF
         pdf = FPDF()
@@ -4268,7 +4268,7 @@ def dif_new():
                 )
                 return redirect(url_for("dif_detail", id=dif.id))
             finally:
-                db.close()
+                SessionLocal.remove()
     context = {
         "form": form,
         "errors": errors,
@@ -4331,7 +4331,7 @@ def dif_detail(id: int):
         }
         return render_template("dif/detail.html", **context)
     finally:
-        db.close()
+        SessionLocal.remove()
 
 
 @app.route("/dif")
@@ -4372,7 +4372,7 @@ def dif_list():
         }
         return render_template("dif/list.html", **context)
     finally:
-        db.close()
+        SessionLocal.remove()
 
 
 @app.post("/api/dif/<int:id>/approve")
@@ -4431,7 +4431,7 @@ def api_dif_approve(id: int):
         html = render_template("partials/dif/_status.html", dif=dif)
         return html
     finally:
-        db.close()
+        SessionLocal.remove()
 
 
 @app.post("/api/dif/<int:id>/reject")
@@ -4488,7 +4488,7 @@ def api_dif_reject(id: int):
         html = render_template("partials/dif/_status.html", dif=dif)
         return html
     finally:
-        db.close()
+        SessionLocal.remove()
 
 
 @app.post("/api/dif/<int:id>/request-changes")
@@ -4547,7 +4547,7 @@ def api_dif_request_changes(id: int):
         html = render_template("partials/dif/_status.html", dif=dif)
         return html
     finally:
-        db.close()
+        SessionLocal.remove()
 
 
 # Exported route names for templates and JavaScript usage

@@ -16,7 +16,7 @@ from flask import (
 )
 from functools import wraps
 
-from models import get_session, User, Role
+from models import get_session, User, Role, SessionLocal
 
 auth_bp = Blueprint('auth', __name__)
 
@@ -32,7 +32,11 @@ def _ensure_user(username: str, email: str | None = None):
         roles = [role.name for role in user.roles]
         return user.id, roles
     finally:
-        session_db.close()
+        # ``get_session`` returns a scoped session.  Using ``session.close`` would
+        # leave a closed session in the registry and cause
+        # ``ResourceClosedError`` in subsequent database operations.  Removing
+        # the session ensures a fresh one is provided next time.
+        SessionLocal.remove()
 
 
 def login_required(view):
