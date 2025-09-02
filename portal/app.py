@@ -2291,32 +2291,36 @@ def create_document_api(data: dict | None = None):
         status="Draft",
     )
     session_db = get_session()
-    session_db.add(doc)
-    user_id = (session.get("user") or {}).get("id") or data.get("user_id")
-    if not user_id:
+    try:
+        session_db.add(doc)
+        user_id = (session.get("user") or {}).get("id") or data.get("user_id")
+        if not user_id:
+            session_db.rollback()
+            return jsonify(error="user_id required"), 400
+        session_db.flush()
+        if standard:
+            session_db.add(DocumentStandard(doc_id=doc.id, standard_code=standard))
+        session_db.commit()
+        enqueue_preview(doc.id, f"{doc.major_version}.{doc.minor_version}", doc.doc_key)
+        content = extract_text(doc_key)
+        index_document(doc, content)
+        if app.config.get("AUTO_REVIEW_ON_UPLOAD"):
+            approver_ids = [
+                u.id
+                for u in session_db.query(User).join(User.roles).filter(Role.name == RoleEnum.APPROVER.value)
+            ]
+            if approver_ids:
+                services.submit_for_approval(doc.id, approver_ids)
+            log_action(user_id, doc.id, "auto_review")
+        user_ids = [u.id for u in session_db.query(User).all()]
+        notify_mandatory_read(doc, user_ids)
+        result = {"id": doc.id, "doc_key": doc_key, "standard": doc.standard_code}
+        return jsonify(result), 201
+    except Exception as e:
         session_db.rollback()
+        return jsonify(error=str(e)), 500
+    finally:
         SessionLocal.remove()
-        return jsonify(error="user_id required"), 400
-    session_db.flush()
-    if standard:
-        session_db.add(DocumentStandard(doc_id=doc.id, standard_code=standard))
-    session_db.commit()
-    enqueue_preview(doc.id, f"{doc.major_version}.{doc.minor_version}", doc.doc_key)
-    content = extract_text(doc_key)
-    index_document(doc, content)
-    if app.config.get("AUTO_REVIEW_ON_UPLOAD"):
-        approver_ids = [
-            u.id
-            for u in session_db.query(User).join(User.roles).filter(Role.name == RoleEnum.APPROVER.value)
-        ]
-        if approver_ids:
-            services.submit_for_approval(doc.id, approver_ids)
-        log_action(user_id, doc.id, "auto_review")
-    user_ids = [u.id for u in session_db.query(User).all()]
-    notify_mandatory_read(doc, user_ids)
-    result = {"id": doc.id, "doc_key": doc_key, "standard": doc.standard_code}
-    SessionLocal.remove()
-    return jsonify(result), 201
 
 
 @app.put("/api/documents/<int:id>")
