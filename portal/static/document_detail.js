@@ -192,12 +192,41 @@ function initVersioningMenu() {
   });
 }
 
+function initUploadVersionModal() {
+  const modalEl = document.getElementById('uploadVersionModal');
+  if (!modalEl) return;
+  const modal = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
+  const form = modalEl.querySelector('form');
+  form.addEventListener('htmx:afterRequest', (evt) => {
+    if (evt.detail.successful) {
+      modal.hide();
+      form.reset();
+    } else {
+      let message = 'Upload failed';
+      try {
+        const data = JSON.parse(evt.detail.xhr.responseText);
+        if (data && data.error) {
+          message = data.error;
+        }
+      } catch (e) {
+        // ignore
+      }
+      showToast(message, { timeout: 6000 });
+    }
+  });
+  if (window.location.hash === '#uploadVersionModal') {
+    modal.show();
+    history.replaceState(null, '', window.location.pathname + window.location.search);
+  }
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   initTabs();
   initVersionSelection();
   initWorkflowForm();
   initAssignForm();
   initVersioningMenu();
+  initUploadVersionModal();
 
   const params = new URLSearchParams(window.location.search);
   if (params.get('created') === '1') {
@@ -209,7 +238,11 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 document.addEventListener('htmx:afterSwap', (evt) => {
-  if (evt.target.id === 'tab-versions' || evt.target.id === 'revision-panel') {
+  if (
+    evt.target.id === 'tab-versions' ||
+    evt.target.id === 'revision-panel' ||
+    evt.target.id === 'version-list'
+  ) {
     initVersionSelection();
     if (evt.target.id === 'tab-versions') {
       window.scrollTo(0, 0);
