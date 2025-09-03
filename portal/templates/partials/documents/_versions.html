@@ -1,19 +1,37 @@
 <form id="version-list" method="get" action="{{ url_for('compare_document_versions', doc_id=doc.id) }}">
   <div class="row">
     <div class="col-md-8">
-      <ul class="list-group">
-        {% for rev in revisions %}
-        <li class="list-group-item d-flex justify-content-between align-items-center">
-          <div class="d-flex align-items-center">
-            <input class="form-check-input me-2 version-checkbox" type="checkbox" name="rev_id" value="{{ rev.id }}" id="rev-{{ rev.id }}" data-label="{{ rev.major_version }}.{{ rev.minor_version }}" data-download-url="{{ url_for('get_file', file_key=rev.file_key) }}" hx-get="{{ url_for('document_detail', doc_id=doc.id, revision_id=rev.id) }}" hx-target="#revision-panel" hx-select="#revision-note" hx-swap="innerHTML" hx-trigger="change" hx-push-url="false">
-            <label class="form-check-label" for="rev-{{ rev.id }}">{{ rev.major_version }}.{{ rev.minor_version }}</label>
-          </div>
-          <small class="text-muted">{{ rev.created_at.strftime('%Y-%m-%d') if rev.created_at else '' }}</small>
-        </li>
-        {% else %}
-        <li class="list-group-item">No versions found.</li>
-        {% endfor %}
-      </ul>
+      <div class="table-responsive">
+        <table class="table table-hover align-middle">
+          <thead>
+            <tr>
+              <th scope="col">Version</th>
+              <th scope="col">Date</th>
+              <th scope="col">Uploaded By</th>
+              <th scope="col">Note</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for rev in revisions %}
+            <tr>
+              <td>
+                <div class="form-check">
+                  <input class="form-check-input me-2 version-checkbox" type="checkbox" name="rev_id" value="{{ rev.id }}" id="rev-{{ rev.id }}" data-label="{{ rev.major_version }}.{{ rev.minor_version }}" data-download-url="{{ url_for('get_file', file_key=rev.file_key) }}" hx-get="{{ url_for('document_detail', doc_id=doc.id, revision_id=rev.id) }}" hx-target="#revision-panel" hx-select="#revision-note" hx-swap="innerHTML" hx-trigger="change" hx-push-url="false">
+                  <label class="form-check-label" for="rev-{{ rev.id }}">{{ rev.major_version }}.{{ rev.minor_version }}</label>
+                </div>
+              </td>
+              <td class="text-muted">{{ rev.created_at.strftime('%Y-%m-%d') if rev.created_at else '' }}</td>
+              <td>{{ rev.user.username if rev.user else '' }}</td>
+              <td>{{ rev.revision_notes or '' }}</td>
+            </tr>
+            {% else %}
+            <tr>
+              <td colspan="4">No versions found.</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
       {% if can_server_diff %}
       <button type="submit" id="compare-button" class="btn btn-secondary mt-2" data-can-server-diff="true" disabled>Compare</button>
       {% else %}
