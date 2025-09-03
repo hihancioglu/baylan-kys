@@ -28,6 +28,9 @@
     Assign Mandatory Reading <span class="badge bg-secondary" id="assignment-count">{{ ack_count | default(0) }}</span>
   </button>
   {% endif %}
+  {% if can_download %}
+  <a class="btn btn-outline-secondary" href="/documents/{{ doc.id }}/download?version=v{{ doc.major_version }}.{{ doc.minor_version }}">Download</a>
+  {% endif %}
   {% if can_upload_version %}
   <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#uploadVersionModal">Upload New Version</button>
   {% endif %}
@@ -99,12 +102,12 @@
 
 {% include "partials/_audit_log.html" %}
 
-<div class="toolbar" data-component="toolbar">
-  <a class="btn btn-secondary" href="{{ url_for('list_documents') }}">Back to documents</a>
-  {% if can_download %}
-  <a class="btn btn-secondary" href="{{ url_for('document_download', doc_id=doc.id) }}">Download</a>
-  {% endif %}
-</div>
+  <div class="toolbar" data-component="toolbar">
+    <a class="btn btn-secondary" href="{{ url_for('list_documents') }}">Back to documents</a>
+    {% if can_download %}
+    <a class="btn btn-secondary" href="{{ url_for('document_download', doc_id=doc.id) }}?version=v{{ doc.major_version }}.{{ doc.minor_version }}">Download</a>
+    {% endif %}
+  </div>
 
 {% if can_upload_version %}
 <div class="modal fade" id="uploadVersionModal" tabindex="-1" aria-hidden="true">
