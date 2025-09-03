@@ -55,10 +55,15 @@ function initVersionSelection() {
     });
   }
   if (!checkboxes.length) return;
-  const update = () => {
+  const update = (evt) => {
     if (!summary || !compareBtn) return;
+    let selected = Array.from(checkboxes).filter((cb) => cb.checked);
+    if (selected.length > 2 && evt?.target.checked) {
+      evt.target.checked = false;
+      showToast('En fazla iki sürüm seçebilirsiniz');
+      selected = selected.filter((cb) => cb !== evt.target);
+    }
     summary.innerHTML = '';
-    const selected = Array.from(checkboxes).filter((cb) => cb.checked);
     revA = selected[0]?.value || null;
     revB = selected[1]?.value || null;
     selected.forEach((cb) => {
