@@ -82,16 +82,22 @@ def test_compare_api_creates_diff_and_returns_url(app_models, client):
     app_module.storage_client.get_object = MagicMock(
         side_effect=[{"Body": io.BytesIO(file1)}, {"Body": io.BytesIO(file2)}]
     )
+    app_module._generate_pdf_diff = MagicMock(return_value=b"%PDF-1.4")
     app_module.storage_client.put = MagicMock()
     app_module.storage_client.generate_presigned_url = MagicMock(return_value="/signed")
 
     resp = client.post(f"/api/documents/{doc_id}/compare?from={rev1_id}&to={rev2_id}")
     assert resp.status_code == 200
     data = resp.get_json()
-    expected = f"previews/{doc_id}/diff-{rev1_id}-{rev2_id}.html"
+    expected = f"previews/{doc_id}/diff-{rev1_id}-{rev2_id}.pdf"
     assert data["filename"] == expected
+    assert data["filename"].endswith(".pdf")
     assert data["url"] == "/signed"
+    app_module._generate_pdf_diff.assert_called_once()
     app_module.storage_client.put.assert_called_once()
+    assert (
+        app_module.storage_client.put.call_args[1]["ContentType"] == "application/pdf"
+    )
     app_module.storage_client.generate_presigned_url.assert_called_once_with(
         expected, bucket=app_module.storage_client.bucket_previews
     )

@@ -1698,6 +1698,43 @@ def _office_diff(data_a: bytes, data_b: bytes, mime: str) -> str:
     return difflib.HtmlDiff().make_table(text_a.splitlines(), text_b.splitlines())
 
 
+def _generate_pdf_diff(data_a: bytes, data_b: bytes, mime: str) -> bytes:
+    """Generate a PDF diff for Office documents using a headless suite."""
+    ext_map = {
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document": ".docx",
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": ".xlsx",
+        "application/vnd.openxmlformats-officedocument.presentationml.presentation": ".pptx",
+        "application/vnd.oasis.opendocument.text": ".odt",
+        "application/vnd.oasis.opendocument.spreadsheet": ".ods",
+    }
+    ext = ext_map.get(mime, ".bin")
+    with tempfile.TemporaryDirectory() as tmpdir:
+        tmpdir_path = Path(tmpdir)
+        a_path = tmpdir_path / f"a{ext}"
+        b_path = tmpdir_path / f"b{ext}"
+        out_path = tmpdir_path / "diff.pdf"
+        a_path.write_bytes(data_a)
+        b_path.write_bytes(data_b)
+
+        cmd = [
+            os.environ.get("OFFICE_DIFF_CMD", "libreoffice"),
+            "--headless",
+            "--convert-to",
+            "pdf",
+            "--outdir",
+            tmpdir,
+            str(a_path),
+            str(b_path),
+            str(out_path),
+        ]
+        try:
+            subprocess.run(cmd, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        except Exception as exc:  # pragma: no cover - subprocess details
+            raise RuntimeError("Failed to generate PDF diff") from exc
+
+        return out_path.read_bytes()
+
+
 @app.post("/api/documents/<int:doc_id>/compare")
 @roles_required(RoleEnum.READER.value)
 def compare_document_revisions_api(doc_id: int):
@@ -1730,14 +1767,14 @@ def compare_document_revisions_api(doc_id: int):
         obj_b = storage_client.get_object(Key=rev_b.file_key)
         data_a = obj_a["Body"].read()
         data_b = obj_b["Body"].read()
-        diff_html = _office_diff(data_a, data_b, doc.mime)
+        pdf_bytes = _generate_pdf_diff(data_a, data_b, doc.mime)
 
-        filename = f"previews/{doc_id}/diff-{rev_from}-{rev_to}.html"
+        filename = f"previews/{doc_id}/diff-{rev_from}-{rev_to}.pdf"
         storage_client.put(
             Bucket=storage_client.bucket_previews,
             Key=filename,
-            Body=diff_html.encode("utf-8"),
-            ContentType="text/html",
+            Body=pdf_bytes,
+            ContentType="application/pdf",
         )
         url = storage_client.generate_presigned_url(
             filename, bucket=storage_client.bucket_previews
