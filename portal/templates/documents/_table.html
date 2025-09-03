@@ -40,7 +40,7 @@
           <span class="btn btn-sm btn-outline-secondary disabled">Workflow</span>
           {% endif %}
           {% if doc.can_download %}
-          <a href="{{ url_for('document_download', doc_id=doc.id) }}" class="btn btn-sm btn-outline-secondary">Download</a>
+          <a href="{{ url_for('document_download', doc_id=doc.id) }}?version=v{{ doc.major_version }}.{{ doc.minor_version }}" class="btn btn-sm btn-outline-secondary">Download</a>
           {% endif %}
           <a href="{{ url_for('document_detail', doc_id=doc.id) }}#uploadVersionModal" class="btn btn-sm btn-outline-secondary">Upload New Version</a>
         </td>
