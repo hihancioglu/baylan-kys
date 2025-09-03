@@ -125,3 +125,22 @@ def test_compare_api_missing_revision_returns_404(app_models, client):
     resp = client.post(f"/api/documents/{doc_id}/compare?from={rev1_id}&to={missing}")
     assert resp.status_code == 404
     app_module.storage_client.get_object.assert_not_called()
+
+
+def test_compare_api_presign_failure_returns_500(app_models, client):
+    app_module, models = app_models
+    doc_id, rev1_id, rev2_id = _setup_document(models)
+    file1 = _docx("hello")
+    file2 = _docx("world")
+
+    app_module.storage_client.get_object = MagicMock(
+        side_effect=[{"Body": io.BytesIO(file1)}, {"Body": io.BytesIO(file2)}]
+    )
+    app_module._generate_pdf_diff = MagicMock(return_value=b"%PDF-1.4")
+    app_module.storage_client.put = MagicMock()
+    app_module.storage_client.generate_presigned_url = MagicMock(return_value=None)
+
+    resp = client.post(f"/api/documents/{doc_id}/compare?from={rev1_id}&to={rev2_id}")
+    assert resp.status_code == 500
+    data = resp.get_json()
+    assert data["error"] == "Could not generate diff link"

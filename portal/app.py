@@ -1780,7 +1780,8 @@ def compare_document_revisions_api(doc_id: int):
             filename, bucket=storage_client.bucket_previews
         )
         if not url:
-            app.logger.warning("Failed to generate presigned URL for %s", filename)
+            app.logger.error("Failed to generate presigned URL for %s", filename)
+            return jsonify(error="Could not generate diff link"), 500
         return jsonify(filename=filename, url=url)
     finally:
         SessionLocal.remove()
