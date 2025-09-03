@@ -3,6 +3,7 @@ import hashlib
 import io
 import json
 import os
+import re
 import secrets
 import subprocess
 import tempfile
@@ -1480,10 +1481,31 @@ def document_download(doc_id: int):
         user = session.get("user")
         if not user or not permission_check(user["id"], doc, download=True):
             return "Forbidden", 403
-        url = storage_client.generate_presigned_url(doc.doc_key)
+        version_param = request.args.get("version")
+        file_key = doc.doc_key
+        version_str = f"v{doc.major_version}.{doc.minor_version}"
+        if version_param:
+            match = re.fullmatch(r"v(\d+)\.(\d+)", version_param)
+            if not match:
+                return "Revision not found", 404
+            major_version, minor_version = map(int, match.groups())
+            revision = (
+                db.query(DocumentRevision)
+                .filter_by(
+                    doc_id=doc_id,
+                    major_version=major_version,
+                    minor_version=minor_version,
+                )
+                .first()
+            )
+            if not revision:
+                return "Revision not found", 404
+            file_key = revision.file_key
+            version_str = version_param
+        url = storage_client.generate_presigned_url(file_key)
         if not url:
             return "File not available", 404
-        log_action(user["id"], doc_id, "download_document")
+        log_action(user["id"], doc_id, "download_document", payload={"version": version_str})
         return redirect(url)
     finally:
         SessionLocal.remove()
