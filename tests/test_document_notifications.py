@@ -1,4 +1,5 @@
 import importlib
+import json
 import sys
 from pathlib import Path
 
@@ -65,5 +66,6 @@ def test_publish_document_queues_notification(monkeypatch):
         f"/api/documents/{doc_id}/publish", data={}, headers={"HX-Request": "true"}
     )
     assert resp.status_code == 204
+    assert resp.headers["HX-Trigger"] == json.dumps({"showToast": "Document published"})
     assert len(q.jobs) == 1
     assert q.jobs[0].args[0] == owner_id

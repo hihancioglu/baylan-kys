@@ -3358,8 +3358,11 @@ def publish_document(id: int):
         doc = db.get(Document, id)
         if not doc:
             return jsonify({"error": "Not found"}), 404
-        if doc.status != "Approved":
-            return jsonify({"error": "Document not approved"}), 400
+        if doc.status not in ("Approved", "Review") or not doc.file_key:
+            return (
+                jsonify({"error": "Document not reviewable or missing active version"}),
+                400,
+            )
         pending = (
             db.query(WorkflowStep)
             .filter(
@@ -3395,7 +3398,9 @@ def publish_document(id: int):
         if request.headers.get("HX-Request"):
             resp = make_response("", 204)
             resp.headers["HX-Redirect"] = url_for("document_detail", doc_id=doc.id)
-            resp.headers["HX-Trigger"] = json.dumps({"showToast": "Saved"})
+            resp.headers["HX-Trigger"] = json.dumps(
+                {"showToast": "Document published"}
+            )
             return resp
         return redirect(url_for("list_documents", status="Published"))
     finally:
