@@ -69,3 +69,51 @@ def test_publish_document_queues_notification(monkeypatch):
     assert resp.headers["HX-Trigger"] == json.dumps({"showToast": "Document published"})
     assert len(q.jobs) == 1
     assert q.jobs[0].args[0] == owner_id
+
+
+def test_publish_review_document_queues_notification(monkeypatch):
+    app_module, models, q = _setup_app(monkeypatch)
+    session = models.SessionLocal()
+    owner = models.User(username="owner")
+    publisher = models.User(username="publisher")
+    doc = models.Document(doc_key="doc1", title="Doc1", status="Review", owner=owner)
+    session.add_all([owner, publisher, doc])
+    session.commit()
+    doc_id = doc.id
+    owner_id = owner.id
+    publisher_id = publisher.id
+    session.close()
+    client = app_module.app.test_client()
+    with client.session_transaction() as sess:
+        sess["user"] = {"id": publisher_id}
+        sess["roles"] = [app_module.RoleEnum.PUBLISHER.value]
+    resp = client.post(
+        f"/api/documents/{doc_id}/publish", data={}, headers={"HX-Request": "true"}
+    )
+    assert resp.status_code == 204
+    assert resp.headers["HX-Trigger"] == json.dumps({"showToast": "Document published"})
+    assert len(q.jobs) == 1
+    assert q.jobs[0].args[0] == owner_id
+
+
+def test_publish_document_without_version_returns_400(monkeypatch):
+    app_module, models, q = _setup_app(monkeypatch)
+    session = models.SessionLocal()
+    owner = models.User(username="owner")
+    publisher = models.User(username="publisher")
+    doc = models.Document(doc_key="", title="Doc1", status="Approved", owner=owner)
+    session.add_all([owner, publisher, doc])
+    session.commit()
+    doc_id = doc.id
+    publisher_id = publisher.id
+    session.close()
+    client = app_module.app.test_client()
+    with client.session_transaction() as sess:
+        sess["user"] = {"id": publisher_id}
+        sess["roles"] = [app_module.RoleEnum.PUBLISHER.value]
+    resp = client.post(
+        f"/api/documents/{doc_id}/publish", data={}, headers={"HX-Request": "true"}
+    )
+    assert resp.status_code == 400
+    assert resp.json["error"] == "Document not reviewable or missing active version"
+    assert len(q.jobs) == 0
