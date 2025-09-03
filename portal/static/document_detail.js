@@ -41,11 +41,21 @@ function initVersionSelection() {
   const docId = form?.action.match(/\/documents\/(\d+)\/compare/)?.[1];
   let revA = null;
   let revB = null;
+  let revALabel = null;
+  let revBLabel = null;
   const hasServerDiff = compareBtn?.dataset.canServerDiff === 'true';
   if (!hasServerDiff && compareBtn) {
     compareBtn.addEventListener('click', () => {
       if (compareBtn.disabled) return;
       const modalEl = document.getElementById('local-compare-modal');
+      if (downloadA && downloadB && docId && revA && revB && revALabel && revBLabel) {
+        downloadA.href = `/documents/${docId}/revisions/${revA}/download`;
+        downloadB.href = `/documents/${docId}/revisions/${revB}/download`;
+        downloadA.textContent = `Download ${revALabel}`;
+        downloadB.textContent = `Download ${revBLabel}`;
+        downloadA.classList.remove('d-none');
+        downloadB.classList.remove('d-none');
+      }
       if (modalEl) {
         const modal =
           bootstrap.Modal.getInstance(modalEl) ||
@@ -66,6 +76,8 @@ function initVersionSelection() {
     summary.innerHTML = '';
     revA = selected[0]?.value || null;
     revB = selected[1]?.value || null;
+    revALabel = selected[0]?.dataset.label || null;
+    revBLabel = selected[1]?.dataset.label || null;
     selected.forEach((cb) => {
       const li = document.createElement('li');
       li.className = 'list-group-item';
@@ -76,24 +88,16 @@ function initVersionSelection() {
       compareBtn.disabled = false;
       compareBtn.classList.remove('btn-secondary');
       compareBtn.classList.add('btn-primary');
-      if (downloadA && downloadB && docId && revA && revB) {
-        downloadA.classList.remove('d-none');
-        downloadB.classList.remove('d-none');
-        downloadA.href = `/documents/${docId}/revisions/${revA}/download`;
-        downloadB.href = `/documents/${docId}/revisions/${revB}/download`;
-        downloadA.textContent = `Download ${selected[0].dataset.label}`;
-        downloadB.textContent = `Download ${selected[1].dataset.label}`;
-      }
     } else {
       compareBtn.disabled = true;
       compareBtn.classList.remove('btn-primary');
       compareBtn.classList.add('btn-secondary');
-      if (downloadA && downloadB) {
-        downloadA.classList.add('d-none');
-        downloadB.classList.add('d-none');
-        downloadA.removeAttribute('href');
-        downloadB.removeAttribute('href');
-      }
+    }
+    if (downloadA && downloadB) {
+      downloadA.classList.add('d-none');
+      downloadB.classList.add('d-none');
+      downloadA.removeAttribute('href');
+      downloadB.removeAttribute('href');
     }
   };
   checkboxes.forEach((cb) => cb.addEventListener('change', update));
