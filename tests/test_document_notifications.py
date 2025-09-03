@@ -66,7 +66,7 @@ def test_publish_document_queues_notification(monkeypatch):
         f"/api/documents/{doc_id}/publish", data={}, headers={"HX-Request": "true"}
     )
     assert resp.status_code == 204
-    assert resp.headers["HX-Trigger"] == json.dumps({"showToast": "Document published"})
+    assert resp.headers["HX-Trigger"] == json.dumps({"showToast": "Published – assign mandatory reading"})
     assert len(q.jobs) == 1
     assert q.jobs[0].args[0] == owner_id
 
@@ -91,7 +91,7 @@ def test_publish_review_document_queues_notification(monkeypatch):
         f"/api/documents/{doc_id}/publish", data={}, headers={"HX-Request": "true"}
     )
     assert resp.status_code == 204
-    assert resp.headers["HX-Trigger"] == json.dumps({"showToast": "Document published"})
+    assert resp.headers["HX-Trigger"] == json.dumps({"showToast": "Published – assign mandatory reading"})
     assert len(q.jobs) == 1
     assert q.jobs[0].args[0] == owner_id
 
