@@ -220,6 +220,30 @@ function initUploadVersionModal() {
   }
 }
 
+function getDocStatus() {
+  const statusEl = Array.from(document.querySelectorAll('li')).find((li) =>
+    li.textContent.trim().startsWith('Status:')
+  );
+  return statusEl ? statusEl.textContent.replace('Status:', '').trim() : null;
+}
+
+function updatePublishButton() {
+  const btn = document.getElementById('publish-button');
+  if (!btn) return;
+  const form = document.getElementById('publish-form');
+  const status = getDocStatus();
+  if (form && status === 'Approved') {
+    btn.disabled = false;
+    btn.textContent = 'Publish';
+  } else if (!form) {
+    btn.disabled = true;
+    btn.textContent = 'Publish (No active version)';
+  } else if (status !== 'Approved') {
+    btn.disabled = true;
+    btn.textContent = 'Publish (Approval pending)';
+  }
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   initTabs();
   initVersionSelection();
@@ -235,6 +259,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const url = `${window.location.pathname}${params.toString() ? `?${params.toString()}` : ''}${window.location.hash}`;
     history.replaceState(null, '', url);
   }
+  updatePublishButton();
 });
 
 document.addEventListener('htmx:afterSwap', (evt) => {
@@ -247,14 +272,13 @@ document.addEventListener('htmx:afterSwap', (evt) => {
     if (evt.target.id === 'tab-versions') {
       window.scrollTo(0, 0);
     }
+    updatePublishButton();
   }
 });
 
 document.body.addEventListener('auto-review-started', () => {
   showToast('Doküman incelemeye gönderildi');
-  const btn = document.getElementById('publish-button');
-  if (btn) {
-    btn.disabled = true;
-    btn.textContent = 'Publish (Approval pending)';
-  }
+  updatePublishButton();
 });
+document.body.addEventListener('version-uploaded', updatePublishButton);
+document.body.addEventListener('approval-granted', updatePublishButton);
