@@ -1323,7 +1323,10 @@ def document_detail(doc_id: int | None = None, id: int | None = None):
     db = get_session()
     doc = (
         db.query(Document)
-        .options(joinedload(Document.revisions), joinedload(Document.lock_owner))
+        .options(
+            joinedload(Document.revisions).joinedload(DocumentRevision.user),
+            joinedload(Document.lock_owner),
+        )
         .filter(Document.id == doc_id)
         .one_or_none()
     )
@@ -2058,6 +2061,7 @@ def upload_document_version(doc_id: int):
         minor_version=doc.minor_version,
         revision_notes=notes,
         file_key=prev_key,
+        uploaded_by=user.get("id"),
     )
     db.add(revision)
 
