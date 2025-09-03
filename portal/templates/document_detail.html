@@ -28,6 +28,11 @@
     Assign Mandatory Reading <span class="badge bg-secondary" id="assignment-count">{{ ack_count | default(0) }}</span>
   </button>
   {% endif %}
+  {% if preview %}
+  <a class="btn btn-primary" href="{{ preview.url }}" target="_blank">Preview (PDF)</a>
+  {% else %}
+  <button type="button" class="btn btn-secondary" disabled>Önizleme mevcut değil</button>
+  {% endif %}
   {% if can_download %}
   <a class="btn btn-outline-secondary" href="/documents/{{ doc.id }}/download?version=v{{ doc.major_version }}.{{ doc.minor_version }}">Download</a>
   {% endif %}
@@ -81,15 +86,6 @@
     <button type="submit" class="btn btn-outline-primary">Check out</button>
   </form>
   {% endif %}
-{% endif %}
-{% if preview %}
-<div class="mb-4">
-  <a href="{{ preview.url }}" target="_blank">Preview (PDF)</a>
-</div>
-{% else %}
-<div class="mb-4 preview-unavailable">
-  <button type="button" class="btn btn-outline-secondary" disabled>Önizleme mevcut değil</button>
-</div>
 {% endif %}
 <ul>
   <li><strong>Code:</strong> {{ doc.code }}</li>
