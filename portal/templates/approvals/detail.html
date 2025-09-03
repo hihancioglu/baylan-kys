@@ -4,18 +4,14 @@
 <link rel="stylesheet" href="{{ url_for('static', filename='toolbar/toolbar.css') }}">
 <div class="toolbar" data-component="toolbar">
   <a class="btn btn-secondary" href="{{ url_for('approval_queue') }}">Back</a>
+  {% if preview %}
+  <a class="btn btn-primary" href="{{ preview.url }}" target="_blank">Preview (PDF)</a>
+  {% else %}
+  <button type="button" class="btn btn-secondary" disabled>Önizleme mevcut değil</button>
+  {% endif %}
 </div>
 <script type="module" src="{{ url_for('static', filename='toolbar/toolbar.js') }}"></script>
 {% endblock %}
 {% block content %}
-{% if preview %}
-<div class="mb-3">
-  <a href="{{ preview.url }}" target="_blank">Preview (PDF)</a>
-</div>
-{% else %}
-<div class="mb-3 preview-unavailable">
-  <button type="button" class="btn btn-outline-secondary" disabled>Önizleme mevcut değil</button>
-</div>
-{% endif %}
 <div class="alert alert-info mb-3">Review the document, add a comment, then choose to approve or reject.</div>
 {% endblock %}
