@@ -32,7 +32,14 @@ def _setup_document(models, can_download: bool):
         user = models.User(id=1, username="u1")
         user.roles.append(role)
         doc = models.Document(id=1, file_key="foo/bar.txt", title="t")
-        session.add_all([role, user, doc])
+        rev = models.DocumentRevision(
+            id=1,
+            doc_id=doc.id,
+            major_version=1,
+            minor_version=0,
+            file_key="foo/rev1.txt",
+        )
+        session.add_all([role, user, doc, rev])
         session.commit()
         perm = models.DocumentPermission(
             role_id=role.id, doc_id=doc.id, can_download=can_download
@@ -81,4 +88,44 @@ def test_document_download_forbidden(app_modules):
         sess["roles"] = ["reader"]
     resp = client.get("/documents/1/download")
     assert resp.status_code == 403
+    app_module.storage_client.generate_presigned_url.assert_not_called()
+
+
+def test_document_download_specific_version(app_modules):
+    app_module, models = app_modules
+    _setup_document(models, can_download=True)
+    app_module.storage_client.generate_presigned_url = MagicMock(return_value="/signed")
+    client = app_module.app.test_client()
+    with client.session_transaction() as sess:
+        sess["user"] = {"id": 1}
+        sess["roles"] = ["reader"]
+    resp = client.get("/documents/1/download?version=v1.0")
+    assert resp.status_code == 302
+    assert resp.headers["Location"] == "/signed"
+    app_module.storage_client.generate_presigned_url.assert_called_once_with(
+        "foo/rev1.txt"
+    )
+    log_session = models.SessionLocal()
+    try:
+        logs = (
+            log_session.query(models.AuditLog)
+            .filter_by(doc_id=1, action="download_document")
+            .all()
+        )
+        assert len(logs) == 1
+        assert logs[0].payload["version"] == "v1.0"
+    finally:
+        log_session.close()
+
+
+def test_document_download_unknown_version(app_modules):
+    app_module, models = app_modules
+    _setup_document(models, can_download=True)
+    app_module.storage_client.generate_presigned_url = MagicMock(return_value="/signed")
+    client = app_module.app.test_client()
+    with client.session_transaction() as sess:
+        sess["user"] = {"id": 1}
+        sess["roles"] = ["reader"]
+    resp = client.get("/documents/1/download?version=v1.1")
+    assert resp.status_code == 404
     app_module.storage_client.generate_presigned_url.assert_not_called()
