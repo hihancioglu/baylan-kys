@@ -102,6 +102,8 @@ def test_upload_new_version_success(client, app_models):
         "content_type": "application/pdf",
         "note": "rev1",
     }
+    rev = session.query(models.DocumentRevision).filter_by(doc_id=doc_id).first()
+    assert rev.uploaded_by == 1
     session.close()
 
 

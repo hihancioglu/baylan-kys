@@ -123,8 +123,10 @@ class DocumentRevision(Base):
     track_changes = Column(JSON)
     compare_result = Column(JSON)
     created_at = Column(DateTime, default=datetime.utcnow)
+    uploaded_by = Column(Integer, ForeignKey("users.id"), nullable=True)
 
     document = relationship(Document, back_populates="revisions")
+    user = relationship("User", foreign_keys=[uploaded_by])
 
 
 class DocumentPermission(Base):
