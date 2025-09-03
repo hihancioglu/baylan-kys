@@ -3399,7 +3399,7 @@ def publish_document(id: int):
             resp = make_response("", 204)
             resp.headers["HX-Redirect"] = url_for("document_detail", doc_id=doc.id)
             resp.headers["HX-Trigger"] = json.dumps(
-                {"showToast": "Document published"}
+                {"showToast": "Published – assign mandatory reading"}
             )
             return resp
         return redirect(url_for("list_documents", status="Published"))
