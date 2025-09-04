@@ -117,6 +117,10 @@ def test_rollback_document_creates_new_revision_and_serves_content(client, app_m
     revisions = session.query(m.DocumentRevision).filter_by(doc_id=doc_id).all()
     minors = {r.minor_version for r in revisions}
     assert minors == {0, 1}
+
+    logs = session.query(m.AuditLog).filter_by(doc_id=doc_id, action="rolled_back").all()
+    assert len(logs) == 1
+    assert logs[0].payload == {"from": "v1.0", "to": "v1.2", "by": 1}
     session.close()
 
     storage.storage_client.copy.assert_called_once_with(
