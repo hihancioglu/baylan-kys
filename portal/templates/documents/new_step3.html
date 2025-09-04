@@ -3,18 +3,12 @@
 {% block content %}
 <h1 class="fw-bold page-title">{{ t('new_document_step3_title') }}</h1>
 {% if form.upload_error %}
-<div class="alert alert-danger">{{ t('upload_failed', error=form.upload_error) }}</div>
+<div class="d-none" data-errors="{{ [t('upload_failed', error=form.upload_error)] | tojson }}"></div>
 {% elif form.uploaded_file_key %}
-<div class="alert alert-success">{{ t('file_uploaded_success') }}</div>
+<div class="d-none" data-success="{{ t('file_uploaded_success') }}"></div>
 {% endif %}
 {% if errors %}
-<div class="alert alert-danger" data-errors='{{ errors | tojson }}'>
-  <ul class="mb-0">
-    {% for msg in errors.values() %}
-    <li>{{ msg }}</li>
-    {% endfor %}
-  </ul>
-</div>
+<div class="d-none" data-errors="{{ errors | tojson }}"></div>
 {% endif %}
 <form method="post" action="{{ url_for('new_document', step=3) }}">
   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
