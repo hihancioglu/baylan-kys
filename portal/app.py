@@ -1073,6 +1073,9 @@ def list_documents():
     user = session.get("user")
     for d in docs:
         d.can_download = bool(user) and permission_check(user["id"], d, download=True)
+        d.can_upload_version = bool(user) and permission_check(
+            user["id"], d, upload=True
+        )
 
     db_session = get_session()
     departments = [d[0] for d in db_session.query(Document.department).distinct().all()]
@@ -1105,6 +1108,9 @@ def documents_table():
     user = session.get("user")
     for d in docs:
         d.can_download = bool(user) and permission_check(user["id"], d, download=True)
+        d.can_upload_version = bool(user) and permission_check(
+            user["id"], d, upload=True
+        )
     context = {
         "documents": docs,
         "page": page,

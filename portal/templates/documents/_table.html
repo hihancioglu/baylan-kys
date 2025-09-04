@@ -42,10 +42,12 @@
           {% if doc.can_download %}
           <a href="{{ url_for('document_download', doc_id=doc.id) }}?version=v{{ doc.major_version }}.{{ doc.minor_version }}" class="btn btn-sm btn-outline-secondary">Download</a>
           {% endif %}
-          <a href="{{ url_for('document_detail', doc_id=doc.id) }}#uploadVersionModal" class="btn btn-sm btn-outline-secondary">Upload New Version</a>
-        </td>
-      </tr>
-      {% endfor %}
+            {% if has_role('editor') or has_role('publisher') or has_role('quality_admin') and doc.can_upload_version %}
+            <a href="{{ url_for('document_detail', doc_id=doc.id) }}#uploadVersionModal" class="btn btn-sm btn-outline-secondary">Upload New Version</a>
+            {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
     </tbody>
     {% else %}
     <tbody>
