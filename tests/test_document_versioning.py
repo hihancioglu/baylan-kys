@@ -104,7 +104,7 @@ def test_rollback_document_creates_new_revision_and_serves_content(client, app_m
         sess["user"] = {"id": 1, "name": "Tester"}
         sess["roles"] = ["reviewer", "reader"]
 
-    resp = client.post(f"/api/documents/{doc_id}/rollback", json={"version": "v1.0"})
+    resp = client.post(f"/api/documents/{doc_id}/rollback?to=v1.0")
     assert resp.status_code == 200
     body = resp.get_json()
     assert body["minor_version"] == 2

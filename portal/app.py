@@ -1916,17 +1916,21 @@ def _rollback_document(doc: Document, rev: DocumentRevision, user: dict, db):
 def rollback_document_api(doc_id: int):
     """Rollback document to a specific version via API."""
     data = request.get_json(silent=True) or {}
-    version_str = (
-        data.get("version")
-        or request.form.get("version")
+    target_version = (
+        request.args.get("to")
+        or request.form.get("to")
+        or data.get("to")
+        # Backward compatibility for older clients using "version".
         or request.args.get("version")
+        or request.form.get("version")
+        or data.get("version")
         or ""
     )
-    version_str = version_str.lstrip("v")
+    target_version = target_version.lstrip("v")
     try:
-        major, minor = map(int, version_str.split("."))
+        major, minor = map(int, target_version.split("."))
     except ValueError:
-        return jsonify(error="Invalid version"), 400
+        return jsonify(error="Invalid target version"), 400
     db = get_session()
     doc = db.get(Document, doc_id)
     if not doc:
