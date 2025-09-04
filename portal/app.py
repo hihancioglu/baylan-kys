@@ -1925,7 +1925,11 @@ def _rollback_document(doc: Document, rev: DocumentRevision, user: dict, db):
 
 
 @app.post("/api/documents/<int:doc_id>/rollback")
-@roles_required(RoleEnum.REVIEWER.value)
+@roles_required(
+    RoleEnum.CONTRIBUTOR.value,
+    RoleEnum.PUBLISHER.value,
+    RoleEnum.QUALITY_ADMIN.value,
+)
 def rollback_document_api(doc_id: int):
     """Rollback document to a specific version via API."""
     data = request.get_json(silent=True) or {}
@@ -2064,7 +2068,11 @@ def document_versioning(id: int):
 
 
 @app.post("/api/documents/<int:doc_id>/versions")
-@roles_required(RoleEnum.CONTRIBUTOR.value)
+@roles_required(
+    RoleEnum.CONTRIBUTOR.value,
+    RoleEnum.PUBLISHER.value,
+    RoleEnum.QUALITY_ADMIN.value,
+)
 def upload_document_version(doc_id: int):
     db = get_session()
     doc = db.get(Document, doc_id)
@@ -2221,7 +2229,11 @@ def upload_document_version(doc_id: int):
 
 
 @app.post("/api/documents/<int:doc_id>/checkout")
-@roles_required(RoleEnum.CONTRIBUTOR.value)
+@roles_required(
+    RoleEnum.CONTRIBUTOR.value,
+    RoleEnum.PUBLISHER.value,
+    RoleEnum.QUALITY_ADMIN.value,
+)
 def checkout_document(doc_id: int):
     db = get_session()
     doc = db.get(Document, doc_id)
@@ -3477,7 +3489,11 @@ def save_revision(doc_id):
 
 @app.post("/api/documents/<int:id>/publish")
 @app.post("/documents/<int:id>/publish")  # Backward compatibility
-@roles_required(RoleEnum.PUBLISHER.value)
+@roles_required(
+    RoleEnum.CONTRIBUTOR.value,
+    RoleEnum.PUBLISHER.value,
+    RoleEnum.QUALITY_ADMIN.value,
+)
 def publish_document(id: int):
     db = get_session()
     try:
@@ -3596,7 +3612,11 @@ def acknowledge_document(doc_id):
 
 @app.post("/api/ack/assign")
 @app.post("/ack/assign")  # Backward compatibility
-@roles_required(RoleEnum.PUBLISHER.value)
+@roles_required(
+    RoleEnum.CONTRIBUTOR.value,
+    RoleEnum.PUBLISHER.value,
+    RoleEnum.QUALITY_ADMIN.value,
+)
 def assign_acknowledgements_endpoint():
     """Assign acknowledgements for the given document.
 
