@@ -387,8 +387,14 @@ def get_allowed_standards() -> set[str]:
 
 # -- Acknowledgement helpers -------------------------------------------------
 
-def _assign_acknowledgements(db, doc_id, user_ids):
-    """Create acknowledgement placeholders for given users."""
+def _assign_acknowledgements(db, doc_id, user_ids, due_at=None):
+    """Create acknowledgement placeholders for given users.
+
+    ``due_at`` specifies when the acknowledgement is required. It is stored on
+    any newly created :class:`Acknowledgement` rows and ignored for existing
+    ones.
+    """
+
     for uid in set(user_ids):
         exists = (
             db.query(Acknowledgement)
@@ -396,7 +402,7 @@ def _assign_acknowledgements(db, doc_id, user_ids):
             .first()
         )
         if not exists:
-            db.add(Acknowledgement(user_id=uid, doc_id=doc_id))
+            db.add(Acknowledgement(user_id=uid, doc_id=doc_id, due_at=due_at))
 
 
 def _compute_counts(db, user_id, roles):
@@ -3547,8 +3553,15 @@ def assign_acknowledgements_endpoint():
     data = request.get_json(silent=True) or {}
     doc_id = data.get("doc_id")
     targets = data.get("targets", [])
+    due_at_str = data.get("due_at")
+    due_at = None
     if not doc_id:
         return jsonify(error="doc_id required"), 400
+    if due_at_str:
+        try:
+            due_at = datetime.fromisoformat(due_at_str)
+        except (TypeError, ValueError):
+            return jsonify(error="invalid due_at"), 400
     db = get_session()
     try:
         doc = db.get(Document, doc_id)
@@ -3565,12 +3578,13 @@ def assign_acknowledgements_endpoint():
                 if role:
                     for user in role.users:
                         user_ids.add(user.id)
-        _assign_acknowledgements(db, doc_id, user_ids)
+        _assign_acknowledgements(db, doc_id, user_ids, due_at)
         db.commit()
+        count = db.query(Acknowledgement).filter_by(doc_id=doc_id).count()
         if doc and user_ids:
             notify_mandatory_read(doc, list(user_ids))
         broadcast_counts()
-        resp = jsonify(ok=True)
+        resp = jsonify(ok=True, count=count)
         resp.headers["HX-Trigger"] = json.dumps(
             {"ackUpdated": True, "showToast": "Assignments added"}
         )

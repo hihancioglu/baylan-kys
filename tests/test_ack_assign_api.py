@@ -5,6 +5,8 @@ import sys
 import uuid
 import json
 
+from datetime import datetime, timedelta
+
 import pytest
 from unittest.mock import patch
 
@@ -184,10 +186,64 @@ def test_assign_acknowledgements_user_targets(client, app_models):
         notify_mock.assert_called_once()
 
     assert resp.status_code == 200
+    assert resp.get_json()["count"] == 2
     session = m.SessionLocal()
     acks = session.query(m.Acknowledgement).filter_by(doc_id=doc_id).all()
     ack_user_ids = {a.user_id for a in acks}
     assert ack_user_ids == {user1_id, user2_id}
+    session.close()
+    app._got_first_request = False
+
+
+def test_assign_acknowledgements_due_at(client, app_models):
+    app, m = app_models
+    session = m.SessionLocal()
+    uid = uuid.uuid4().hex
+    publisher = m.User(username=f"ack_publisher_{uid}")
+    user = m.User(username=f"ack_user_{uid}")
+    doc = m.Document(
+        doc_key=f"ack_doc_{uid}.docx", title="Ack Doc", status="Published"
+    )
+    session.add_all([publisher, user, doc])
+    session.commit()
+    doc_id = doc.id
+    publisher_id = publisher.id
+    user_id = user.id
+    session.close()
+
+    with client.session_transaction() as sess:
+        sess["user"] = {"id": publisher_id}
+        sess["roles"] = ["publisher"]
+
+    due_at = (datetime.utcnow() + timedelta(days=7)).replace(microsecond=0)
+
+    with patch("app.broadcast_counts") as broadcast_mock, patch(
+        "app.notify_mandatory_read"
+    ) as notify_mock:
+        notify_mock.return_value = None
+        resp = client.post(
+            "/api/ack/assign",
+            json={
+                "doc_id": doc_id,
+                "targets": [user_id],
+                "due_at": due_at.isoformat(),
+            },
+        )
+        broadcast_mock.assert_called_once()
+
+    assert resp.status_code == 200
+    data = resp.get_json()
+    assert data["count"] == 1
+    trigger = json.loads(resp.headers.get("HX-Trigger"))
+    assert trigger.get("ackUpdated") is True
+
+    session = m.SessionLocal()
+    ack = (
+        session.query(m.Acknowledgement)
+        .filter_by(doc_id=doc_id, user_id=user_id)
+        .one()
+    )
+    assert ack.due_at == due_at
     session.close()
     app._got_first_request = False
 
