@@ -193,6 +193,10 @@ def _can_server_diff(mime: str) -> bool:
 # Maximum allowed upload size for document versions (default 50MB)
 MAX_UPLOAD_SIZE = int(os.getenv("MAX_UPLOAD_SIZE_MB", "50")) * 1024 * 1024
 
+# Duration (in minutes) a document remains locked after checkout
+LOCK_DURATION_MINUTES = int(os.getenv("LOCK_DURATION_MINUTES", "30"))
+app.config["LOCK_DURATION_MINUTES"] = LOCK_DURATION_MINUTES
+
 AV_SCAN_ENABLED = os.getenv("AV_SCAN_ENABLED", "").lower() in {"1", "true", "yes"}
 CLAMD_HOST = os.getenv("CLAMD_HOST")
 CLAMD_PORT = os.getenv("CLAMD_PORT")
@@ -2221,7 +2225,7 @@ def checkout_document(doc_id: int):
 
     previous_locked_by = doc.locked_by
     doc.locked_by = user_id
-    doc.lock_expires_at = now + timedelta(minutes=30)
+    doc.lock_expires_at = now + timedelta(minutes=LOCK_DURATION_MINUTES)
     db.commit()
     log_action(user_id, doc.id, "checkout_document")
     subject, body = _render(

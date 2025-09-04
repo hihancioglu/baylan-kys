@@ -131,6 +131,20 @@ def test_checkout_requires_permission(client, app_models):
     assert resp.status_code == 403
 
 
+def test_checkout_respects_lock_duration(client, app_models, monkeypatch):
+    app_module, models = app_models
+    doc_id, user1, _ = _create_doc_and_users(models)
+    _login(client, user1)
+    monkeypatch.setattr(app_module, "LOCK_DURATION_MINUTES", 5)
+    monkeypatch.setitem(app_module.app.config, "LOCK_DURATION_MINUTES", 5)
+    before = datetime.utcnow()
+    resp = client.post(f"/api/documents/{doc_id}/checkout")
+    assert resp.status_code == 200
+    data = resp.get_json()
+    lock_expires_at = datetime.fromisoformat(data["lock_expires_at"])
+    assert abs((lock_expires_at - before) - timedelta(minutes=5)) < timedelta(seconds=5)
+
+
 def test_checkin_requires_permission(client, app_models):
     app_module, models = app_models
     doc_id, user1, _ = _create_doc_and_users(models, u1_perms={"checkout": True, "checkin": False})
