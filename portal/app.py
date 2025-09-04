@@ -2242,7 +2242,11 @@ def checkout_document(doc_id: int):
     if previous_locked_by and previous_locked_by not in {owner_id, user_id}:
         notify_user(previous_locked_by, subject, body)
     SessionLocal.remove()
-    return jsonify(locked_by=user_id, lock_expires_at=doc.lock_expires_at.isoformat())
+    return jsonify(
+        locked_by=user_id,
+        locked_until=doc.lock_expires_at.isoformat(),
+        lock_expires_at=doc.lock_expires_at.isoformat(),
+    )
 
 
 @app.post("/api/documents/<int:doc_id>/checkin")
