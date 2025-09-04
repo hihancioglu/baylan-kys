@@ -65,16 +65,24 @@ def test_assign_acknowledgements_role_targets(client, app_models):
         sess["user"] = {"id": publisher_id}
         sess["roles"] = ["publisher"]
 
+    due_at = (datetime.utcnow() + timedelta(days=7)).replace(microsecond=0)
+
     with patch("app.broadcast_counts") as broadcast_mock, patch(
         "app.notify_mandatory_read"
     ) as notify_mock:
         notify_mock.return_value = None
         resp = client.post(
             "/api/ack/assign",
-            json={"doc_id": doc_id, "targets": [f"ack_reader_{uid}"]},
+            json={
+                "doc_id": doc_id,
+                "targets": [f"ack_reader_{uid}"],
+                "due_at": due_at.isoformat(),
+            },
         )
         broadcast_mock.assert_called_once()
     assert resp.status_code == 200
+    data = resp.get_json()
+    assert data["count"] == 2
     trigger = json.loads(resp.headers.get("HX-Trigger"))
     assert trigger.get("ackUpdated") is True
     assert trigger.get("showToast") == "Assignments added"
@@ -82,6 +90,7 @@ def test_assign_acknowledgements_role_targets(client, app_models):
     acks = session.query(m.Acknowledgement).filter_by(doc_id=doc_id).all()
     ack_user_ids = {a.user_id for a in acks}
     assert ack_user_ids == {user1_id, user2_id}
+    assert all(a.due_at == due_at for a in acks)
     session.close()
     app._got_first_request = False
 
@@ -103,11 +112,18 @@ def test_assign_acknowledgements_nonexistent_doc(client, app_models):
         sess["user"] = {"id": publisher_id}
         sess["roles"] = ["publisher"]
 
+    due_at = (datetime.utcnow() + timedelta(days=7)).replace(microsecond=0)
+
     with patch("app.broadcast_counts") as broadcast_mock, patch(
         "app.notify_mandatory_read"
     ) as notify_mock:
         resp = client.post(
-            "/api/ack/assign", json={"doc_id": 999, "targets": [target_id]}
+            "/api/ack/assign",
+            json={
+                "doc_id": 999,
+                "targets": [target_id],
+                "due_at": due_at.isoformat(),
+            },
         )
         broadcast_mock.assert_not_called()
         notify_mock.assert_not_called()
@@ -139,11 +155,18 @@ def test_assign_acknowledgements_unpublished_doc(client, app_models):
         sess["user"] = {"id": publisher_id}
         sess["roles"] = ["publisher"]
 
+    due_at = (datetime.utcnow() + timedelta(days=7)).replace(microsecond=0)
+
     with patch("app.broadcast_counts") as broadcast_mock, patch(
         "app.notify_mandatory_read"
     ) as notify_mock:
         resp = client.post(
-            "/api/ack/assign", json={"doc_id": doc_id, "targets": [target_id]}
+            "/api/ack/assign",
+            json={
+                "doc_id": doc_id,
+                "targets": [target_id],
+                "due_at": due_at.isoformat(),
+            },
         )
         broadcast_mock.assert_not_called()
         notify_mock.assert_not_called()
@@ -175,12 +198,19 @@ def test_assign_acknowledgements_user_targets(client, app_models):
         sess["user"] = {"id": publisher_id}
         sess["roles"] = ["publisher"]
 
+    due_at = (datetime.utcnow() + timedelta(days=7)).replace(microsecond=0)
+
     with patch("app.broadcast_counts") as broadcast_mock, patch(
         "app.notify_mandatory_read"
     ) as notify_mock:
         notify_mock.return_value = None
         resp = client.post(
-            "/api/ack/assign", json={"doc_id": doc_id, "targets": [user1_id, user2_id]}
+            "/api/ack/assign",
+            json={
+                "doc_id": doc_id,
+                "targets": [user1_id, user2_id],
+                "due_at": due_at.isoformat(),
+            },
         )
         broadcast_mock.assert_called_once()
         notify_mock.assert_called_once()
@@ -191,6 +221,7 @@ def test_assign_acknowledgements_user_targets(client, app_models):
     acks = session.query(m.Acknowledgement).filter_by(doc_id=doc_id).all()
     ack_user_ids = {a.user_id for a in acks}
     assert ack_user_ids == {user1_id, user2_id}
+    assert all(a.due_at == due_at for a in acks)
     session.close()
     app._got_first_request = False
 
@@ -265,10 +296,15 @@ def test_assign_acknowledgements_missing_doc_id(client, app_models):
         sess["user"] = {"id": publisher_id}
         sess["roles"] = ["publisher"]
 
+    due_at = (datetime.utcnow() + timedelta(days=7)).replace(microsecond=0)
+
     with patch("app.broadcast_counts") as broadcast_mock, patch(
         "app.notify_mandatory_read"
     ) as notify_mock:
-        resp = client.post("/api/ack/assign", json={"targets": [user_id]})
+        resp = client.post(
+            "/api/ack/assign",
+            json={"targets": [user_id], "due_at": due_at.isoformat()},
+        )
         broadcast_mock.assert_not_called()
         notify_mock.assert_not_called()
 
@@ -297,16 +333,24 @@ def test_assign_acknowledgements_invalid_targets(client, app_models):
         sess["user"] = {"id": publisher_id}
         sess["roles"] = ["publisher"]
 
+    due_at = (datetime.utcnow() + timedelta(days=7)).replace(microsecond=0)
+
     with patch("app.broadcast_counts") as broadcast_mock, patch(
         "app.notify_mandatory_read"
     ) as notify_mock:
         resp = client.post(
-            "/api/ack/assign", json={"doc_id": doc_id, "targets": ["bogus_role"]}
+            "/api/ack/assign",
+            json={
+                "doc_id": doc_id,
+                "targets": ["bogus_role"],
+                "due_at": due_at.isoformat(),
+            },
         )
         broadcast_mock.assert_called_once()
         notify_mock.assert_not_called()
 
     assert resp.status_code == 200
+    assert resp.get_json()["count"] == initial_count
     session = m.SessionLocal()
     assert session.query(m.Acknowledgement).count() == initial_count
     session.close()
