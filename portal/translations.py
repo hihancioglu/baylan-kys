@@ -26,6 +26,8 @@ TRANSLATIONS = {
         "department_label": "Department",
         "type_label": "Type",
         "standard_label": "Standard",
+        "no_versions_yet": "No versions uploaded yet.",
+        "upload_new_version": "Upload New Version",
     },
     "tr": {
         "new_document_step3_title": "Yeni Doküman - Adım 3",
@@ -50,6 +52,8 @@ TRANSLATIONS = {
         "department_label": "Departman",
         "type_label": "Tür",
         "standard_label": "Standart",
+        "no_versions_yet": "Henüz sürüm yüklenmedi.",
+        "upload_new_version": "Yeni Sürüm Yükle",
     },
 }
 

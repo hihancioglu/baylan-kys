@@ -2,6 +2,7 @@
   <div class="row">
     <div class="col-md-8">
       <div class="table-responsive">
+        {% if revisions %}
         <table class="table table-hover align-middle">
           <thead>
             <tr>
@@ -24,13 +25,16 @@
               <td>{{ rev.user.username if rev.user else '' }}</td>
               <td>{{ rev.revision_notes or '' }}</td>
             </tr>
-            {% else %}
-            <tr>
-              <td colspan="4">No versions found.</td>
-            </tr>
             {% endfor %}
           </tbody>
         </table>
+        {% else %}
+        <div class="text-center p-4" role="status">
+          <svg class="icon mb-2" aria-hidden="true"><use href="#icon-upload"></use></svg>
+          <p class="mb-2">{{ t('no_versions_yet') }}</p>
+          <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#uploadVersionModal">{{ t('upload_new_version') }}</button>
+        </div>
+        {% endif %}
       </div>
       {% if can_server_diff %}
       <button type="submit" id="compare-button" class="btn btn-secondary mt-2" data-can-server-diff="true" disabled>Compare</button>
