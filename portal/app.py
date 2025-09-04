@@ -2074,8 +2074,11 @@ def upload_document_version(doc_id: int):
         app.logger.warning("upload_document_version: missing file", extra={"doc_id": doc_id})
         return jsonify(error="File is required"), 400
 
-    data = uploaded.read()
-    size = len(data)
+    size = uploaded.content_length
+    if not size:
+        uploaded.seek(0, os.SEEK_END)
+        size = uploaded.tell()
+    uploaded.seek(0)
     if size > MAX_UPLOAD_SIZE:
         SessionLocal.remove()
         app.logger.warning(
@@ -2090,6 +2093,8 @@ def upload_document_version(doc_id: int):
             "upload_document_version: unsupported mime %s", mime, extra={"doc_id": doc_id}
         )
         return jsonify(error="Unsupported file type"), 400
+
+    data = uploaded.read()
 
     if AV_SCAN_ENABLED:
         infected, output = _clamdscan(data)

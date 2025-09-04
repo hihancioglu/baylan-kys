@@ -157,7 +157,7 @@ def test_upload_new_version_invalid_mime(client, app_models):
     storage.storage_client.put.assert_not_called()
 
 
-def test_upload_new_version_too_large(client, app_models):
+def test_upload_new_version_too_large(client, app_models, monkeypatch):
     app_module, models = app_models
     _login(client)
     doc_id = _create_doc(models)
@@ -166,13 +166,24 @@ def test_upload_new_version_too_large(client, app_models):
     storage.storage_client.put = MagicMock()
 
     app_module.MAX_UPLOAD_SIZE = 100
-    data = {"file": (io.BytesIO(b"x" * 101), "test.pdf")}
+
+    class CountingIO(io.BytesIO):
+        def __init__(self, *args, **kwargs):
+            self.reads = 0
+            super().__init__(*args, **kwargs)
+        def read(self, *args, **kwargs):
+            self.reads += 1
+            return super().read(*args, **kwargs)
+
+    file_obj = CountingIO(b"x" * 101)
+    data = {"file": (file_obj, "test.pdf")}
     resp = client.post(
         f"/api/documents/{doc_id}/versions",
         data=data,
         content_type="multipart/form-data",
     )
     assert resp.status_code == 400
+    assert file_obj.reads == 2
 
     session = models.SessionLocal()
     doc = session.get(models.Document, doc_id)
