@@ -14,7 +14,7 @@
       <td>{{ item.code }}</td>
       <td>{{ item.title }}</td>
       <td>{{ item.status }}</td>
-      <td>{{ item.due_date }}</td>
+      <td>{{ item.due_at }}</td>
       <td>
         <form hx-post="{{ url_for('ack.confirm', id=item.id) }}"
               hx-target="closest tr"

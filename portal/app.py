@@ -3693,19 +3693,12 @@ def ack_list():
     db = get_session()
     try:
         query = (
-            db.query(Document)
+            db.query(Acknowledgement)
+            .join(Document, Acknowledgement.doc_id == Document.id)
+            .options(joinedload(Acknowledgement.document))
+            .filter(Acknowledgement.user_id == user_id)
+            .filter(Acknowledgement.acknowledged_at.is_(None))
             .filter(Document.status == "Published")
-            .outerjoin(
-                Acknowledgement,
-                (Acknowledgement.doc_id == Document.id)
-                & (Acknowledgement.user_id == user_id),
-            )
-            .filter(
-                or_(
-                    Acknowledgement.id.is_(None),
-                    Acknowledgement.acknowledged_at.is_(None),
-                )
-            )
         )
 
         filters = {}
@@ -3717,21 +3710,21 @@ def ack_list():
         if due:
             try:
                 due_dt = datetime.fromisoformat(due)
-                query = query.filter(Document.created_at <= due_dt)
+                query = query.filter(Acknowledgement.due_at <= due_dt)
                 filters["due"] = due
             except ValueError:
                 pass
 
-        docs = query.order_by(Document.id).all()
+        acks = query.order_by(Acknowledgement.due_at).all()
         acknowledgements = [
             {
-                "id": d.id,
-                "code": d.code,
-                "title": d.title,
-                "status": d.status,
-                "due_date": (d.created_at.date().isoformat() if d.created_at else None),
+                "id": a.id,
+                "code": a.document.code,
+                "title": a.document.title,
+                "status": a.document.status,
+                "due_at": (a.due_at.date().isoformat() if a.due_at else None),
             }
-            for d in docs
+            for a in acks
         ]
         context = {
             "acknowledgements": acknowledgements,
