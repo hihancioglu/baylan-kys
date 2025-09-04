@@ -9,3 +9,12 @@
   ```
 - After a document is uploaded, `pdf_preview_job.enqueue_preview` creates `previews/<doc_id>/<version>.pdf` in the preview bucket.
 
+## Scheduled Jobs
+
+- Ensure the scheduler container (or an equivalent cron setup) runs maintenance tasks.
+- The scheduler now executes `clear_locks_job.py` every 5 minutes to release expired document locks:
+  ```bash
+  ( while :; do python clear_locks_job.py; sleep 300; done )
+  ```
+  Configure your deployment to run this command periodically if not using `docker-compose`.
+

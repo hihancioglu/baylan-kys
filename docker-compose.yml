@@ -195,6 +195,7 @@ services:
       sh -c "pip install -r requirements.txt &&
              ( while :; do python archive_job.py; sleep 86400; done ) &
              ( while :; do python dif_overdue_job.py; sleep 3600; done ) &
+             ( while :; do python clear_locks_job.py; sleep 300; done ) &
              ( while :; do python periodic_review.py; sleep 31536000; done ) &
              wait"
     depends_on:
