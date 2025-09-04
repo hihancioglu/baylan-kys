@@ -1869,6 +1869,7 @@ def revert_document(doc_id: int, revision_id: int):
         return "Version not found", 404
     user = session.get("user") or {}
     _rollback_document(doc, rev, user, db)
+    db.commit()
     revisions = (
         db.query(DocumentRevision)
         .filter_by(doc_id=doc_id)
@@ -1899,6 +1900,7 @@ def _rollback_document(doc: Document, rev: DocumentRevision, user: dict, db):
         file_key=doc.doc_key,
     )
     db.add(old_rev)
+    from_version = f"v{rev.major_version}.{rev.minor_version}"
     new_minor = doc.minor_version + 1
     _, ext = os.path.splitext(rev.file_key)
     new_key = f"documents/{doc.id}/versions/{doc.major_version}.{new_minor}{ext}"
@@ -1906,8 +1908,13 @@ def _rollback_document(doc: Document, rev: DocumentRevision, user: dict, db):
     doc.doc_key = new_key
     doc.minor_version = new_minor
     doc.revision_notes = rev.revision_notes
-    db.commit()
-    log_action(user.get("id"), doc.id, "rollback_document")
+    to_version = f"v{doc.major_version}.{doc.minor_version}"
+    log_action(
+        user.get("id"),
+        doc.id,
+        "rolled_back",
+        payload={"from": from_version, "to": to_version, "by": user.get("id")},
+    )
     return doc
 
 
@@ -1946,6 +1953,7 @@ def rollback_document_api(doc_id: int):
         return jsonify(error="Revision not found"), 404
     user = session.get("user") or {}
     doc = _rollback_document(doc, rev, user, db)
+    db.commit()
     resp = {
         "doc_id": doc.id,
         "major_version": doc.major_version,
