@@ -141,8 +141,9 @@ def test_checkout_respects_lock_duration(client, app_models, monkeypatch):
     resp = client.post(f"/api/documents/{doc_id}/checkout")
     assert resp.status_code == 200
     data = resp.get_json()
-    lock_expires_at = datetime.fromisoformat(data["lock_expires_at"])
-    assert abs((lock_expires_at - before) - timedelta(minutes=5)) < timedelta(seconds=5)
+    locked_until = datetime.fromisoformat(data["locked_until"])
+    assert abs((locked_until - before) - timedelta(minutes=5)) < timedelta(seconds=5)
+    assert data["lock_expires_at"] == data["locked_until"]
 
 
 def test_checkin_requires_permission(client, app_models):
