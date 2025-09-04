@@ -102,7 +102,7 @@ def test_rollback_document_creates_new_revision_and_serves_content(client, app_m
 
     with client.session_transaction() as sess:
         sess["user"] = {"id": 1, "name": "Tester"}
-        sess["roles"] = ["reviewer", "reader"]
+        sess["roles"] = ["contributor", "reader"]
 
     resp = client.post(f"/api/documents/{doc_id}/rollback?to=v1.0")
     assert resp.status_code == 200
