@@ -177,7 +177,8 @@
 </div>
 
 <script type="module" src="{{ url_for('static', filename='document_detail.js') }}"></script>
-<script>
+<script type="module">
+import { showToast } from '{{ url_for('static', filename='components/toast.js') }}';
 document.addEventListener('htmx:responseError', function (evt) {
   if (evt.target.id === 'publish-form') {
     let message = 'Failed to publish document';
@@ -189,7 +190,7 @@ document.addEventListener('htmx:responseError', function (evt) {
     } catch (e) {
       // ignore JSON parse errors
     }
-    alert(message);
+    showToast(message, { timeout: 6000 });
   }
 });
 </script>

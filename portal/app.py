@@ -2096,7 +2096,7 @@ def upload_document_version(doc_id: int):
         app.logger.warning(
             "upload_document_version: file too large (%s bytes)", size, extra={"doc_id": doc_id}
         )
-        return jsonify(error="File too large"), 400
+        return jsonify(error=t("file_too_large")), 400
 
     mime = uploaded.mimetype
     if mime not in ALLOWED_UPLOAD_MIMES:
@@ -2104,7 +2104,7 @@ def upload_document_version(doc_id: int):
         app.logger.warning(
             "upload_document_version: unsupported mime %s", mime, extra={"doc_id": doc_id}
         )
-        return jsonify(error="Unsupported file type"), 400
+        return jsonify(error=t("unsupported_file_type")), 400
 
     data = uploaded.read()
 

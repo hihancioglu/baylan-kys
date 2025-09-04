@@ -9,6 +9,10 @@ document.querySelectorAll('[data-errors]').forEach(el => {
   }
 });
 
+document.querySelectorAll('[data-success]').forEach(el => {
+  showToast(el.dataset.success, { timeout: 6000 });
+});
+
 const saveDraftBtn = document.getElementById('save-draft');
 if (saveDraftBtn) {
   const messages = {

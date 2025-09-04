@@ -1,4 +1,5 @@
 import { getToken } from './tokens.js';
+import { showToast } from './components/toast.js';
 // Bootstrap JavaScript is loaded globally via CDN in the base template,
 // so there's no need for an ES module import here.
 getToken('color-primary');
@@ -9,16 +10,8 @@ document.addEventListener('DOMContentLoaded', () => {
     .forEach((el) => new bootstrap.Tooltip(el));
 });
 
-function displayToast(message) {
-  const toastEl = document.getElementById('action-toast');
-  if (!toastEl) return;
-  toastEl.querySelector('.toast-body').textContent = message;
-  const toast = window.bootstrap.Toast.getOrCreateInstance(toastEl);
-  toast.show();
-}
-
 document.addEventListener('showToast', (event) => {
-  displayToast(event.detail);
+  showToast(event.detail);
 });
 
 document.addEventListener('ackCount', (event) => {
@@ -27,14 +20,25 @@ document.addEventListener('ackCount', (event) => {
 });
 
 document.body.addEventListener('htmx:responseError', (event) => {
-  displayToast(event.detail.xhr.response || 'Request failed');
+  let message = 'Request failed';
+  try {
+    const data = JSON.parse(event.detail.xhr.responseText);
+    if (data && data.error) {
+      message = data.error;
+    }
+  } catch (e) {
+    if (event.detail.xhr.responseText) {
+      message = event.detail.xhr.responseText;
+    }
+  }
+  showToast(message, { timeout: 6000 });
   if (event.detail.target) {
     event.detail.target.innerHTML = '';
   }
 });
 
 document.body.addEventListener('htmx:sendError', () => {
-  displayToast('Request failed');
+  showToast('Request failed', { timeout: 6000 });
 });
 
 document.body.addEventListener('htmx:beforeRequest', (event) => {
