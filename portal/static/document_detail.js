@@ -153,14 +153,14 @@ function initAssignForm() {
     const targets = Array.from(
       form.querySelectorAll('input[name="targets"]:checked')
     ).map((cb) => cb.value);
+    const dueAt = form.querySelector('input[name="due_at"]').value;
     const csrf = document
       .querySelector('meta[name="csrf-token"]')
       .getAttribute('content');
     evt.detail.headers['Content-Type'] = 'application/json';
     evt.detail.headers['X-CSRFToken'] = csrf;
     evt.detail.parameters = {};
-    evt.detail.body = JSON.stringify({ doc_id: docId, targets });
-    form.dataset.lastCount = targets.length;
+    evt.detail.body = JSON.stringify({ doc_id: docId, targets, due_at: dueAt });
   });
   form.addEventListener('htmx:afterRequest', (evt) => {
     if (evt.detail.successful) {
@@ -172,9 +172,16 @@ function initAssignForm() {
       form.reset();
       const badge = document.getElementById('assignment-count');
       if (badge) {
-        const add = parseInt(form.dataset.lastCount || '0', 10);
-        const current = parseInt(badge.textContent || '0', 10);
-        badge.textContent = current + add;
+        try {
+          const data = JSON.parse(evt.detail.xhr.responseText);
+          if (data && typeof data.count === 'number') {
+            badge.textContent = data.count;
+          } else {
+            badge.textContent = '0';
+          }
+        } catch (e) {
+          badge.textContent = '0';
+        }
       }
     } else {
       let message = 'Assignment failed';
