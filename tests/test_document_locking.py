@@ -221,3 +221,45 @@ def test_force_checkin_button_visibility(client, app_models):
     assert resp.status_code == 200
     body = resp.get_data(as_text=True)
     assert "Force Check in" in body
+
+
+def test_unlock_document_admin(client, app_models):
+    app_module, models = app_models
+    doc_id, user1, user2 = _create_doc_and_users(models)
+    session = models.SessionLocal()
+    doc = session.get(models.Document, doc_id)
+    doc.locked_by = user1
+    doc.lock_expires_at = datetime.utcnow() + timedelta(minutes=5)
+    session.commit()
+    session.close()
+
+    _login(client, user2, roles=["quality_admin"])
+    resp = client.post(f"/api/documents/{doc_id}/unlock")
+    assert resp.status_code == 200
+    assert resp.get_json() == {"status": "unlocked"}
+
+    session = models.SessionLocal()
+    doc = session.get(models.Document, doc_id)
+    assert doc.locked_by is None
+    assert doc.lock_expires_at is None
+    session.close()
+
+
+def test_unlock_document_forbidden(client, app_models):
+    app_module, models = app_models
+    doc_id, user1, user2 = _create_doc_and_users(models)
+    session = models.SessionLocal()
+    doc = session.get(models.Document, doc_id)
+    doc.locked_by = user1
+    doc.lock_expires_at = datetime.utcnow() + timedelta(minutes=5)
+    session.commit()
+    session.close()
+
+    _login(client, user2)
+    resp = client.post(f"/api/documents/{doc_id}/unlock")
+    assert resp.status_code == 403
+
+    session = models.SessionLocal()
+    doc = session.get(models.Document, doc_id)
+    assert doc.locked_by == user1
+    session.close()

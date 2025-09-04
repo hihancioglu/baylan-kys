@@ -2266,6 +2266,31 @@ def checkin_document(doc_id: int):
     return jsonify(status="ok")
 
 
+@app.post("/api/documents/<int:doc_id>/unlock")
+def unlock_document(doc_id: int):
+    db = get_session()
+    doc = db.get(Document, doc_id)
+    if not doc:
+        SessionLocal.remove()
+        return jsonify(error="Document not found"), 404
+
+    user = session.get("user") or {}
+    user_id = user.get("id")
+    roles = session.get("roles", [])
+    if RoleEnum.QUALITY_ADMIN.value not in roles and not permission_check(
+        user_id, doc, override=True
+    ):
+        SessionLocal.remove()
+        return jsonify(error="Forbidden"), 403
+
+    doc.locked_by = None
+    doc.lock_expires_at = None
+    db.commit()
+    log_action(user_id, doc.id, "unlock_document")
+    SessionLocal.remove()
+    return jsonify(status="unlocked")
+
+
 @app.post("/documents")
 @roles_required(RoleEnum.CONTRIBUTOR.value)
 def create_document():
