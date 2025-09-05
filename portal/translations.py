@@ -30,6 +30,16 @@ TRANSLATIONS = {
         "standard_label": "Standard",
         "no_versions_yet": "No versions uploaded yet.",
         "upload_new_version": "Upload New Version",
+        "audit_create": "Created",
+        "audit_view": "Viewed",
+        "audit_download_document": "Document downloaded",
+        "audit_download_revision": "Revision downloaded",
+        "audit_version_uploaded": "Version uploaded",
+        "audit_publish_document": "Document published",
+        "audit_assign_mr": "MR assigned",
+        "audit_checkout_document": "Document checked out",
+        "audit_checkin_document": "Document checked in",
+        "audit_rollback": "Rolled back",
     },
     "tr": {
         "new_document_step3_title": "Yeni Doküman - Adım 3",
@@ -58,6 +68,16 @@ TRANSLATIONS = {
         "standard_label": "Standart",
         "no_versions_yet": "Henüz sürüm yüklenmedi.",
         "upload_new_version": "Yeni Sürüm Yükle",
+        "audit_create": "Oluşturuldu",
+        "audit_view": "Görüntülendi",
+        "audit_download_document": "Doküman indirildi",
+        "audit_download_revision": "Revizyon indirildi",
+        "audit_version_uploaded": "Sürüm yüklendi",
+        "audit_publish_document": "Doküman yayımlandı",
+        "audit_assign_mr": "MR atandı",
+        "audit_checkout_document": "Doküman check-out yapıldı",
+        "audit_checkin_document": "Doküman check-in yapıldı",
+        "audit_rollback": "Geri alındı",
     },
 }
 
@@ -70,7 +90,8 @@ def get_locale() -> str:
 
 def t(key: str, **kwargs: str) -> str:
     locale = get_locale()
-    text = TRANSLATIONS.get(locale, TRANSLATIONS["en"]).get(key, key)
+    # Look up translation in the requested locale, fall back to English, then the key
+    text = TRANSLATIONS.get(locale, {}).get(key, TRANSLATIONS["en"].get(key, key))
     try:
         return text.format(**kwargs)
     except Exception:
