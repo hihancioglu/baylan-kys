@@ -2267,8 +2267,10 @@ def upload_document_version(doc_id: int):
                 can_download=can_download,
             )
         )
+        triggers = ["version-uploaded"]
         if auto_review:
-            response.headers["HX-Trigger"] = "auto-review-started"
+            triggers.append("auto-review-started")
+        response.headers["HX-Trigger"] = ",".join(triggers)
         SessionLocal.remove()
         return response
 

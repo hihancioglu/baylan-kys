@@ -118,7 +118,7 @@
   <div class="modal fade" id="uploadVersionModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog">
       <div class="modal-content">
-        <form id="upload-version-form" hx-post="/api/documents/{{ doc.id }}/versions" hx-target="#version-list" hx-swap="outerHTML" hx-encoding="multipart/form-data">
+          <form id="upload-version-form" hx-post="/api/documents/{{ doc.id }}/versions" hx-target="#tab-versions" hx-swap="outerHTML" hx-encoding="multipart/form-data">
           <div class="modal-header">
             <h5 class="modal-title">Upload New Version</h5>
             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
