@@ -40,7 +40,7 @@
               <td>{{ rev.revision_notes or '' }}</td>
               {% if has_role('editor') or has_role('publisher') or has_role('quality_admin') %}
               <td>
-                <form class="d-inline rollback-form" hx-post="{{ url_for('rollback_document_api', doc_id=doc.id) }}?to=v{{ rev.major_version }}.{{ rev.minor_version }}" hx-swap="none">
+                <form class="d-inline rollback-form" hx-post="{{ url_for('rollback_document_api', doc_id=doc.id) }}?to=v{{ rev.major_version }}.{{ rev.minor_version }}" hx-target="#tab-versions" hx-swap="outerHTML">
                   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                   <button type="submit" class="btn btn-sm btn-outline-danger">Rollback</button>
                 </form>
