@@ -269,14 +269,26 @@ function initUploadVersionForm() {
   const form = document.getElementById('upload-version-form');
   if (!form) return;
   form.addEventListener('htmx:afterRequest', (evt) => {
-    if (!evt.detail.successful) return;
-    const modalEl = document.getElementById('uploadVersionModal');
-    const modal =
-      bootstrap.Modal.getInstance(modalEl) ||
-      new bootstrap.Modal(modalEl);
-    modal.hide();
-    form.reset();
-    document.body.dispatchEvent(new Event('version-uploaded'));
+    if (evt.detail.successful) {
+      const modalEl = document.getElementById('uploadVersionModal');
+      const modal =
+        bootstrap.Modal.getInstance(modalEl) ||
+        new bootstrap.Modal(modalEl);
+      modal.hide();
+      form.reset();
+      document.body.dispatchEvent(new Event('version-uploaded'));
+    } else {
+      let message = 'Yükleme başarısız oldu';
+      try {
+        const data = JSON.parse(evt.detail.xhr.responseText);
+        if (data && data.error) {
+          message = data.error;
+        }
+      } catch (e) {
+        // ignore
+      }
+      showToast(message, { timeout: 6000 });
+    }
   });
 }
 
@@ -321,12 +333,24 @@ document.addEventListener('DOMContentLoaded', () => {
   updatePublishButton();
 });
 
+document.addEventListener('htmx:beforeRequest', (evt) => {
+  const target = evt.detail.target;
+  if (target && (target.id === 'tab-versions' || target.id === 'revision-panel')) {
+    const tmpl = document.getElementById('versions-skeleton');
+    if (tmpl) {
+      target.innerHTML = tmpl.innerHTML;
+    }
+    target.setAttribute('aria-busy', 'true');
+  }
+});
+
 document.addEventListener('htmx:afterSwap', (evt) => {
   if (
     evt.target.id === 'tab-versions' ||
     evt.target.id === 'revision-panel' ||
     evt.target.id === 'version-list'
   ) {
+    evt.target.removeAttribute('aria-busy');
     initVersionSelection();
     if (evt.target.id === 'tab-versions') {
       window.scrollTo(0, 0);
