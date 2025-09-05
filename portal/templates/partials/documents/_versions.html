@@ -20,7 +20,7 @@
             {% for rev in revisions %}
             <tr>
               <td>
-                <div class="form-check">
+                <div class="form-check mb-0">
                   <input class="form-check-input me-2 version-checkbox" type="checkbox" name="rev_id" value="{{ rev.id }}" id="rev-{{ rev.id }}" data-label="{{ rev.major_version }}.{{ rev.minor_version }}" data-download-url="{{ url_for('get_file', file_key=rev.file_key) }}" hx-get="{{ url_for('document_detail', doc_id=doc.id, revision_id=rev.id) }}" hx-target="#revision-panel" hx-select="#revision-note" hx-swap="innerHTML" hx-trigger="change" hx-push-url="false">
                   <label class="form-check-label" for="rev-{{ rev.id }}">{{ rev.major_version }}.{{ rev.minor_version }}</label>
                 </div>
@@ -41,7 +41,7 @@
           </tbody>
         </table>
         {% else %}
-        <div class="text-center p-4" role="status">
+        <div class="text-center p-4 empty-state" role="status">
           <svg class="icon mb-2" aria-hidden="true"><use href="#icon-upload"></use></svg>
           <p class="mb-2">{{ t('no_versions_yet') }}</p>
           <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#uploadVersionModal">{{ t('upload_new_version') }}</button>
