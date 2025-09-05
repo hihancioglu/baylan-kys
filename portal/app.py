@@ -1531,7 +1531,7 @@ def document_download(doc_id: int):
                 user["id"],
                 doc_id,
                 "download_document",
-                payload={"version": version_str},
+                payload={"downloaded_version": version_str},
             )
             return redirect(url)
         obj = storage_client.get_object(Key=file_key)

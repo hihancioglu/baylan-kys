@@ -21,7 +21,7 @@
             <tr>
               <td>
                 <div class="form-check mb-0">
-                  <input class="form-check-input me-2 version-checkbox" type="checkbox" name="rev_id" value="{{ rev.id }}" id="rev-{{ rev.id }}" data-label="{{ rev.major_version }}.{{ rev.minor_version }}" data-download-url="{{ url_for('get_file', file_key=rev.file_key) }}" hx-get="{{ url_for('document_detail', doc_id=doc.id, revision_id=rev.id) }}" hx-target="#revision-panel" hx-select="#revision-note" hx-swap="innerHTML" hx-trigger="change" hx-push-url="false">
+                  <input class="form-check-input me-2 version-checkbox" type="checkbox" name="rev_id" value="{{ rev.id }}" id="rev-{{ rev.id }}" data-label="{{ rev.major_version }}.{{ rev.minor_version }}" data-download-url="/documents/{{doc.id}}/download?version=v{{rev.major_version}}.{{rev.minor_version}}" hx-get="{{ url_for('document_detail', doc_id=doc.id, revision_id=rev.id) }}" hx-target="#revision-panel" hx-select="#revision-note" hx-swap="innerHTML" hx-trigger="change" hx-push-url="false">
                   <label class="form-check-label" for="rev-{{ rev.id }}">{{ rev.major_version }}.{{ rev.minor_version }}</label>
                 </div>
               </td>

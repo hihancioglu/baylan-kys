@@ -114,7 +114,7 @@ def test_document_download_specific_version(app_modules):
             .all()
         )
         assert len(logs) == 1
-        assert logs[0].payload["version"] == "v1.0"
+        assert logs[0].payload["downloaded_version"] == "v1.0"
     finally:
         log_session.close()
 
