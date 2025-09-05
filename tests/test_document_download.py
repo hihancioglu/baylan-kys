@@ -2,6 +2,7 @@ import sys
 import importlib
 from pathlib import Path
 from unittest.mock import MagicMock
+import io
 
 import pytest
 
@@ -129,3 +130,35 @@ def test_document_download_unknown_version(app_modules):
     resp = client.get("/documents/1/download?version=v1.1")
     assert resp.status_code == 404
     app_module.storage_client.generate_presigned_url.assert_not_called()
+
+
+def test_document_download_via_proxy_streams(app_modules):
+    app_module, models = app_modules
+    _setup_document(models, can_download=True)
+    app_module.storage_client.generate_presigned_url = MagicMock(return_value="/signed")
+    app_module.storage_client.get_object = MagicMock(return_value={"Body": io.BytesIO(b"data")})
+    client = app_module.app.test_client()
+    with client.session_transaction() as sess:
+        sess["user"] = {"id": 1}
+        sess["roles"] = ["reader"]
+    resp = client.get("/documents/1/download?via=proxy")
+    assert resp.status_code == 200
+    assert resp.data == b"data"
+    app_module.storage_client.generate_presigned_url.assert_not_called()
+    app_module.storage_client.get_object.assert_called_once_with(Key="foo/bar.txt")
+
+
+def test_document_revision_download_via_proxy_streams(app_modules):
+    app_module, models = app_modules
+    _setup_document(models, can_download=True)
+    app_module.storage_client.generate_presigned_url = MagicMock(return_value="/signed")
+    app_module.storage_client.get_object = MagicMock(return_value={"Body": io.BytesIO(b"rev")})
+    client = app_module.app.test_client()
+    with client.session_transaction() as sess:
+        sess["user"] = {"id": 1}
+        sess["roles"] = ["reader"]
+    resp = client.get("/documents/1/revisions/1/download?via=proxy")
+    assert resp.status_code == 200
+    assert resp.data == b"rev"
+    app_module.storage_client.generate_presigned_url.assert_not_called()
+    app_module.storage_client.get_object.assert_called_once_with(Key="foo/rev1.txt")

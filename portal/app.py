@@ -1524,11 +1524,40 @@ def document_download(doc_id: int):
                 return "Revision not found", 404
             file_key = revision.file_key
             version_str = version_param
-        url = storage_client.generate_presigned_url(file_key)
-        if not url:
-            return "File not available", 404
-        log_action(user["id"], doc_id, "download_document", payload={"version": version_str})
-        return redirect(url)
+        via_proxy = request.args.get("via") == "proxy"
+        url = None if via_proxy else storage_client.generate_presigned_url(file_key)
+        if url:
+            log_action(
+                user["id"],
+                doc_id,
+                "download_document",
+                payload={"version": version_str},
+            )
+            return redirect(url)
+        obj = storage_client.get_object(Key=file_key)
+        body = obj.get("Body") if isinstance(obj, dict) else obj
+
+        def _iter():
+            while True:
+                chunk = body.read(8192)
+                if not chunk:
+                    break
+                yield chunk
+
+        log_action(
+            user["id"],
+            doc_id,
+            "download_document",
+            payload={"version": version_str},
+        )
+        headers = {
+            "Content-Disposition": f"attachment; filename={Path(file_key).name}",
+        }
+        return Response(
+            stream_with_context(_iter()),
+            headers=headers,
+            mimetype=doc.mime or "application/octet-stream",
+        )
     finally:
         SessionLocal.remove()
 
@@ -1549,11 +1578,34 @@ def document_revision_download(doc_id: int, rev_id: int):
         user = session.get("user")
         if not user or not permission_check(user["id"], revision.document, download=True):
             return "Forbidden", 403
-        url = storage_client.generate_presigned_url(revision.file_key)
-        if not url:
-            return "File not available", 404
+        via_proxy = request.args.get("via") == "proxy"
+        url = (
+            None
+            if via_proxy
+            else storage_client.generate_presigned_url(revision.file_key)
+        )
+        if url:
+            log_action(user["id"], doc_id, "download_revision")
+            return redirect(url)
+        obj = storage_client.get_object(Key=revision.file_key)
+        body = obj.get("Body") if isinstance(obj, dict) else obj
+
+        def _iter():
+            while True:
+                chunk = body.read(8192)
+                if not chunk:
+                    break
+                yield chunk
+
         log_action(user["id"], doc_id, "download_revision")
-        return redirect(url)
+        headers = {
+            "Content-Disposition": f"attachment; filename={Path(revision.file_key).name}",
+        }
+        return Response(
+            stream_with_context(_iter()),
+            headers=headers,
+            mimetype=revision.document.mime or "application/octet-stream",
+        )
     finally:
         SessionLocal.remove()
 

@@ -90,6 +90,7 @@ def test_files_route_respects_size_limit(app_modules, client):
     backend.generate_presigned_url = type(backend).generate_presigned_url.__get__(
         backend, type(backend)
     )
+    backend.max_presign_size = 50 * 1024 * 1024
     backend.client.head_object = MagicMock(return_value={"ContentLength": 51 * 1024 * 1024})
     backend.public_client.generate_presigned_url = MagicMock(return_value="/signed")
     resp = client.get("/files/foo/bar.txt")
