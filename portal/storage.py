@@ -39,12 +39,9 @@ class StorageBackend:
     bucket_archive: str | None = None
     bucket_previews: str | None = None
     archive_prefix: str = _env("archive.prefix", "archive/") or "archive/"
-    signed_url_expire_seconds: int = int(
-        _env("signed_url_expire_seconds", "3600") or "3600"
-    )
+    signed_url_expire_seconds: int = int(_env("storage.signed_url_expire_seconds", "3600") or "3600")
     # Maximum object size (in bytes) allowed for presigned downloads.
-    max_presign_size: int = 50 * 1024 * 1024  # 50MB
-
+    max_presign_size: int = 200 * 1024 * 1024  # 200MB
     # -- basic primitives -------------------------------------------------
     def put(self, *args, **kwargs):  # pragma: no cover - interface only
         raise NotImplementedError
