@@ -10,6 +10,9 @@
               <th scope="col">Date</th>
               <th scope="col">Uploaded By</th>
               <th scope="col">Note</th>
+              {% if has_role('editor') or has_role('publisher') or has_role('quality_admin') %}
+              <th scope="col">Actions</th>
+              {% endif %}
             </tr>
           </thead>
           <tbody>
@@ -24,6 +27,14 @@
               <td class="text-muted">{{ rev.created_at.strftime('%Y-%m-%d') if rev.created_at else '' }}</td>
               <td>{{ rev.user.username if rev.user else '' }}</td>
               <td>{{ rev.revision_notes or '' }}</td>
+              {% if has_role('editor') or has_role('publisher') or has_role('quality_admin') %}
+              <td>
+                <form class="d-inline rollback-form" hx-post="{{ url_for('rollback_document_api', doc_id=doc.id) }}?to=v{{ rev.major_version }}.{{ rev.minor_version }}" hx-swap="none">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                  <button type="submit" class="btn btn-sm btn-outline-danger">Rollback</button>
+                </form>
+              </td>
+              {% endif %}
             </tr>
             {% endfor %}
           </tbody>
