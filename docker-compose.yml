@@ -220,7 +220,7 @@ services:
       # SSL sertifikası kullanacaksanız aşağıyı açın ve dosyaları koyun
       # - ./nginx/certs:/etc/nginx/certs:ro
     ports:
-      - "8090:80"
+      - "80:80"
       # - "443:443"
     networks: [qdms]
 
