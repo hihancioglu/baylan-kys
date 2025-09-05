@@ -1,18 +1,28 @@
+<template id="versions-skeleton">
+  <div role="status" aria-live="polite">
+    <div class="placeholder-glow" aria-hidden="true">
+      <span class="placeholder col-12 mb-2"></span>
+      <span class="placeholder col-12 mb-2"></span>
+      <span class="placeholder col-12 mb-2"></span>
+    </div>
+    <span class="visually-hidden">{{ t('loading') }}</span>
+  </div>
+</template>
 <div id="tab-versions">
   <form id="version-list" method="get" action="{{ url_for('compare_document_versions', doc_id=doc.id) }}">
     <div class="row">
       <div class="col-md-8">
         <div class="table-responsive">
           {% if revisions %}
-          <table class="table table-hover align-middle">
+          <table class="table table-hover align-middle" aria-live="polite">
           <thead>
             <tr>
-              <th scope="col">Version</th>
-              <th scope="col">Date</th>
-              <th scope="col">Uploaded By</th>
-              <th scope="col">Note</th>
+              <th scope="col">{{ t('version') }}</th>
+              <th scope="col">{{ t('date') }}</th>
+              <th scope="col">{{ t('uploaded_by') }}</th>
+              <th scope="col">{{ t('note') }}</th>
               {% if has_role('editor') or has_role('publisher') or has_role('quality_admin') %}
-              <th scope="col">Actions</th>
+              <th scope="col">{{ t('actions') }}</th>
               {% endif %}
             </tr>
           </thead>
@@ -41,7 +51,7 @@
           </tbody>
         </table>
         {% else %}
-        <div class="text-center p-4 empty-state" role="status">
+        <div class="text-center p-4 empty-state" role="status" aria-live="polite">
           <svg class="icon mb-2" aria-hidden="true"><use href="#icon-upload"></use></svg>
           <p class="mb-2">{{ t('no_versions_yet') }}</p>
           <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#uploadVersionModal">{{ t('upload_new_version') }}</button>
@@ -49,35 +59,35 @@
         {% endif %}
       </div>
       {% if can_server_diff %}
-      <button type="submit" id="compare-button" class="btn btn-secondary mt-2" data-can-server-diff="true" disabled>Compare</button>
+      <button type="submit" id="compare-button" class="btn btn-secondary mt-2" data-can-server-diff="true" disabled>{{ t('compare') }}</button>
       {% else %}
-      <button type="button" id="compare-button" class="btn btn-secondary mt-2" data-can-server-diff="false" disabled>Compare</button>
+      <button type="button" id="compare-button" class="btn btn-secondary mt-2" data-can-server-diff="false" disabled>{{ t('compare') }}</button>
       {% endif %}
     </div>
     <div class="col-md-4">
       <div id="revision-panel">
         {% if revision %}
         <div id="revision-note">
-          <h5>Version {{ revision.major_version }}.{{ revision.minor_version }}</h5>
-          <p>{{ revision.revision_notes or 'No revision notes.' }}</p>
+          <h5>{{ t('version') }} {{ revision.major_version }}.{{ revision.minor_version }}</h5>
+          <p>{{ revision.revision_notes or t('no_revision_notes') }}</p>
           <button type="button" id="compare-to-button" class="btn btn-outline-primary mt-2"
             data-url="{{ url_for('compare_document_versions', doc_id=doc.id) }}"
             data-rev-id="{{ revision.id }}"
-            data-rev-label="{{ revision.major_version }}.{{ revision.minor_version }}">Compare to…</button>
+            data-rev-label="{{ revision.major_version }}.{{ revision.minor_version }}">{{ t('compare_to') }}</button>
           {% if can_download %}
-          <a class="btn btn-outline-secondary mt-2" href="{{ url_for('document_download', doc_id=doc.id) }}?version=v{{ revision.major_version }}.{{ revision.minor_version }}">Download</a>
+          <a class="btn btn-outline-secondary mt-2" href="{{ url_for('document_download', doc_id=doc.id) }}?version=v{{ revision.major_version }}.{{ revision.minor_version }}">{{ t('download') }}</a>
           {% endif %}
         </div>
         {% else %}
         <div id="revision-note">
-          <p>Select a version to view its note.</p>
+          <p>{{ t('select_version_to_view_note') }}</p>
         </div>
         {% endif %}
       </div>
-      <h5 class="mt-3">Selected Versions</h5>
+      <h5 class="mt-3">{{ t('selected_versions') }}</h5>
       <ul id="selected-versions" class="list-group"></ul>
-      <a id="download-rev-a" class="btn btn-outline-secondary mt-2 d-none" download>Download A</a>
-      <a id="download-rev-b" class="btn btn-outline-secondary mt-2 d-none" download>Download B</a>
+      <a id="download-rev-a" class="btn btn-outline-secondary mt-2 d-none" download>{{ t('download') }} A</a>
+      <a id="download-rev-b" class="btn btn-outline-secondary mt-2 d-none" download>{{ t('download') }} B</a>
     </div>
   </div>
 </form>
