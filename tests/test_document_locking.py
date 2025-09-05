@@ -229,16 +229,16 @@ def test_force_checkin_button_visibility(client, app_models):
     resp = client.get(f"/documents/{doc_id}")
     assert resp.status_code == 200
     body = resp.get_data(as_text=True)
-    assert "Force Check in" not in body
+    assert "Unlock" not in body
 
     _login(client, user2, roles=["reader", "quality_admin"])
     resp = client.get(f"/documents/{doc_id}")
     assert resp.status_code == 200
     body = resp.get_data(as_text=True)
-    assert "Force Check in" in body
+    assert "Unlock" in body
 
 
-def test_unlock_document_admin(client, app_models):
+def test_unlock_document_quality_admin(client, app_models):
     app_module, models = app_models
     doc_id, user1, user2 = _create_doc_and_users(models)
     session = models.SessionLocal()
@@ -249,6 +249,28 @@ def test_unlock_document_admin(client, app_models):
     session.close()
 
     _login(client, user2, roles=["quality_admin"])
+    resp = client.post(f"/api/documents/{doc_id}/unlock")
+    assert resp.status_code == 200
+    assert resp.get_json() == {"status": "unlocked"}
+
+    session = models.SessionLocal()
+    doc = session.get(models.Document, doc_id)
+    assert doc.locked_by is None
+    assert doc.lock_expires_at is None
+    session.close()
+
+
+def test_unlock_document_admin_role(client, app_models):
+    app_module, models = app_models
+    doc_id, user1, user2 = _create_doc_and_users(models)
+    session = models.SessionLocal()
+    doc = session.get(models.Document, doc_id)
+    doc.locked_by = user1
+    doc.lock_expires_at = datetime.utcnow() + timedelta(minutes=5)
+    session.commit()
+    session.close()
+
+    _login(client, user2, roles=["admin"])
     resp = client.post(f"/api/documents/{doc_id}/unlock")
     assert resp.status_code == 200
     assert resp.get_json() == {"status": "unlocked"}
@@ -278,3 +300,20 @@ def test_unlock_document_forbidden(client, app_models):
     doc = session.get(models.Document, doc_id)
     assert doc.locked_by == user1
     session.close()
+
+
+def test_admin_checkout_override(client, app_models):
+    app_module, models = app_models
+    doc_id, user1, user2 = _create_doc_and_users(models, u2_perms={"checkout": False})
+    session = models.SessionLocal()
+    doc = session.get(models.Document, doc_id)
+    doc.locked_by = user1
+    doc.lock_expires_at = datetime.utcnow() + timedelta(minutes=5)
+    session.commit()
+    session.close()
+
+    _login(client, user2, roles=["admin"])
+    resp = client.post(f"/api/documents/{doc_id}/checkout")
+    assert resp.status_code == 200
+    data = resp.get_json()
+    assert data["locked_by"] == user2

@@ -42,7 +42,7 @@
   {% endif %}
   {% if has_role('contributor') or has_role('publisher') or has_role('quality_admin') %}
     {% if can_upload_version %}
-    <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#uploadVersionModal">Upload New Version</button>
+    <button type="button" class="btn btn-outline-primary" id="upload-version-btn" data-bs-toggle="modal" data-bs-target="#uploadVersionModal">Upload New Version</button>
     {% endif %}
   {% endif %}
   {% if has_role('admin') or has_role('quality') %}
@@ -68,11 +68,12 @@
 {% block content %}
 <h1>{{ doc.title }}</h1>
 {% if has_role('contributor') or has_role('publisher') or has_role('quality_admin') %}
+  <div id="lock-status">
   {% if doc.locked_by and doc.lock_expires_at and doc.lock_expires_at > now %}
     {% if current_user and current_user.id == doc.locked_by %}
     <div class="alert alert-info">Checked out by you until {{ doc.lock_expires_at }}.</div>
     {% if can_checkin %}
-    <form class="mb-3" hx-post="/api/documents/{{ doc.id }}/checkin" hx-swap="none">
+    <form id="checkin-form" class="mb-3" hx-post="/api/documents/{{ doc.id }}/checkin" hx-swap="none">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <button type="submit" class="btn btn-warning">Check in</button>
     </form>
@@ -80,20 +81,21 @@
     {% else %}
     <div class="alert alert-warning">Locked by {{ doc.lock_owner.username if doc.lock_owner else 'another user' }} until {{ doc.lock_expires_at }}.</div>
     {% if can_override or 'quality_admin' in user_roles %}
-    <form class="mb-3" hx-post="/api/documents/{{ doc.id }}/checkin" hx-swap="none">
+    <form id="unlock-form" class="mb-3" hx-post="/api/documents/{{ doc.id }}/unlock" hx-swap="none">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-      <button type="submit" class="btn btn-danger">Force Check in</button>
+      <button type="submit" class="btn btn-danger">Unlock</button>
     </form>
     {% endif %}
     {% endif %}
   {% else %}
     {% if can_checkout %}
-    <form class="mb-3" hx-post="/api/documents/{{ doc.id }}/checkout" hx-swap="none">
+    <form id="checkout-form" class="mb-3" hx-post="/api/documents/{{ doc.id }}/checkout" hx-swap="none">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <button type="submit" class="btn btn-outline-primary">Check out</button>
     </form>
     {% endif %}
   {% endif %}
+  </div>
 {% endif %}
 <ul>
   <li><strong>Code:</strong> {{ doc.code }}</li>
