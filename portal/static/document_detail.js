@@ -236,6 +236,42 @@ function initUploadVersionModal() {
   }
 }
 
+function initRollbackForms() {
+  const forms = document.querySelectorAll('.rollback-form');
+  forms.forEach((form) => {
+    form.addEventListener('htmx:afterRequest', (evt) => {
+      if (evt.detail.successful) {
+        let message = 'Rollback successful';
+        try {
+          const data = JSON.parse(evt.detail.xhr.responseText);
+          if (
+            data &&
+            typeof data.major_version === 'number' &&
+            typeof data.minor_version === 'number'
+          ) {
+            message = `Rolled back to v${data.major_version}.${data.minor_version}`;
+          }
+        } catch (e) {
+          // ignore
+        }
+        showToast(message);
+        window.location.reload();
+      } else {
+        let message = 'Rollback failed';
+        try {
+          const data = JSON.parse(evt.detail.xhr.responseText);
+          if (data && data.error) {
+            message = data.error;
+          }
+        } catch (e) {
+          // ignore
+        }
+        showToast(message, { timeout: 6000 });
+      }
+    });
+  });
+}
+
 function getDocStatus() {
   const statusEl = Array.from(document.querySelectorAll('li')).find((li) =>
     li.textContent.trim().startsWith('Status:')
@@ -267,6 +303,7 @@ document.addEventListener('DOMContentLoaded', () => {
   initAssignForm();
   initVersioningMenu();
   initUploadVersionModal();
+  initRollbackForms();
 
   const params = new URLSearchParams(window.location.search);
   if (params.get('created') === '1') {
@@ -285,6 +322,7 @@ document.addEventListener('htmx:afterSwap', (evt) => {
     evt.target.id === 'version-list'
   ) {
     initVersionSelection();
+    initRollbackForms();
     if (evt.target.id === 'tab-versions') {
       window.scrollTo(0, 0);
     }
