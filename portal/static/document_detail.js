@@ -133,7 +133,9 @@ function initWorkflowForm() {
       reviewers: data.getAll('reviewers[]'),
       approvers: data.getAll('approvers[]'),
     };
-    const csrf = data.get('csrf_token');
+    const csrf = document
+      .querySelector('meta[name="csrf-token"]')
+      .getAttribute('content');
     await fetch('/api/workflow/start', {
       method: 'POST',
       headers: {
@@ -213,80 +215,6 @@ function initUploadVersionForm() {
   });
 }
 
-function initVersioningMenu() {
-  const form = document.getElementById('increment-major-form');
-  if (!form) return;
-  form.addEventListener('htmx:afterRequest', (evt) => {
-    if (evt.detail.successful) {
-      window.location.reload();
-    }
-  });
-}
-
-function initUploadVersionModal() {
-  const modalEl = document.getElementById('uploadVersionModal');
-  if (!modalEl) return;
-  const modal = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
-  const form = modalEl.querySelector('form');
-  form.addEventListener('htmx:afterRequest', (evt) => {
-    if (evt.detail.successful) {
-      modal.hide();
-      form.reset();
-    } else {
-      let message = 'Upload failed';
-      try {
-        const data = JSON.parse(evt.detail.xhr.responseText);
-        if (data && data.error) {
-          message = data.error;
-        }
-      } catch (e) {
-        // ignore
-      }
-      showToast(message, { timeout: 6000 });
-    }
-  });
-  if (window.location.hash === '#uploadVersionModal') {
-    modal.show();
-    history.replaceState(null, '', window.location.pathname + window.location.search);
-  }
-}
-
-function initRollbackForms() {
-  const forms = document.querySelectorAll('.rollback-form');
-  forms.forEach((form) => {
-    form.addEventListener('htmx:afterRequest', (evt) => {
-      if (evt.detail.successful) {
-        let message = 'Rollback successful';
-        try {
-          const data = JSON.parse(evt.detail.xhr.responseText);
-          if (
-            data &&
-            typeof data.major_version === 'number' &&
-            typeof data.minor_version === 'number'
-          ) {
-            message = `Rolled back to v${data.major_version}.${data.minor_version}`;
-          }
-        } catch (e) {
-          // ignore
-        }
-        showToast(message);
-        window.location.reload();
-      } else {
-        let message = 'Rollback failed';
-        try {
-          const data = JSON.parse(evt.detail.xhr.responseText);
-          if (data && data.error) {
-            message = data.error;
-          }
-        } catch (e) {
-          // ignore
-        }
-        showToast(message, { timeout: 6000 });
-      }
-    });
-  });
-}
-
 function getDocStatus() {
   const statusEl = Array.from(document.querySelectorAll('li')).find((li) =>
     li.textContent.trim().startsWith('Status:')
@@ -317,9 +245,6 @@ document.addEventListener('DOMContentLoaded', () => {
   initWorkflowForm();
   initAssignForm();
   initUploadVersionForm();
-  initVersioningMenu();
-  initUploadVersionModal();
-  initRollbackForms();
 
   const params = new URLSearchParams(window.location.search);
   if (params.get('created') === '1') {
@@ -338,14 +263,12 @@ document.addEventListener('htmx:afterSwap', (evt) => {
     evt.target.id === 'version-list'
   ) {
     initVersionSelection();
-    initRollbackForms();
     if (evt.target.id === 'tab-versions') {
       window.scrollTo(0, 0);
     }
     updatePublishButton();
   }
 });
-
 document.body.addEventListener('auto-review-started', () => {
   showToast('Doküman incelemeye gönderildi');
   updatePublishButton();
