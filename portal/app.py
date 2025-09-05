@@ -2038,6 +2038,31 @@ def rollback_document_api(doc_id: int):
     user = session.get("user") or {}
     doc = _rollback_document(doc, rev, user, db)
     db.commit()
+    if request.headers.get("HX-Request"):
+        revisions = (
+            db.query(DocumentRevision)
+            .filter_by(doc_id=doc_id)
+            .order_by(
+                DocumentRevision.major_version.desc(),
+                DocumentRevision.minor_version.desc(),
+            )
+            .all()
+        )
+        can_download = False
+        if user and permission_check(user.get("id"), doc, download=True):
+            can_download = True
+        response = make_response(
+            render_template(
+                "partials/documents/_versions.html",
+                doc=doc,
+                revisions=revisions,
+                revision=None,
+                can_download=can_download,
+            )
+        )
+        response.headers["HX-Trigger"] = "version-rolled-back"
+        SessionLocal.remove()
+        return response
     resp = {
         "doc_id": doc.id,
         "major_version": doc.major_version,

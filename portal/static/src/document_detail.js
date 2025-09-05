@@ -292,6 +292,29 @@ function initUploadVersionForm() {
   });
 }
 
+function initRollbackForms() {
+  document.body.addEventListener('htmx:afterRequest', (evt) => {
+    const el = evt.target;
+    if (!el.classList || !el.classList.contains('rollback-form')) {
+      return;
+    }
+    if (evt.detail.successful) {
+      showToast('Sürüm geri alındı');
+    } else {
+      let message = 'Geri alma başarısız oldu';
+      try {
+        const data = JSON.parse(evt.detail.xhr.responseText);
+        if (data && data.error) {
+          message = data.error;
+        }
+      } catch (e) {
+        // ignore
+      }
+      showToast(message, { timeout: 6000 });
+    }
+  });
+}
+
 function getDocStatus() {
   const statusEl = Array.from(document.querySelectorAll('li')).find((li) =>
     li.textContent.trim().startsWith('Status:')
@@ -322,6 +345,7 @@ document.addEventListener('DOMContentLoaded', () => {
   initWorkflowForm();
   initAssignForm();
   initUploadVersionForm();
+  initRollbackForms();
 
   const params = new URLSearchParams(window.location.search);
   if (params.get('created') === '1') {
