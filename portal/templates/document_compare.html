@@ -7,7 +7,11 @@
 {% block content %}
 <h1>Version Comparison</h1>
 <div class="mb-3">
+  {% if pdf_url %}
+  <iframe src="{{ pdf_url }}" style="width:100%;height:80vh" frameborder="0"></iframe>
+  {% else %}
   {{ diff|safe }}
+  {% endif %}
 </div>
 <div class="toolbar" data-component="toolbar">
   <a class="btn btn-secondary" href="{{ url_for('document_detail', doc_id=doc_id) }}">Back</a>

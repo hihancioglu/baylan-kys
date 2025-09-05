@@ -44,25 +44,59 @@ function initVersionSelection() {
   let revALabel = null;
   let revBLabel = null;
   const hasServerDiff = compareBtn?.dataset.canServerDiff === 'true';
-  if (!hasServerDiff && compareBtn) {
-    compareBtn.addEventListener('click', () => {
-      if (compareBtn.disabled) return;
-      const modalEl = document.getElementById('local-compare-modal');
-      if (downloadA && downloadB && docId && revA && revB && revALabel && revBLabel) {
-        downloadA.href = `/documents/${docId}/revisions/${revA}/download`;
-        downloadB.href = `/documents/${docId}/revisions/${revB}/download`;
-        downloadA.textContent = `Download ${revALabel}`;
-        downloadB.textContent = `Download ${revBLabel}`;
-        downloadA.classList.remove('d-none');
-        downloadB.classList.remove('d-none');
-      }
-      if (modalEl) {
-        const modal =
-          bootstrap.Modal.getInstance(modalEl) ||
-          new bootstrap.Modal(modalEl);
-        modal.show();
-      }
-    });
+  const showLocalModal = (aId, aLabel, bId, bLabel) => {
+    const modalEl = document.getElementById('local-compare-modal');
+    if (downloadA && downloadB && docId && aId && bId && aLabel && bLabel) {
+      downloadA.href = `/documents/${docId}/revisions/${aId}/download`;
+      downloadB.href = `/documents/${docId}/revisions/${bId}/download`;
+      downloadA.textContent = `Download ${aLabel}`;
+      downloadB.textContent = `Download ${bLabel}`;
+      downloadA.classList.remove('d-none');
+      downloadB.classList.remove('d-none');
+    }
+    if (modalEl) {
+      const modal =
+        bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
+      modal.show();
+    }
+  };
+
+  if (compareBtn) {
+    if (hasServerDiff) {
+      compareBtn.addEventListener('click', async () => {
+        if (compareBtn.disabled || !docId || !revA || !revB) return;
+        const csrf = document
+          .querySelector('meta[name="csrf-token"]')
+          .getAttribute('content');
+        try {
+          const res = await fetch(
+            `/api/documents/${docId}/compare?from=${revA}&to=${revB}`,
+            {
+              method: 'POST',
+              headers: { 'X-CSRFToken': csrf },
+            }
+          );
+          const data = await res.json();
+          if (res.ok && data.filename) {
+            const url = new URL(
+              `/documents/${docId}/compare`,
+              window.location.origin
+            );
+            url.searchParams.set('file', data.filename);
+            window.location.href = url.toString();
+          } else {
+            showToast(data.error || 'Karşılaştırma başarısız oldu');
+          }
+        } catch (e) {
+          showToast('Karşılaştırma başarısız oldu');
+        }
+      });
+    } else {
+      compareBtn.addEventListener('click', () => {
+        if (compareBtn.disabled) return;
+        showLocalModal(revA, revALabel, revB, revBLabel);
+      });
+    }
   }
   if (!checkboxes.length) return;
   const update = (evt) => {
@@ -105,8 +139,9 @@ function initVersionSelection() {
 
   if (compareToBtn) {
     const currentRevId = compareToBtn.dataset.revId;
+    const currentRevLabel = compareToBtn.dataset.revLabel;
     const compareUrl = compareToBtn.dataset.url;
-    compareToBtn.addEventListener('click', () => {
+    compareToBtn.addEventListener('click', async () => {
       const other = Array.from(checkboxes).filter(
         (cb) => cb.checked && cb.value !== currentRevId
       );
@@ -114,10 +149,40 @@ function initVersionSelection() {
         showToast('Karşılaştırılacak başka bir sürüm seçin');
         return;
       }
-      const url = new URL(compareUrl, window.location.origin);
-      url.searchParams.append('rev_id', currentRevId);
-      url.searchParams.append('rev_id', other[0].value);
-      window.location.href = url.toString();
+      if (hasServerDiff) {
+        const csrf = document
+          .querySelector('meta[name="csrf-token"]')
+          .getAttribute('content');
+        try {
+          const res = await fetch(
+            `/api/documents/${docId}/compare?from=${currentRevId}&to=${other[0].value}`,
+            {
+              method: 'POST',
+              headers: { 'X-CSRFToken': csrf },
+            }
+          );
+          const data = await res.json();
+          if (res.ok && data.filename) {
+            const url = new URL(
+              `/documents/${docId}/compare`,
+              window.location.origin
+            );
+            url.searchParams.set('file', data.filename);
+            window.location.href = url.toString();
+          } else {
+            showToast(data.error || 'Karşılaştırma başarısız oldu');
+          }
+        } catch (e) {
+          showToast('Karşılaştırma başarısız oldu');
+        }
+      } else {
+        showLocalModal(
+          currentRevId,
+          currentRevLabel,
+          other[0].value,
+          other[0].dataset.label
+        );
+      }
     });
   }
 }

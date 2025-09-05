@@ -62,7 +62,8 @@
           <p>{{ revision.revision_notes or 'No revision notes.' }}</p>
           <button type="button" id="compare-to-button" class="btn btn-outline-primary mt-2"
             data-url="{{ url_for('compare_document_versions', doc_id=doc.id) }}"
-            data-rev-id="{{ revision.id }}">Compare to…</button>
+            data-rev-id="{{ revision.id }}"
+            data-rev-label="{{ revision.major_version }}.{{ revision.minor_version }}">Compare to…</button>
           {% if can_download %}
           <a class="btn btn-outline-secondary mt-2" href="{{ url_for('document_download', doc_id=doc.id) }}?version=v{{ revision.major_version }}.{{ revision.minor_version }}">Download</a>
           {% endif %}
