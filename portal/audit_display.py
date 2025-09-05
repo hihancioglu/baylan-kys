@@ -8,16 +8,16 @@ from translations import get_locale
 # Mapping of audit log actions to display metadata used in templates.
 # Each entry maps an action name to an icon identifier and a translation key.
 AUDIT_DISPLAY: Mapping[str, Dict[str, str]] = {
-    "create": {"icon": "plus", "label_key": "create"},
-    "view": {"icon": "search", "label_key": "view"},
-    "download_document": {"icon": "download", "label_key": "download_document"},
-    "download_revision": {"icon": "download", "label_key": "download_revision"},
-    "version_uploaded": {"icon": "upload", "label_key": "version_uploaded"},
-    "publish_document": {"icon": "upload", "label_key": "publish_document"},
-    "assign_mr": {"icon": "bell", "label_key": "assign_mr"},
-    "checkout_document": {"icon": "download", "label_key": "checkout_document"},
-    "checkin_document": {"icon": "upload", "label_key": "checkin_document"},
-    "rollback": {"icon": "filter", "label_key": "rollback"},
+    "create": {"icon": "plus", "label_key": "audit_create"},
+    "view": {"icon": "search", "label_key": "audit_view"},
+    "download_document": {"icon": "download", "label_key": "audit_download_document"},
+    "download_revision": {"icon": "download", "label_key": "audit_download_revision"},
+    "version_uploaded": {"icon": "upload", "label_key": "audit_version_uploaded"},
+    "publish_document": {"icon": "upload", "label_key": "audit_publish_document"},
+    "assign_mr": {"icon": "bell", "label_key": "audit_assign_mr"},
+    "checkout_document": {"icon": "download", "label_key": "audit_checkout_document"},
+    "checkin_document": {"icon": "upload", "label_key": "audit_checkin_document"},
+    "rollback": {"icon": "filter", "label_key": "audit_rollback"},
 }
 
 
