@@ -52,6 +52,7 @@ from pdf_preview_job import enqueue_preview
 from translations import t
 from static_build import build_all
 import services
+from audit_display import inject_audit_display, format_dt
 
 
 # Automatically run database migrations in non-SQLite environments.
@@ -133,6 +134,8 @@ def set_security_headers(response):
 CSRFProtect(app)
 auth_init(app)
 app.register_blueprint(auth_bp)
+app.context_processor(inject_audit_display)
+app.jinja_env.filters["format_dt"] = format_dt
 
 
 @app.errorhandler(403)

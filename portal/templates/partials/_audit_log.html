@@ -2,8 +2,11 @@
 <h4>Audit History</h4>
 <ul class="list-unstyled">
   {% for log in logs %}
+  {% set meta = audit_display.get(log.action, {'icon':'default','label_key':log.action}) %}
   <li>
-    {{ log.at.strftime('%Y-%m-%d %H:%M') }} - {{ log.action }}
+    {{ log.at|format_dt }} -
+    <svg class="icon"><use href="#icon-{{ meta.icon }}"></use></svg>
+    {{ t(meta.label_key) }}
     {% if log.user %}by {{ log.user.username }}{% endif %}
   </li>
   {% endfor %}
