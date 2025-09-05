@@ -292,7 +292,7 @@ function updatePublishButton() {
   if (!btn) return;
   const form = document.getElementById('publish-form');
   const status = getDocStatus();
-  if (form && status === 'Approved') {
+  if (form && ['Review', 'Approved'].includes(status)) {
     btn.disabled = false;
     btn.textContent = 'Publish';
   } else if (!form) {

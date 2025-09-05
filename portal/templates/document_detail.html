@@ -5,7 +5,7 @@
 {% block page_actions %}
 <link rel="stylesheet" href="{{ url_for('static', filename='toolbar/toolbar.css') }}">
 <div class="toolbar" data-component="toolbar" data-variant="icon-text">
-  {% if has_role('editor') or has_role('publisher') or has_role('quality_admin') %}
+  {% if has_role('contributor') or has_role('publisher') or has_role('quality_admin') %}
     {% if doc.status in ['Review', 'Approved'] %}
       {% if doc.file_key %}
       <form id="publish-form" hx-post="/api/documents/{{ doc.id }}/publish" hx-swap="none" class="d-inline">
@@ -21,7 +21,7 @@
     <button type="button" class="btn btn-primary" id="publish-button" disabled title="Publish unavailable">Publish</button>
     {% endif %}
   {% endif %}
-  {% if has_role('editor') or has_role('publisher') or has_role('quality_admin') %}
+  {% if has_role('contributor') or has_role('publisher') or has_role('quality_admin') %}
     {% if doc.status == 'Published' %}
     <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#assignModal">
       Assign Mandatory Reading <span class="badge bg-secondary" id="assignment-count">{{ ack_count }}</span>
@@ -40,7 +40,7 @@
   {% if can_download %}
   <a class="btn btn-outline-secondary" href="/documents/{{ doc.id }}/download?version=v{{ doc.major_version }}.{{ doc.minor_version }}">Download</a>
   {% endif %}
-  {% if has_role('editor') or has_role('publisher') or has_role('quality_admin') %}
+  {% if has_role('contributor') or has_role('publisher') or has_role('quality_admin') %}
     {% if can_upload_version %}
     <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#uploadVersionModal">Upload New Version</button>
     {% endif %}
@@ -67,7 +67,7 @@
 
 {% block content %}
 <h1>{{ doc.title }}</h1>
-{% if has_role('editor') or has_role('publisher') or has_role('quality_admin') %}
+{% if has_role('contributor') or has_role('publisher') or has_role('quality_admin') %}
   {% if doc.locked_by and doc.lock_expires_at and doc.lock_expires_at > now %}
     {% if current_user and current_user.id == doc.locked_by %}
     <div class="alert alert-info">Checked out by you until {{ doc.lock_expires_at }}.</div>
@@ -113,7 +113,7 @@
     {% endif %}
   </div>
 
-{% if has_role('editor') or has_role('publisher') or has_role('quality_admin') %}
+{% if has_role('contributor') or has_role('publisher') or has_role('quality_admin') %}
   {% if can_upload_version %}
   <div class="modal fade" id="uploadVersionModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog">
@@ -142,7 +142,7 @@
   {% endif %}
 {% endif %}
 
-{% if has_role('editor') or has_role('publisher') or has_role('quality_admin') %}
+{% if has_role('contributor') or has_role('publisher') or has_role('quality_admin') %}
 <div class="modal fade" id="assignModal" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog">
     <div class="modal-content">

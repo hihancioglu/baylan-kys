@@ -3576,7 +3576,9 @@ def publish_document(id: int):
         doc = db.get(Document, id)
         if not doc:
             return jsonify({"error": "Not found"}), 404
-        if doc.status not in ("Approved", "Review") or not doc.file_key:
+        if doc.status not in ("Review", "Approved"):
+            return jsonify({"error": "Document not ready for publishing"}), 400
+        if not doc.file_key:
             return (
                 jsonify({"error": "Document not reviewable or missing active version"}),
                 400,
