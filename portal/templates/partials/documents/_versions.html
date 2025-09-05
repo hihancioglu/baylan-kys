@@ -1,9 +1,10 @@
-<form id="version-list" method="get" action="{{ url_for('compare_document_versions', doc_id=doc.id) }}">
-  <div class="row">
-    <div class="col-md-8">
-      <div class="table-responsive">
-        {% if revisions %}
-        <table class="table table-hover align-middle">
+<div id="tab-versions">
+  <form id="version-list" method="get" action="{{ url_for('compare_document_versions', doc_id=doc.id) }}">
+    <div class="row">
+      <div class="col-md-8">
+        <div class="table-responsive">
+          {% if revisions %}
+          <table class="table table-hover align-middle">
           <thead>
             <tr>
               <th scope="col">Version</th>
@@ -97,3 +98,4 @@
   </div>
 </div>
 
+</div>

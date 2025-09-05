@@ -191,6 +191,21 @@ function initAssignForm() {
   });
 }
 
+function initUploadVersionForm() {
+  const form = document.getElementById('upload-version-form');
+  if (!form) return;
+  form.addEventListener('htmx:afterRequest', (evt) => {
+    if (!evt.detail.successful) return;
+    const modalEl = document.getElementById('uploadVersionModal');
+    const modal =
+      bootstrap.Modal.getInstance(modalEl) ||
+      new bootstrap.Modal(modalEl);
+    modal.hide();
+    form.reset();
+    document.body.dispatchEvent(new Event('version-uploaded'));
+  });
+}
+
 function getDocStatus() {
   const statusEl = Array.from(document.querySelectorAll('li')).find((li) =>
     li.textContent.trim().startsWith('Status:')
@@ -220,6 +235,7 @@ document.addEventListener('DOMContentLoaded', () => {
   initVersionSelection();
   initWorkflowForm();
   initAssignForm();
+  initUploadVersionForm();
 
   const params = new URLSearchParams(window.location.search);
   if (params.get('created') === '1') {
