@@ -2309,6 +2309,7 @@ def upload_document_version(doc_id: int):
     RoleEnum.CONTRIBUTOR.value,
     RoleEnum.PUBLISHER.value,
     RoleEnum.QUALITY_ADMIN.value,
+    RoleEnum.ADMIN.value,
 )
 def checkout_document(doc_id: int):
     db = get_session()
@@ -2321,8 +2322,13 @@ def checkout_document(doc_id: int):
     user_id = user.get("id")
     roles = session.get("roles", [])
     if not permission_check(user_id, doc, checkout=True):
-        SessionLocal.remove()
-        return jsonify(error="Forbidden"), 403
+        if (
+            RoleEnum.QUALITY_ADMIN.value not in roles
+            and RoleEnum.ADMIN.value not in roles
+            and not permission_check(user_id, doc, override=True)
+        ):
+            SessionLocal.remove()
+            return jsonify(error="Forbidden"), 403
     now = datetime.utcnow()
     if (
         doc.locked_by
@@ -2330,6 +2336,8 @@ def checkout_document(doc_id: int):
         and doc.locked_by != user_id
         and doc.lock_expires_at > now
         and RoleEnum.QUALITY_ADMIN.value not in roles
+        and RoleEnum.ADMIN.value not in roles
+        and not permission_check(user_id, doc, override=True)
     ):
         SessionLocal.remove()
         return jsonify(error="Document locked"), 409
@@ -2356,7 +2364,11 @@ def checkout_document(doc_id: int):
 
 
 @app.post("/api/documents/<int:doc_id>/checkin")
-@roles_required(RoleEnum.CONTRIBUTOR.value)
+@roles_required(
+    RoleEnum.CONTRIBUTOR.value,
+    RoleEnum.QUALITY_ADMIN.value,
+    RoleEnum.ADMIN.value,
+)
 def checkin_document(doc_id: int):
     db = get_session()
     doc = db.get(Document, doc_id)
@@ -2368,11 +2380,18 @@ def checkin_document(doc_id: int):
     user_id = user.get("id")
     roles = session.get("roles", [])
     if not permission_check(user_id, doc, checkin=True):
-        SessionLocal.remove()
-        return jsonify(error="Cannot checkin"), 403
+        if (
+            RoleEnum.QUALITY_ADMIN.value not in roles
+            and RoleEnum.ADMIN.value not in roles
+            and not permission_check(user_id, doc, override=True)
+        ):
+            SessionLocal.remove()
+            return jsonify(error="Cannot checkin"), 403
     if doc.locked_by and doc.locked_by != user_id:
-        if RoleEnum.QUALITY_ADMIN.value not in roles and not permission_check(
-            user_id, doc, override=True
+        if (
+            RoleEnum.QUALITY_ADMIN.value not in roles
+            and RoleEnum.ADMIN.value not in roles
+            and not permission_check(user_id, doc, override=True)
         ):
             SessionLocal.remove()
             return jsonify(error="Cannot checkin"), 403
@@ -2386,6 +2405,11 @@ def checkin_document(doc_id: int):
 
 
 @app.post("/api/documents/<int:doc_id>/unlock")
+@roles_required(
+    RoleEnum.CONTRIBUTOR.value,
+    RoleEnum.QUALITY_ADMIN.value,
+    RoleEnum.ADMIN.value,
+)
 def unlock_document(doc_id: int):
     db = get_session()
     doc = db.get(Document, doc_id)
@@ -2396,8 +2420,10 @@ def unlock_document(doc_id: int):
     user = session.get("user") or {}
     user_id = user.get("id")
     roles = session.get("roles", [])
-    if RoleEnum.QUALITY_ADMIN.value not in roles and not permission_check(
-        user_id, doc, override=True
+    if (
+        RoleEnum.QUALITY_ADMIN.value not in roles
+        and RoleEnum.ADMIN.value not in roles
+        and not permission_check(user_id, doc, override=True)
     ):
         SessionLocal.remove()
         return jsonify(error="Forbidden"), 403

@@ -212,6 +212,35 @@ function initWorkflowForm() {
   });
 }
 
+function initLockControls() {
+  document.body.addEventListener('htmx:afterRequest', (evt) => {
+    const id = evt.target.id;
+    if (!['checkout-form', 'checkin-form', 'unlock-form'].includes(id)) {
+      return;
+    }
+    if (evt.detail.successful) {
+      window.location.reload();
+      return;
+    }
+    let message = 'Operation failed';
+    try {
+      const data = JSON.parse(evt.detail.xhr.responseText);
+      if (data && data.error) {
+        message = data.error;
+        if (data.error === 'Document locked') {
+          const btn = document.getElementById('upload-version-btn');
+          if (btn) {
+            btn.disabled = true;
+          }
+        }
+      }
+    } catch (e) {
+      /* ignore */
+    }
+    showToast(message);
+  });
+}
+
 function initAssignForm() {
   const form = document.getElementById('assign-form');
   if (!form) return;
@@ -322,6 +351,7 @@ document.addEventListener('DOMContentLoaded', () => {
   initWorkflowForm();
   initAssignForm();
   initUploadVersionForm();
+  initLockControls();
 
   const params = new URLSearchParams(window.location.search);
   if (params.get('created') === '1') {
