@@ -1861,14 +1861,38 @@ def compare_document_revisions_api(doc_id: int):
 @app.get("/documents/<int:doc_id>/compare")
 @roles_required(RoleEnum.READER.value)
 def compare_document_versions(doc_id: int):
+    file_key = request.args.get("file")
     rev_ids = request.args.getlist("rev_id", type=int)
-    if len(rev_ids) < 2:
-        return "Select at least two versions", 400
     session = get_session()
     try:
         doc = session.get(Document, doc_id)
         if not doc:
             return "Document not found", 404
+
+        breadcrumbs = [
+            {"title": "Home", "url": url_for("dashboard")},
+            {"title": "Documents", "url": url_for("list_documents")},
+            {"title": doc.title, "url": url_for("document_detail", doc_id=doc_id)},
+            {"title": "Compare"},
+        ]
+
+        if file_key:
+            if not file_key.startswith(f"previews/{doc_id}/"):
+                return "Invalid file", 400
+            pdf_url = storage_client.generate_presigned_url(
+                file_key, bucket=storage_client.bucket_previews
+            )
+            if not pdf_url:
+                return "Could not generate diff link", 500
+            return render_template(
+                "document_compare.html",
+                doc_id=doc_id,
+                pdf_url=pdf_url,
+                breadcrumbs=breadcrumbs,
+            )
+
+        if len(rev_ids) < 2:
+            return "Select at least two versions", 400
 
         revisions = (
             session.query(DocumentRevision)
@@ -1901,12 +1925,7 @@ def compare_document_versions(doc_id: int):
             doc_id=doc_id,
             revisions=revisions,
             diff=diff_html,
-            breadcrumbs=[
-                {"title": "Home", "url": url_for("dashboard")},
-                {"title": "Documents", "url": url_for("list_documents")},
-                {"title": doc.title, "url": url_for("document_detail", doc_id=doc_id)},
-                {"title": "Compare"},
-            ],
+            breadcrumbs=breadcrumbs,
         )
     finally:
         SessionLocal.remove()
