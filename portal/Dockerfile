@@ -6,6 +6,11 @@ RUN apt-get update && \
     apt-get install -y --no-install-recommends tesseract-ocr poppler-utils clamav-daemon && \
     rm -rf /var/lib/apt/lists/*
 
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+        libreoffice-common libreoffice-writer libreoffice-calc && \
+    rm -rf /var/lib/apt/lists/*
+
 # copy portal requirements first to leverage Docker layer cache
 COPY portal/requirements.txt ./requirements.txt
 RUN pip install -r requirements.txt
